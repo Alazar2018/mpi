@@ -1,0 +1,168 @@
+@import url("https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-primary: rgba(1, 68, 59, 1);
+  --color-secondary: rgba(83, 104, 255, 1);
+
+  --color-green-0.5: rgba(230, 236, 235, 1);
+  --color-green-1: rgba(236, 253, 204, 1);
+  --color-green-2: rgba(205, 255, 78, 1);
+  --color-green-3: rgba(41, 204, 57, 1);
+  --color-green-5: rgba(1, 68, 59, 1);
+  --color-green-9: rgba(0, 29, 25, 1);
+  --color-text-clr: var(--color-gray-3);
+
+  --color-danger: rgba(255, 102, 51, 1);
+
+  --color-orange-5: rgba(255, 102, 51);
+  --color-yellow-5: rgba(255, 203, 51);
+
+  --color-blue-5: rgba(83, 104, 255, 1);
+  --color-indego-5: rgba(136, 51, 255, 1);
+  --color-sky-5: rgba(51, 191, 255, 1);
+
+  --color-gray-1: rgba(238, 240, 255, 1);
+  --color-gray-2: rgba(134, 144, 156, 1);
+  --color-gray-3: rgba(78, 89, 105, 1);
+  --color-gray-4: rgba(163, 174, 208, 1);
+  --color-gray-5: rgba(248, 250, 252, 1);
+  --color-gray-6: rgba(224, 229, 242, 1);
+  --color-gray-7: rgba(249, 250, 255, 1);
+  --color-gray-8: rgba(138, 169, 165, 1);
+  --color-gray-9: rgba(245, 246, 247, 1);
+
+  --color-blue-1: rgba(238, 240, 255, 1);
+  --color-blue-2: rgba(134, 144, 156, 1);
+  --color-blue-3: rgba(140, 154, 255, 1)
+  --color-blue-4: rgba(163, 174, 208, 1);
+  --color-blue-5: rgba(248, 250, 252, 1);
+  --color-blue-6: rgba(224, 229, 242, 1);
+  --color-blue-7: rgba(249, 250, 255, 1);
+  --color-blue-8: rgba(138, 169, 165, 1);
+  --color-blue-9: rgba(35, 44, 107, 1);
+
+  --radius-lgg: 10px;
+
+  --font-sans: "Mulish", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+@layer base {
+  *:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  *:focus {
+    box-shadow: 0 0 0 2px var(--color-secondary);
+  }
+
+  .sys-focus:focus-visible,
+  .sys-focus:focus-within {
+    box-shadow: 0 0 0 2px var(--color-secondary);
+  }
+
+  .custom-slider::-webkit-slider-thumb {
+    width: 23px;
+    cursor: ew-resize;
+    height: 23px;
+    appearance: none;
+    background-color: var(--color-primary);
+    border-radius: 9rem;
+  }
+
+  * {
+    box-sizing: border-box !important;
+  }
+
+  body {
+    color: var(--color-text-clr);
+    font-family: "Mulish", sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 150%;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  .active-route {
+    @apply bg-secondary text-white rounded-lg cursor-pointer
+  }
+
+  .center-line {
+    position: relative;
+    isolation: isolate;
+
+    & > span {
+      box-shadow: 0 0 0 15px #fff;
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      z-index: -1;
+      background: var(--color-gray-4);
+      top: 50%;
+      left: 50%;
+      display: block;
+      height: 0.5px;
+      transform: translate(-50%, -50%);
+      background-color: rgba(224, 229, 242, 1);
+    }
+  }
+
+  span.required::after {
+    content: "*";
+    color: red;
+    display: inline;
+    margin-top: 5px;
+  }
+  .card-shadow {
+    box-shadow: 0px 18px 40px 0px rgba(112, 144, 176, 0.12);
+  }
+
+  .absolute-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .absolute-top-center {
+    position: absolute;
+    top: 0%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .left-corder-circle {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .left-corder-circle::before {
+    content: "";
+    position: absolute;
+    width: 9rem;
+    height: 9rem;
+    background: #fff2;
+    border-radius: 99999px;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, -50%);
+  }
+}
