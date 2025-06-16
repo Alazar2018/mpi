@@ -52,7 +52,7 @@ export default function MainLayout() {
 
   return l ? (
     <>
-      <div className="p-4 max-w-[1440px] mx-auto flex gap-1 h-full w-full">
+      <div className="p-4 mx-auto flex gap-1 h-full w-full">
         <div
           style={{
             boxShadow: "0px 16px 44px 0px rgba(0, 0, 0, 0.07)",

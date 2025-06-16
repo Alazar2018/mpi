@@ -29,7 +29,7 @@ export default function Login() {
           authStore.setToken(res.data.tokens.accessToken, res.data.tokens.refreshToken)
           localStorage.setItem('user', JSON.stringify(res.data.user))
           localStorage.setItem('tokens', JSON.stringify(res.data.tokens))
-          document.cookie = `refreshToken=${res.data.tokens.refreshToken}`
+          // document.cookie = `refreshToken=${res.data.tokens.refreshToken}`
           navigate('/admin')
 				}
         toast(res.success ? 's' : 'e', 'Successfully Logged in', res.error)
