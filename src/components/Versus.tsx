@@ -15,10 +15,10 @@ export default function Versus({match}: {match: Match}) {
 			</div>
 			<div className="col-span-2 flex-col gap-3 bg-white rounded-2xl p-4 card-shadow flex justify-center items-center" >
 				<span className="text-xs text-gray-2" >{secondDateFormat(match?.date)}</span>
-				<div className="size-8 text-secondary grid place-items-center text-xs font-bold rounded-full bg-green-5" >
+				<div className="size-8 text-white grid place-items-center text-xs font-bold rounded-full bg-secondary" >
 					VS
 				</div>
-				<span className="bg-secondary text-xs px-2 rounded-full" >{formatTime(match?.date)}</span>
+				<span className="bg-green-2 text-xs px-2 rounded-full" >{formatTime(match?.date)}</span>
 			</div>
 			<div className="col-span-3 flex-col gap-3 bg-white rounded-2xl p-4 card-shadow flex justify-center items-center" >
 				<div className="size-10 rounded-full bg-gray-200" ></div>

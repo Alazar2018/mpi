@@ -33,7 +33,7 @@ export default function Matchs() {
           Schedule Match
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-4 max-h-40 overflow-hidden">
+      <div className="grid grid-cols-2 gap-4 overflow-hidden">
         {(pendingMatches || []).map((match: Match, idx: number) => (
           <Versus match={match} key={idx} />
         ))}

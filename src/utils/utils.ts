@@ -1,8 +1,25 @@
 import ApiService from "@/service/ApiService";
 import { toast as T, type ToastOptions } from 'react-hot-toast'
 import type { Match } from "@/interface";
+import { sort } from "fast-sort";
 
 export const required = "This is required";
+
+export function mysort(arr: string[]) {
+  return sort(arr).by({
+    asc: true,
+    comparer: new Intl.Collator(undefined, {  sensitivity: 'base' }).compare,
+  })
+}
+
+function* counterId() {
+  let i = 0;
+  while (true) {
+    yield `generated_id_${i++}`;
+  }
+}
+
+export const genId = counterId();
 
 // Length validations
 export function minLength(value: number, message?: string) {
@@ -10,10 +27,10 @@ export function minLength(value: number, message?: string) {
 }
 
 export function getCookies() {
-  return document.cookie.split('; ').reduce((cookies: {[key: string]: string}, cookie) => {
+  return document.cookie.split('; ').reduce((cookies: { [key: string]: string }, cookie) => {
     cookies[cookie.split('=')[0]] = cookie.split('=')[1]
     return cookies
-}, {})
+  }, {})
 }
 export function maxLength(value: number, message?: string) {
   return { value, message: message ?? `Must be no more than ${value} characters` }
@@ -252,19 +269,27 @@ export function formButton(func: any) {
   };
 }
 
+export function debounce(fn: any, delay = 150) {
+  let tid: number
+  return (...args) => {
+    clearTimeout(tid)
+    tid = setTimeout(() => fn(...args), delay)
+  }
+}
+
 export function getApi(url: string, baseUrl?: string) {
   const api = new ApiService(`${baseUrl ?? import.meta.env.v_API_URL}${url}`);
   return api;
 }
 
-export function secondDateFormat(d: string) {
+export function secondDateFormat(d: string, year: boolean = true) {
   if (!d) return " ";
   try {
     const date = new Date(d);
     const dateFormat = new Intl.DateTimeFormat("en-US", {
       day: "numeric",
       month: "short",
-      year: "numeric",
+      year: year ? "numeric" : undefined,
     }).format(date);
     return dateFormat;
   } catch (err) {

@@ -1,12 +1,34 @@
 import Button from "@/components/Button";
-import { NavLink, Outlet, useLocation, useParams } from "react-router-dom";
+import { useApiRequest } from "@/hooks/useApiRequest";
+import { useEffect } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { getChats } from "./chat.api";
+import { useChatStore } from "./store/chat.store";
 
 export default function Connect() {
 	const local = useLocation();
-	const params = useParams();
+	const chatStore = useChatStore()
+
+	const chatsReq = useApiRequest({
+		cacheKey: 'chats',
+		freshDuration: 1000 * 60 * 60,
+		staleWhileRevalidate: true,
+		maxAge: 1000 * 60 * 60,
+	})
 	
+	useEffect(() => {
+		chatsReq.send(
+			() => getChats(),
+			res => {
+				if(res.success) {
+					chatStore.setChats(res.data?.chats ?? [])
+				}
+			}
+		)
+	}, [])
+
 	return (
-		<div className="flex flex-col gap-4 bg-white rounded-3xl p-4 px-6">
+		<div className="flex flex-col gap-4 bg-white rounded-3xl p-4 px-6 h-[calc(100%-1.7rem)]">
       <div className="flex items-center gap-[2px]">
 				{
 					[
@@ -30,7 +52,7 @@ export default function Connect() {
 							>
 								<Button
 									type={local.pathname == el.to ? "action" : "none"}
-									className={`!rounded-lg !font-normal !px-5 !h-10 ${local.pathname == el.to ? '!bg-green-2 !text-secondary' : ''}`}
+									className={`!rounded-lg !font-normal !px-5 !h-10 ${local.pathname == el.to ? '!bg-secondary !text-white' : ''}`}
 								>
 									{el.name}
 								</Button>
