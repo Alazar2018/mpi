@@ -7,17 +7,46 @@ const addToGroup = (group: MessageGroup, message: Message): MessageGroup => {
 	const year = date.getFullYear().toString();
 	const month = (date.getMonth()).toString().padStart(2, '0');
 	const day = date.getDate().toString().padStart(2, '0');
+	const time = date.getMinutes().toString().padStart(2, '0');
 
+	const daysMessage = group[year]?.[month]?.[day] || {}
+	if (daysMessage && Object.keys(daysMessage).length) {
+		const idx = Object.keys(daysMessage).findIndex(el => {
+			const d = new Date(el)
+			return daysMessage[el].from == message.sender._id && (d.getMonth()).toString().padStart(2, '0') == month && (d.getFullYear()).toString() == year && (d.getDate()).toString().padStart(2, '0') == day && d.getMinutes().toString().padStart(2, '0') == time
+		});
+
+		if (idx != -1 && !(daysMessage[Object.keys(daysMessage)?.[idx + 1]])) {
+			daysMessage[Object.keys(daysMessage)[idx]] = {
+				...daysMessage[Object.keys(daysMessage)[idx]],
+				createdAt: message.createdAt,
+				messages: [...daysMessage[Object.keys(daysMessage)[idx]].messages, message]
+			}
+		} else {
+			daysMessage[date.toISOString()] = {
+				avatar: message.sender.avatar,
+				messages: [message],
+				createdAt: message.createdAt,
+				from: message.sender._id
+			}
+		}
+	} else {
+		daysMessage[date.toISOString()] = {
+			avatar: message.sender.avatar,
+			messages: [message],
+			createdAt: message.createdAt,
+			from: message.sender._id
+		}
+	}
 	const g = {
 		...group,
 		[year]: {
 			...group[year],
 			[month]: {
 				...group[year]?.[month],
-				[day]: [
-					...(group[year]?.[month]?.[day] || []),
-					message
-				]
+				[day]: {
+					...daysMessage,
+				}
 			}
 		}
 	};
@@ -46,7 +75,14 @@ function createMsg(chat: Chat, msg: NewMessage): Message {
 export type MessageGroup = {
 	[year: string]: {
 		[month: string]: {
-			[day: string]: Message[];
+			[day: string]: {
+				[time: string]: {
+					avatar: string,
+					messages: Message[],
+					createdAt: Date,
+					from: string
+				}
+			};
 		};
 	};
 };
@@ -119,7 +155,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 	}),
 	addMessage: (newMessage: NewMessage | Message) => {
 		return set((state) => {
-			console.log(newMessage);
 			const idx = state.chats.findIndex((chat) => chat._id == ('_id' in newMessage ? newMessage.chat._id : newMessage.chatId))
 			if (idx == -1) return state
 			const id = genId.next().value as string
@@ -142,8 +177,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 				...state.chats[idx],
 				messages: addToGroup(state.chats[idx].messages, newMsg as Message)
 			};
-
-			console.log(state.chats[idx].messages);
 			return { ...state };
 		})
 	},

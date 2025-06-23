@@ -46,13 +46,16 @@ export default function DMChat({ chat }: { chat: Chat | null }) {
     if (!message) return;
     const newMsg = chatStore.addMessage({
       chatId: chat?._id as string,
-      content: message,
+      content: message.trim(),
       senderId: authStore.user?._id as string,
     });
 
     console.log(newMsg);
     if (textarea.current && textarea.current?.value) {
       textarea.current.value = "";
+      if(textarea.current?.style && textarea.current.style?.height) {
+        textarea.current.style.height = "24px"
+      }
       textarea.current.focus();
     }
 
@@ -121,7 +124,7 @@ export default function DMChat({ chat }: { chat: Chat | null }) {
                         .sort()
                         .reverse()
                         .map((day) => (
-                          <div key={`${day}_${year}_${month}`}>
+                          <div className="flex flex-col gap-8" key={`${day}_${year}_${month}`}>
                             <div className="sticky w-full text-center top-0">
                               <StickyDate
                                 date={secondDateFormat(
@@ -134,11 +137,27 @@ export default function DMChat({ chat }: { chat: Chat | null }) {
                                 )}
                               />
                             </div>
-                            {months[month][day].map((el) => {
-                              return <p key={el.id}>
-                                {el.content}
-                                </p>;
-                            })}
+                            {Object.keys(months[month][day]).sort().map(
+                              (time) => {
+                                const message = months[month][day][time]
+                                return (
+                                  <div key={time} className={`flex items-end gap-4 ${getChatWith()?._id == message.from ? 'justify-start' : 'justify-end'}`} >
+                                    <div className={`w-10 h-[37px] rounded overflow-hidden self-end ${getChatWith()?._id == message.from ? 'order-2' : 'order-3'}`} >
+                                      <img src={message.avatar} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className={`${getChatWith()?._id == message.from ? 'order-3' : 'order-2'} flex flex-col gap-2.5`} >
+                                      {message.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((el) => {
+                                        return (
+                                          <div key={el.id} className={`${getChatWith()?._id == message.from ? "bg-gray-7 rounded-tl-none":"bg-secondary text-white rounded-tr-none"} rounded-2xl py-2 px-3 bg-gray-7 border border-gray-2/20`} >
+                                            <p className="font-medium text-sm whitespace-pre" >{el.content}</p>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            )}
                           </div>
                         ))}
                     </>
