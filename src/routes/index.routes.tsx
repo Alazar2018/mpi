@@ -19,6 +19,7 @@ import PlayerMatches from "../features/players/player_matches.tsx";
 import PlayerGoals from "../features/players/player_goals.tsx";
 import Connect from "../features/connect/connect.tsx";
 import Messages from "../features/connect/messages.tsx";
+import MatchDetail from "@/features/matchs/match_detail.tsx";
 
 export const routes = createBrowserRouter([
 	{ path: "/", element: <App /> },
@@ -70,6 +71,10 @@ export const routes = createBrowserRouter([
 			{
 				path: "matchs/schedule",
 				element: <MatchSchedule />,
+			},
+			{
+				path: "matchs/detail/:matchId",
+				element: <MatchDetail />,
 			},
 			{
 				path: "players",

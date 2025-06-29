@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -46,7 +47,9 @@
 
   --font-sans: "Mulish", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
+  --font-gor: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+} 
 
 html,
 body,
@@ -97,6 +100,34 @@ body,
 }
 
 @layer utilities {
+  .skewed-bg {
+    isolation: isolate;
+    position: relative;
+  }
+
+  .skewed-bg::before {
+    content: '';
+    position: absolute;
+    width: 53%;
+    height: 100%;
+    top: 0;
+    right: 15px;
+    background-color: var(--color-secondary);
+  }
+
+  .skewed-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 50%;
+    background-color: var(--color-green-2);
+    transform: skew(-30deg);
+  }
+
+
+
   .active-route {
     @apply bg-secondary text-white rounded-lg cursor-pointer
   }
