@@ -15,7 +15,8 @@
   --color-text-clr: var(--color-gray-3);
 
   --color-danger: rgba(255, 102, 51, 1);
-
+  --color-reminder: rgba(255, 102, 51, 1);
+  
   --color-orange-5: rgba(255, 102, 51);
   --color-yellow-5: rgba(255, 203, 51);
 
@@ -42,6 +43,10 @@
   --color-blue-7: rgba(249, 250, 255, 1);
   --color-blue-8: rgba(138, 169, 165, 1);
   --color-blue-9: rgba(35, 44, 107, 1);
+
+  --color-blue-10: rgba(202, 208, 255, 1);
+  --color-blue-20: rgba(176, 186, 255, 1);
+  --color-blue-90: rgba(35, 44, 107, 1);
 
   --radius-lgg: 10px;
 
@@ -88,7 +93,7 @@ body,
 
   body {
     color: var(--color-text-clr);
-    font-family: "Mulish", sans-serif;
+    font-family: var(--font-gor);
     font-size: 16px;
     font-weight: 400;
     line-height: 150%;

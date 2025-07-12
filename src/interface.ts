@@ -75,13 +75,14 @@ export interface Match {
   };
   matchType: string;
   matchCategory: string;
-  status: "pending" | "completed" | string;
+  status: "pending" | "completed" | "in_progress" | string;
   totalGameTime: number;
   tieBreakRule: number;
   indoor: boolean;
   courtSurface: string;
   note: string;
   date: string;
+  startTime?: string; // ISO date string when the match was started
   p1Status: string;
   p2Status: string;
   winner: string | null;

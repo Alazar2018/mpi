@@ -20,6 +20,8 @@ import PlayerGoals from "../features/players/player_goals.tsx";
 import Connect from "../features/connect/connect.tsx";
 import Messages from "../features/connect/messages.tsx";
 import MatchDetail from "@/features/matchs/match_detail.tsx";
+import MatchTracker from "@/features/matchs/match_tracker.tsx";
+import Match from "@/features/matchs/match.tsx";
 
 export const routes = createBrowserRouter([
 	{ path: "/", element: <App /> },
@@ -75,6 +77,16 @@ export const routes = createBrowserRouter([
 			{
 				path: "matchs/detail/:matchId",
 				element: <MatchDetail />,
+				children: [
+					{
+						path: '',
+						element: <Match />
+					},
+					{
+						path: "tracking",
+						element: <MatchTracker />,
+					},
+				]
 			},
 			{
 				path: "players",

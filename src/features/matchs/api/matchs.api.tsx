@@ -8,3 +8,7 @@ export function getAllMatchs(query = {}) {
 		params: query
 	})
 }
+
+export function getMatchById(matchId: string) {
+	return api.addAuthenticationHeader().get<Match>(`/${matchId}`)
+}

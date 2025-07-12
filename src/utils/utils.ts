@@ -36,6 +36,25 @@ export function maxLength(value: number, message?: string) {
   return { value, message: message ?? `Must be no more than ${value} characters` }
 }
 
+export function formatDateToYYMMDD(date: string, includeTime = false) {
+  if (!date) return undefined;
+  
+  const d = new Date(date);
+
+  const year = d.getFullYear().toString();
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  
+  if (!includeTime) {
+    return `${year}-${month}-${day}`;
+  }
+  
+  const hours = d.getHours().toString().padStart(2, "0");
+  const minutes = d.getMinutes().toString().padStart(2, "0");
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 // Name validations
 export function validateName(value: string) {
   // Check basic pattern (letters, spaces, and at most one special character)
