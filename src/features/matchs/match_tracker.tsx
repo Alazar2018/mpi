@@ -9,6 +9,12 @@ import { useMatchTrackerStore } from "./store/match_tracker.store";
 import FocusTrap from "@/components/FocusTrap";
 import TimeCounter from "@/components/TimeCounter";
 
+type RallyResult =
+  | "Winner"
+  | "Return Play"
+  | "Forced Error"
+  | "Unforced Error"
+  | "Double Bounce";
 type ServeResult =
   | "Ace"
   | "Serve In - Return Out (forced)"
@@ -33,8 +39,10 @@ type ShotType =
   | "Backhand Drop Shot";
 
 function ServeResult({
+  type = "Serve",
   onSelect,
 }: {
+  type: "Serve" | "Rally";
   onSelect: (result: ServeResult | null) => void;
 }) {
   return (
@@ -49,81 +57,398 @@ function ServeResult({
         }}
         className="*:flex p-2 *:p-2 *:justify-center *:items-center gap-2 *:bg-white  grid grid-cols-2 grid-rows-4"
       >
-        <div data-value="Ace" tabIndex={0}>
-          Ace
-        </div>
-        <div data-value="Serve In - Return Out (forced)" tabIndex={0}>
-          Serve In - Return Out (forced)
-        </div>
-        <div data-value="Serve In - Return Play" tabIndex={0}>
-          Serve In - Return Play
-        </div>
-        <div data-value="First Serve Fault" tabIndex={0}>
-          First Serve Fault
-        </div>
-        <div data-value="Double Fault" tabIndex={0}>
-          Double Fault
-        </div>
-        <div data-value="Let" tabIndex={0}>
-          Let
-        </div>
-        <div data-value="Foot Fault" tabIndex={0}>
-          Foot Fault
-        </div>
+        {type == "Serve" && (
+          <>
+            <div data-value="Ace" tabIndex={0}>
+              Ace
+            </div>
+            <div data-value="Serve In - Return Play" tabIndex={0}>
+              Serve In - Return Play
+            </div>
+            <div data-value="First Serve Fault" tabIndex={0}>
+              First Serve Fault
+            </div>
+            <div data-value="Serve In - Return Out (forced)" tabIndex={0}>
+              Serve In - Return Out (forced)
+            </div>
+            <div data-value="Double Fault" tabIndex={0}>
+              Double Fault
+            </div>
+            <div data-value="Let" tabIndex={0}>
+              Let
+            </div>
+            <div data-value="Foot Fault" tabIndex={0}>
+              Foot Fault
+            </div>
+          </>
+        )}
+        {type == "Rally" && (
+          <>
+            <div data-value="Winner" tabIndex={0}>
+              Winner
+            </div>
+            <div data-value="Return Play" tabIndex={0}>
+              Return Play
+            </div>
+            <div data-value="Forced Error" tabIndex={0}>
+              Forced Error
+            </div>
+            <div data-value="Unforced Error" tabIndex={0}>
+              Unforced Error
+            </div>
+            <div data-value="Double Bounce" tabIndex={0}>
+              Double Bounce
+            </div>
+          </>
+        )}
       </div>
     </FocusTrap>
   );
 }
 
-function ShotPlacement() {
+function ShotPlacement({
+  type,
+  onSelect,
+}: {
+  type: "Bad" | "Good";
+  onSelect: (result: GoodShotPlacement | BadShotPlacement | null) => void;
+}) {
   return (
-    <div className="flex flex-col p-2 h-full overflow-y-auto gap-2 absolute inset-0 rounded-md !bg-white">
+    <div
+      onClick={(ev: React.MouseEvent<HTMLDivElement>) => {
+        const val = (ev.target as HTMLDivElement)?.dataset?.value as
+          | GoodShotPlacement
+          | BadShotPlacement;
+        if (val) {
+          onSelect?.(val);
+        }
+      }}
+      className="flex flex-col p-2 h-full overflow-y-auto gap-2 absolute inset-0 rounded-md !bg-white"
+    >
       <span>Shot Placement</span>
       <FocusTrap className="*:flex p-2 *:p-2 *:justify-center border border-gray-1 rounded-md *:items-center gap-2 *:bg-gray-1  grid grid-cols-2 grid-rows-4">
-        <div tabIndex={0}>Down The Line</div>
-        <div tabIndex={0}>Cross Court</div>
-        <div tabIndex={0}>Drop Shot</div>
+        {type == "Good" && (
+          <>
+            <div data-value="Down The Line" tabIndex={0}>
+              Down The Line
+            </div>
+            <div data-value="Cross Court" tabIndex={0}>
+              Cross Court
+            </div>
+            <div data-value="Drop Shot" tabIndex={0}>
+              Drop Shot
+            </div>
+          </>
+        )}
+        {type == "Bad" && (
+          <>
+            <div data-value="Net" tabIndex={0}>
+              Net
+            </div>
+            <div data-value="Wide" tabIndex={0}>
+              Wide
+            </div>
+            <div data-value="Long" tabIndex={0}>
+              Long
+            </div>
+          </>
+        )}
       </FocusTrap>
     </div>
   );
 }
 
-function ShotType() {
+function ShotType({
+  onSelect,
+}: {
+  onSelect: (result: ShotType | null) => void;
+}) {
   return (
-    <div className="flex flex-col p-2 gap-2 absolute inset-0 rounded-md !bg-white">
+    <div
+      onClick={(ev: React.MouseEvent<HTMLDivElement>) => {
+        const val = (ev.target as HTMLDivElement)?.dataset?.value as ShotType;
+        if (val) {
+          onSelect?.(val);
+        }
+      }}
+      className="flex flex-col p-2 gap-2 absolute inset-0 rounded-md !bg-white"
+    >
       <span>Shot Type</span>
       <FocusTrap className="max-h-max border border-gray-1 rounded-md *:flex p-2 *:h-10 *:bg-gray-1 *:justify-center *:items-center gap-2 grid grid-cols-2 grid-rows-6">
-        <div tabIndex={0}>Forehand</div>
-        <div tabIndex={0}>Backhand</div>
-        <div tabIndex={0}>Forhand Volley</div>
-        <div tabIndex={0}>Backhand Volley</div>
-        <div tabIndex={0}>Forhand Swinging Volley</div>
-        <div tabIndex={0}>Backhand Swinging Volley</div>
-        <div tabIndex={0}>Forhand Slice</div>
-        <div tabIndex={0}>Backhand Slice</div>
-        <div tabIndex={0}>OverHead</div>
-        <div tabIndex={0}>Forhand Drop Shot</div>
-        <div tabIndex={0}>Backhand Drop Shot</div>
+        <div data-value="Forehand" tabIndex={0}>
+          Forehand
+        </div>
+        <div data-value="Backhand" tabIndex={0}>
+          Backhand
+        </div>
+        <div data-value="Forhand Volley" tabIndex={0}>
+          Forhand Volley
+        </div>
+        <div data-value="Backhand Volley" tabIndex={0}>
+          Backhand Volley
+        </div>
+        <div data-value="Forhand Swinging Volley" tabIndex={0}>
+          Forhand Swinging Volley
+        </div>
+        <div data-value="Backhand Swinging Volley" tabIndex={0}>
+          Backhand Swinging Volley
+        </div>
+        <div data-value="Forhand Slice" tabIndex={0}>
+          Forhand Slice
+        </div>
+        <div data-value="Backhand Slice" tabIndex={0}>
+          Backhand Slice
+        </div>
+        <div data-value="OverHead" tabIndex={0}>
+          OverHead
+        </div>
+        <div data-value="Forhand Drop Shot" tabIndex={0}>
+          Forhand Drop Shot
+        </div>
+        <div data-value="Backhand Drop Shot" tabIndex={0}>
+          Backhand Drop Shot
+        </div>
       </FocusTrap>
     </div>
   );
 }
 
-function Tracking() {
-  const [result, setResult] = useState({
+type Rally = {
+  shotType: string;
+  shotPlacement: string;
+  rally: number;
+  returnOutcome: RallyResult | null;
+};
+
+type Result = {
+  serveOutCome: string;
+  player1Reaction: string;
+  player2Reaction: string;
+  rallys: Rally[];
+  setRally: (key: keyof Rally, value: string) => void;
+  setResult: (key: keyof Result, value: string) => void;
+};
+
+function Tracking({
+  tracker,
+}: {
+  tracker: (result: Result & { rally: Rally }) => React.ReactNode;
+}) {
+  const [result, setResult] = useState<Result>({
     serveOutCome: "",
-    shotType: "",
-    shotPlacement: "",
     player1Reaction: "",
     player2Reaction: "",
-    rally: "",
+    rallys: [
+      {
+        shotType: "",
+        shotPlacement: "",
+        rally: 0,
+        returnOutcome: null,
+      },
+    ],
+    setResult: (key: keyof Result, value: string) => {
+      console.log(key, value);
+      setResult({
+        ...result,
+        [key]: value,
+      });
+    },
+    setRally(key: keyof Rally, value: string) {
+      setResult({
+        ...result,
+        rallys: [
+          ...result.rallys,
+          {
+            ...result.rallys[result.rallys.length - 1],
+            [key]: value,
+          },
+        ],
+      });
+    },
   });
+
+  const thisRally = result.rallys[result.rallys.length - 1];
+
+  return tracker({ ...result, rally: thisRally });
+}
+
+type Point = {
+  serveOutCome: ServeResult | null;
+  winner: string;
+  firstServeFault: boolean;
+  doubleFault: boolean;
+  let: boolean;
+  footFault: boolean;
+  rallys: Rally[];
+};
+
+function Progress({ setPoint, players }: { players: {player1: string, player2: string}, setPoint: (point: Point) => void }) {
+  const [active, setActive] = useState<
+    "serveOutCome" | "shotType" | "shotPlacement"
+  >("serveOutCome");
+  const [result, setResult] = useState<Point>({
+    serveOutCome: null,
+    winner: "",
+    firstServeFault: false,
+    doubleFault: false,
+    let: false,
+    footFault: false,
+    rallys: [],
+  });
+
+  useEffect(() => {
+    setResult({
+      serveOutCome: null,
+      winner: "",
+      firstServeFault: false,
+      doubleFault: false,
+      let: false,
+      footFault: false,
+      rallys: [],
+    })
+  }, [players])
+
+  function selectServeResult(res: ServeResult | RallyResult | null) {
+    if (!result.serveOutCome) {
+      setResult({
+        ...result,
+        serveOutCome: res as ServeResult,
+      });
+    } else {
+      setResult({
+        ...result,
+        rallys: [
+          ...result.rallys,
+          {
+            returnOutcome: res as RallyResult,
+            shotType: "",
+            shotPlacement: "",
+            rally: 0,
+          },
+        ],
+      });
+    }
+
+    if (
+      ["First Serve Fault", "Double Fault", "Let", "Foot Fault"].includes(
+        res as string
+      )
+    ) {
+      setResult({
+        ...result,
+        firstServeFault: res == "First Serve Fault",
+        doubleFault: res == "Double Fault",
+        let: res == "Let",
+        footFault: res == "Foot Fault",
+      });
+    } else if (
+      result.rallys?.[result.rallys.length - 1]?.returnOutcome &&
+      result.rallys[result.rallys.length - 1].returnOutcome != "Return Play"
+    ) {
+      setResult({
+        ...result,
+        winner: result.rallys.length % 2 == 0 ? players.player1 : players.player2
+      });
+      setPoint({
+        ...result,
+        winner: result.rallys.length % 2 == 0 ? players.player1 : players.player2
+      });
+    }
+
+    if (res == "Serve In - Return Play" || res == "Return Play") {
+      setActive("shotType");
+    } else if ("Ace" == (res as string)) {
+      setPoint({
+        ...result,
+        winner: players.player1
+      });
+    } else if (res == "Double Bounce") {
+      setPoint({
+        ...result,
+        winner: result.rallys.length % 2 == 0 ? players.player1 : players.player2
+      });
+    }
+  }
+
+  function setShotType(res: ShotType | null) {
+    console.log(res);
+    if (result.rallys.length > 0) {
+      result.rallys.splice(result.rallys.length - 1, 1, {
+        ...result.rallys[result.rallys.length - 1],
+        shotType: res as string,
+      });
+
+      setResult(result);
+    } else {
+      setResult({
+        ...result,
+        rallys: [
+          ...result.rallys,
+          {
+            shotType: res as string,
+            shotPlacement: "",
+            rally: 0,
+            returnOutcome: null,
+          },
+        ],
+      });
+    }
+    setActive("shotPlacement");
+  }
+
+  function setShotPlacement(res: GoodShotPlacement | BadShotPlacement | null) {
+    if (result.rallys.length > 0) {
+      result.rallys.splice(result.rallys.length - 1, 1, {
+        ...result.rallys[result.rallys.length - 1],
+        shotPlacement: res as string,
+      });
+      setResult(result);
+    } else {
+      setResult({
+        ...result,
+        rallys: [
+          ...result.rallys,
+          {
+            shotPlacement: res as string,
+            shotType: "",
+            rally: 0,
+            returnOutcome: null,
+          },
+        ],
+      });
+    }
+    setActive("serveOutCome");
+  }
+
+  return (
+    <>
+      {active == "serveOutCome" && (
+        <ServeResult
+          type={!result.serveOutCome ? "Serve" : "Rally"}
+          onSelect={selectServeResult}
+        />
+      )}
+      {active == "shotType" && <ShotType onSelect={setShotType} />}
+      {active == "shotPlacement" && (
+        <ShotPlacement
+          onSelect={setShotPlacement}
+          type={
+            [
+              result.serveOutCome ||
+                result.rallys[result.rallys.length - 1].returnOutcome,
+            ].includes("Serve In - Return Play")
+              ? "Good"
+              : "Bad"
+          }
+        />
+      )}
+    </>
+  );
 }
 
 export default function MatchTracker() {
   const params = useParams<{ matchId: string }>();
   const matchTrackerStore = useMatchTrackerStore();
-  const [rally, setRally] = useState(0);
   const [matchStartTime, setMatchStartTime] = useState<number | null>(null);
 
   const matchesReq = useApiRequest<Match>({
@@ -232,7 +557,6 @@ export default function MatchTracker() {
             <button className="">Redo</button>
           </div>
           <div>
-            {rally > 1 && <span>{rally}</span>}
             <TimeCounter
               isRunning={!!matchTrackerStore.serving}
               className="mr-4"
@@ -312,7 +636,23 @@ export default function MatchTracker() {
           <div className="relative grid gap-2 *:bg-green-1 grid-cols-2 grid-rows-[50px_1fr_50px]">
             {matchTrackerStore.serving ===
               (matchesReq.response?.p2?._id || matchesReq.response?.p2Name) && (
-              <ServeResult onSelect={(result) => console.log(result)} />
+              <Tracking
+                tracker={(result) => {
+                  return (
+                    <>
+                      <Progress
+                        players={{
+                          player1: (matchTrackerStore.serving == (matchesReq.response?.p2?._id || matchesReq.response?.p2Name) ? (matchesReq.response?.p2?._id || matchesReq.response?.p2Name) : matchesReq.response?.p1?._id) as string,
+                          player2: (matchTrackerStore.serving != (matchesReq.response?.p2?._id || matchesReq.response?.p2Name) ? (matchesReq.response?.p2?._id || matchesReq.response?.p2Name) : matchesReq.response?.p1?._id) as string,
+                        }}
+                        setPoint={(point) => {
+                          console.log(point);
+                        }}
+                      />
+                    </>
+                  );
+                }}
+              />
             )}
             <div className="col-span-2"></div>
             <div></div>
