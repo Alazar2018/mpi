@@ -290,7 +290,7 @@ export function formButton(func: any) {
 
 export function debounce(fn: any, delay = 150) {
   let tid: number
-  return (...args) => {
+  return (...args: any[]) => {
     clearTimeout(tid)
     tid = setTimeout(() => fn(...args), delay)
   }

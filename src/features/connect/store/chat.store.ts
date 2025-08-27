@@ -1,4 +1,5 @@
 import type { User } from "@/store/auth.store";
+import type { Chat as ChatServiceChat, ChatUser } from "@/service/chat.server";
 import { genId } from "@/utils/utils";
 import { create } from "zustand";
 
@@ -24,7 +25,7 @@ const addToGroup = (group: MessageGroup, message: Message): MessageGroup => {
 			}
 		} else {
 			daysMessage[date.toISOString()] = {
-				avatar: message.sender.avatar,
+				avatar: message.sender.avatar || '',
 				messages: [message],
 				createdAt: message.createdAt,
 				from: message.sender._id
@@ -32,7 +33,7 @@ const addToGroup = (group: MessageGroup, message: Message): MessageGroup => {
 		}
 	} else {
 		daysMessage[date.toISOString()] = {
-			avatar: message.sender.avatar,
+			avatar: message.sender.avatar || '',
 			messages: [message],
 			createdAt: message.createdAt,
 			from: message.sender._id
@@ -61,8 +62,8 @@ function createMsg(chat: Chat, msg: NewMessage): Message {
 		content: msg.content,
 		isGroup: chat.isGroupChat,
 		sender: chat.users.find((user) => user._id == msg.senderId) as User,
-		createdAt: new Date(chat.latestMessageTimeStamp),
-		updatedAt: new Date(chat.latestMessageTimeStamp),
+		createdAt: new Date(chat.latestMessageTimeStamp || new Date().toISOString()),
+		updatedAt: new Date(chat.latestMessageTimeStamp || new Date().toISOString()),
 		chat: chat,
 		image: "",
 		isRead: false,
@@ -99,7 +100,19 @@ export type Chat = {
 	latestMessageSenderId: string,
 	latestMessageTimeStamp: string,
 	_id: string,
-	messages: MessageGroup
+	messages: MessageGroup,
+	// Additional properties from chat service
+	photo?: string,
+	unreadCount: number,
+	isArchived: boolean,
+	isPinned: boolean,
+	isMuted: boolean,
+	lastReadAt?: string,
+	groupAdmin?: {
+		_id: string;
+		firstName: string;
+		lastName: string;
+	};
 }
 
 export type Message = {
@@ -119,12 +132,16 @@ export type Message = {
 
 type ChatStore = {
 	chats: Chat[];
+	selectedChat: Chat | null;
 	typing: Set<string>,
 	online: Set<string>,
 	addChat: (chat: Chat) => void,
 	setChats: (chat: Chat[]) => void;
+	setSelectedChat: (chat: Chat | null) => void;
 	addMessage: (newMessage: NewMessage | Message) => void,
 	addMessages: (newMessages: { chatId: string, messages: Message[] }) => void;
+	updateMessageReadStatus: (messageId: string, chatId: string, isRead: boolean) => void;
+	markAllMessagesAsRead: (chatId: string) => void;
 	setTyping: (typing: Set<string>) => void;
 	setOnline: (typing: Set<string>) => void;
 	getChatWith: (userId: string) => Chat | null;
@@ -138,26 +155,24 @@ type NewMessage = {
 
 export const useChatStore = create<ChatStore>((set, get) => ({
 	chats: [],
+	selectedChat: null,
 	typing: new Set<string>(),
 	online: new Set<string>(),
 	setChats: (chat: Chat[]) => set((state) => {
 		return ({
-			...state, chats: chat.map((el) => {
-				return {
-					...el,
-					messages: {}
-				}
-			})
+			...state, chats: chat
 		})
 	}),
 	addChat: (chat: Chat) => set((state) => {
-		return ({ ...state, chat: [...state.chats, chat] })
+		return ({ ...state, chats: [...state.chats, chat] })
 	}),
 	addMessage: (newMessage: NewMessage | Message) => {
 		return set((state) => {
-			const idx = state.chats.findIndex((chat) => chat._id == ('_id' in newMessage ? newMessage.chat._id : newMessage.chatId))
-			if (idx == -1) return state
-			const id = genId.next().value as string
+			const chatId = '_id' in newMessage ? newMessage.chat._id : newMessage.chatId;
+			const idx = state.chats.findIndex((chat) => chat._id === chatId);
+			if (idx == -1) return state;
+			
+			const id = genId.next().value as string;
 			const newMsg = ('_id' in newMessage) ? newMessage : {
 				_id: id,
 				content: newMessage.content,
@@ -171,13 +186,25 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 				readBy: [],
 				receivers: [],
 				id: id
-			}
-
-			state.chats[idx] = {
-				...state.chats[idx],
-				messages: addToGroup(state.chats[idx].messages, newMsg as Message)
 			};
-			return { ...state };
+
+			// Update the chat with the new message
+			const updatedChat = {
+				...state.chats[idx],
+				messages: addToGroup(state.chats[idx].messages, newMsg as Message),
+				latestMessage: newMsg.content,
+				latestMessageContent: newMsg.content,
+				latestMessageSenderId: newMsg.sender._id,
+				latestMessageTimeStamp: newMsg.createdAt.toISOString(),
+				unreadCount: state.chats[idx].unreadCount + 1
+			};
+
+			return {
+				...state,
+				chats: state.chats.map((chat, index) => 
+					index === idx ? updatedChat : chat
+				)
+			};
 		})
 	},
 	addMessages: (newMessages: { chatId: string, messages: Message[] }) => {
@@ -198,5 +225,40 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 	},
 	setOnline: (online: Set<string>) => set((state) => ({ ...state, online })),
 	setTyping: (typing: Set<string>) => set((state) => ({ ...state, typing })),
+	setSelectedChat: (chat: Chat | null) => set((state) => ({ ...state, selectedChat: chat })),
+	updateMessageReadStatus: (messageId: string, chatId: string, isRead: boolean) => set((state) => {
+		const chatIndex = state.chats.findIndex((chat) => chat._id === chatId);
+		if (chatIndex === -1) return state;
+		
+		// Update the message read status in the chat's messages
+		const updatedChat = { ...state.chats[chatIndex] };
+		// Note: This is a simplified update - you may need to adjust based on your message structure
+		// The actual implementation depends on how messages are stored in your chat structure
+		
+		return {
+			...state,
+			chats: state.chats.map((chat, index) => 
+				index === chatIndex ? updatedChat : chat
+			)
+		};
+	}),
+	markAllMessagesAsRead: (chatId: string) => set((state) => {
+		const chatIndex = state.chats.findIndex((chat) => chat._id === chatId);
+		if (chatIndex === -1) return state;
+		
+		// Mark all messages as read and reset unread count
+		const updatedChat = {
+			...state.chats[chatIndex],
+			unreadCount: 0,
+			lastReadAt: new Date().toISOString()
+		};
+		
+		return {
+			...state,
+			chats: state.chats.map((chat, index) => 
+				index === chatIndex ? updatedChat : chat
+			)
+		};
+	}),
 	getChatWith: (userId: string) => get().chats.find((chat) => chat.users.some((user) => user._id == userId)) || null,
 }));

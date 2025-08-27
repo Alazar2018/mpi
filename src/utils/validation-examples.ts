@@ -4,7 +4,6 @@
 
 import {
   required,
-  minLength,
   maxLength,
   validateFirstName,
   validateLastName,

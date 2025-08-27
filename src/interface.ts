@@ -1,4 +1,4 @@
-import type { Role, User } from "./store/auth.store";
+import type { User } from "./store/auth.store";
 
 interface Action {
   description: string;
@@ -215,45 +215,82 @@ export interface MatchSet {
   p2SetReport: SetReport;
   _id: string;
 }
-export enum Status {
-  ACTIVE = "ACTIVE",
-  PENDING = "PENDING",
-  SUSPENDED = "SUSPENDED",
-}
+export const Status = {
+  ACTIVE: "ACTIVE",
+  PENDING: "PENDING",
+  SUSPENDED: "SUSPENDED",
+} as const;
 
-export enum PaymentStatus {
-  REQUESTED = "Requested",
-  PROCESSED = "Processed",
-  CHECKED = "Checked",
-  APPROVED = "Approved",
-  AUTHORIZED = "Authorized",
-}
+export const PaymentStatus = {
+  REQUESTED: "Requested",
+  PROCESSED: "Processed",
+  CHECKED: "Checked",
+  APPROVED: "Approved",
+  AUTHORIZED: "Authorized",
+} as const;
 
 export type Query = Record<string, any>;
 
-type Gender = {
-  Male: "Male";
-  Female: "Female";
-};
+
 
 export interface LoginPayload {
   email: string;
   password: string;
+  deviceInfo?: {
+    deviceId: string;
+    deviceName: string;
+    platform: string;
+    userAgent: string;
+    ipAddress?: string;
+  };
 }
 
 export interface LoginResponse {
-  user: User;
-  tokens: { accessToken: string; refreshToken: string };
+  status: string;
+  message: string;
+  data: {
+    user: User;
+    tokens: { accessToken: string; refreshToken: string };
+    session: {
+      sessionId: string; // API returns sessionId, not _id
+      deviceInfo: {
+        deviceId: string;
+        platform: string;
+        userAgent: string;
+      };
+      expiresAt: string;
+    };
+    nextStep: string;
+  };
+}
+
+export interface Session {
+  _id: string;
+  deviceInfo: {
+    deviceId: string;
+    platform: string;
+    userAgent: string;
+  };
+  createdAt: string;
+  expiresAt: string;
+  isActive: boolean;
+  createdBy: string;
+}
+
+export interface SessionsResponse {
+  status: string;
+  message: string;
+  data: {
+    sessions: Session[];
+  };
 }
 
 export interface RegisterPayload {
   email: string;
-  otp: string;
-  role: Role;
+  password: string;
   firstName: string;
   lastName: string;
-  password: string;
-  avatar?: File | string | null;
+  role: string;
   dateOfBirth: string;
   gender: string;
   phoneNumber: string;
@@ -263,4 +300,9 @@ export interface RegisterPayload {
   stateProvince: string;
   country: string;
   zipCode: string;
+  deviceInfo?: {
+    deviceId: string;
+    deviceName: string;
+    platform: string;
+  };
 }

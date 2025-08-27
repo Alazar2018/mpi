@@ -1,8 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import Button from "@components/Button.tsx";
-import icons from "@utils/icons.ts";
-import { useAuthStore } from "@/store/auth.store.ts";
+import Button from "@/components/Button";
+import icons from "@/utils/icons";
+import { useAuthStore } from "@/store/auth.store";
+
+interface Player {
+    id: string;
+    name: string;
+    avatar: string;
+}
 
 const courtTypes = ["Hard", "Clay", "Grass", "Artificial Grass", "Carpet"];
 const matchCategories = ["Friendly", "Tournament", "League", "Practice", "Exhibition"];
@@ -25,13 +31,18 @@ export default function ScheduleMatch() {
         notes: ""
     });
 
-    // Dummy players data - in a real app, this would come from your API
-    const players = [
-        { id: "1", name: "Alex Morgan", avatar: "https://randomuser.me/api/portraits/women/33.jpg" },
-        { id: "2", name: "Jamie Smith", avatar: "https://randomuser.me/api/portraits/men/45.jpg" },
-        { id: "3", name: "Taylor Swift", avatar: "https://randomuser.me/api/portraits/women/22.jpg" },
-        { id: "4", name: "Chris Evans", avatar: "https://randomuser.me/api/portraits/men/65.jpg" },
-    ];
+    // TODO: Replace with actual API call to fetch players
+    const [players, setPlayers] = useState<Player[]>([]);
+    const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
+
+    useEffect(() => {
+        // Simulate API loading - replace with actual API call
+        setTimeout(() => {
+            setIsLoadingPlayers(false);
+            // In the future, replace this with actual API call
+            // fetchPlayers().then(setPlayers);
+        }, 1000);
+    }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;

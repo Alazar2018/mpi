@@ -1,6 +1,4 @@
-import { Outlet, useNavigation } from "react-router";
-import { OutletOnly } from "../home";
-import icons from "@/utils/icons";
+import { Outlet } from "react-router";
 
 export default function MatchIndex() {
 		return(

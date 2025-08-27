@@ -207,7 +207,7 @@ export default function MatchSchedule() {
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: 24 }).map((el, hour) => {
+            {Array.from({ length: 24 }).map((_, hour) => {
               return (
                 <tr key={hour} className="h-12 *:border *:border-gray-9">
                   <td className="flex h-20">

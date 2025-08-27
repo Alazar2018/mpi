@@ -1,84 +1,189 @@
-import { create } from 'zustand'
+import { create } from 'zustand';
 
-export type Role = "player" | "coach" | "parent";
+
 
 export interface EmailAddress {
   email: string;
   verified: boolean;
 }
 
-export interface PhoneNumber {
-  countryCode: string;
-  number: string;
-}
-
-export interface Address {
-  streetAddress: string;
-  streetAddress2: string;
-  city: string;
-  stateProvince: string;
-  country: string;
-  zipCode: string;
-}
-
-export interface NotificationSettings {
-  enabled: boolean;
-  notificationType: string[];
-  notificationFrequency: string;
-}
-
-
 export interface NotificationPreference {
-  emailNotification: NotificationSettings;
-  pushNotification: NotificationSettings;
+  emailNotification: {
+    enabled: boolean;
+  };
+  pushNotification: {
+    enabled: boolean;
+  };
 }
 
 export interface User {
   _id: string;
-  isRegistrationComplete: boolean;
-  hasOtp: boolean;
-  badge: number;
   firstName: string;
   lastName: string;
-  emailAddress: EmailAddress;
-  dateOfBirth: string;
-  gender: string;
-  phoneNumber: PhoneNumber;
-  address: Address;
-  isProfilePublic: boolean;
-  notificationPreference: NotificationPreference;
-  avatar: string;
-  role: Role;
-  googleId: string;
-  lastOnline: string;
-  provider: string;
-  __t: string;
-  children: string[];
-  id: string;
+  email?: string; // Add direct email field
+  role: string;
+  registrationStep?: string;
+  nextStep?: string; // Add nextStep from login response
+  marketplaceProfile?: Record<string, any>;
+  avatar?: string;
+  emailAddress?: EmailAddress; // Keep for backward compatibility
+  isRegistrationComplete?: boolean;
+  notificationPreference?: NotificationPreference;
+}
+
+export interface Tokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface Session {
+  sessionId: string;
+  expiresAt: string;
+  deviceInfo: {
+    deviceId: string;
+    platform: string;
+    userAgent: string;
+  };
 }
 
 interface AuthState {
-  otp: string | null,
-  email: string | null;
   user: User | null;
-	accessToken: string | null;
-  refreshToken: string | null;
-  setEmail: (email: string) => void;
-  setOtp: (otp: string) => void;
+  tokens: Tokens | null;
+  session: Session | null;
+  isHydrated: boolean; // Add hydration state
+  get accessToken(): string | null;
+  get role(): string | null; // Keep the getter for backward compatibility
+  getRole: () => string | null; // Function version
   setUser: (user: User) => void;
+  setTokens: (tokens: Tokens) => void;
   setToken: (accessToken: string, refreshToken: string) => void;
+  setSession: (session: Session) => void;
+  clearAuth: () => void;
   clearUser: () => void;
+  // Debug function to get current state
+  getState: () => AuthState;
+  // Function to mark as hydrated
+  setHydrated: (hydrated: boolean) => void;
+  // Function to load from localStorage
+  loadFromStorage: () => boolean;
+  // Function to refresh user data from server
+  refreshUser: () => Promise<void>;
+  setAvatar: (avatar: string) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  email: null,
-  otp: null,
-  user: null,
-	accessToken: null,
-  refreshToken: null,
-  setEmail: (email: string) => set((state) => ({ ...state, email })),
-  setUser: (user) => set((state) => ({ ...state, user })),
-  setOtp: (otp) => set((state) => ({ ...state, otp })),
-	setToken: (accessToken: string, refreshToken: string) => set((state) => ({ ...state, accessToken, refreshToken })),
-  clearUser: () => set({ user: null })
-}));
+export const useAuthStore = create<AuthState>()(
+  (set, get) => ({
+    user: null,
+    tokens: null,
+    session: null,
+    isHydrated: false, // Initialize hydration state
+    get accessToken() {
+      return get().tokens?.accessToken || null;
+    },
+    get role() {
+      return get().user?.role || null;
+    },
+    getRole: () => {
+      const userRole = get().user?.role || null;
+      return userRole;
+    },
+    setUser: (user: User) => {
+     
+      set({ user });
+      
+      // Manually save to localStorage
+      localStorage.setItem('auth-user', JSON.stringify(user));
+    },
+    setAvatar: (avatar: string) => {
+      const currentUser = get().user;
+      if (currentUser) {
+        const updatedUser = { ...currentUser, avatar };
+        set({ user: updatedUser });
+        localStorage.setItem('auth-user', JSON.stringify(updatedUser));
+      }
+    },
+    setTokens: (tokens: Tokens) => {
+      
+      set({ tokens });
+      
+      // Manually save to localStorage
+      localStorage.setItem('auth-tokens', JSON.stringify(tokens));
+    },
+    setToken: (accessToken: string, refreshToken: string) => {
+      const tokens = { accessToken, refreshToken };
+      set({ tokens });
+      
+      // Manually save to localStorage
+      localStorage.setItem('auth-tokens', JSON.stringify(tokens));
+    },
+    setSession: (session: Session) => {
+      set({ session });
+      
+      // Manually save to localStorage
+      localStorage.setItem('auth-session', JSON.stringify(session));
+    },
+    clearAuth: () => {
+      set({ user: null, tokens: null, session: null });
+      
+      // Clear localStorage
+      localStorage.removeItem('auth-user');
+      localStorage.removeItem('auth-tokens');
+      localStorage.removeItem('auth-session');
+    },
+    clearUser: () => {
+      set({ user: null });
+      
+      // Clear user from localStorage
+      localStorage.removeItem('auth-user');
+    },
+    // Function to refresh user data from server
+    refreshUser: async () => {
+      try {
+        // Import profile service dynamically to avoid circular dependencies
+        const { fetchUserProfile } = await import('@/service/profile.server');
+        const userProfile = await fetchUserProfile();
+        
+        if (userProfile && userProfile.avatar) {
+          const currentUser = get().user;
+          if (currentUser) {
+            const updatedUser = {
+              ...currentUser,
+              avatar: userProfile.avatar
+            };
+            set({ user: updatedUser });
+            localStorage.setItem('auth-user', JSON.stringify(updatedUser));
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing user data:", error);
+      }
+    },
+    // Debug function to get current state
+    getState: () => get(),
+    // Function to mark as hydrated
+    setHydrated: (hydrated: boolean) => set({ isHydrated: hydrated }),
+    // Function to load from localStorage
+    loadFromStorage: () => {
+      try {
+        const userStr = localStorage.getItem('auth-user');
+        const tokensStr = localStorage.getItem('auth-tokens');
+        const sessionStr = localStorage.getItem('auth-session');
+        
+        if (userStr || tokensStr || sessionStr) {
+          const user = userStr ? JSON.parse(userStr) : null;
+          const tokens = tokensStr ? JSON.parse(tokensStr) : null;
+          const session = sessionStr ? JSON.parse(sessionStr) : null;
+          
+          
+          
+          set({ user, tokens, session, isHydrated: true });
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('Error loading from localStorage:', error);
+        return false;
+      }
+    },
+  })
+);

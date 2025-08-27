@@ -2,9 +2,9 @@ import icons from "@/utils/icons";
 
 const style = {
   primary: "bg-primary text-white",
-  secondary: "border border-primary",
+  secondary: "border border-primary text-[var(--text-primary)]",
   action: "bg-secondary text-white justify-center",
-  neutral: "rounded-full bg-gray-1 border-0",
+  neutral: "rounded-full bg-[var(--bg-tertiary)] border-0 text-[var(--text-primary)]",
   danger: `rounded-full bg-danger text-white`,
   none: "",
 };
@@ -26,6 +26,7 @@ export default function Button({
   size = "none",
   children,
   tabIndex = 0,
+  disabled = false,
 }: {
   onClick?: (ev: React.MouseEvent<HTMLButtonElement>) => void;
   className?: string;
@@ -36,13 +37,19 @@ export default function Button({
   type?: keyof typeof style;
   tabIndex?: number;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       name={name ?? ""}
-      {...(onClick ? { onClick } : {})}
+      {...(onClick && !disabled ? { onClick } : {})}
       tabIndex={tabIndex}
-      className={`relative overflow-hidden rounded-lg cursor-pointer flex items-center gap-4 text-left h-11 px-8 py-2.5 ${style[type]} ${btnSize[size]} ${className}`}
+      disabled={disabled}
+      className={`relative overflow-hidden rounded-lg flex items-center gap-4 text-left h-11 px-8 py-2.5 ${style[type]} ${btnSize[size]} ${className} transition-colors duration-300 ${
+        disabled 
+          ? 'cursor-not-allowed opacity-50' 
+          : 'cursor-pointer hover:bg-[var(--bg-secondary)]'
+      }`}
     >
       {pending && (
         <div className="absolute inset-0 backdrop-blur-md bg-inherit grid place-items-center">

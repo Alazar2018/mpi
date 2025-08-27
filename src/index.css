@@ -54,13 +54,75 @@
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-gor: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* Dark mode CSS variables */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-header: #ffffff;
+  --bg-dropdown: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-loading: #f8fafc;
+  
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  
+  --border-primary: #e2e8f0;
+  --border-secondary: #f1f5f9;
+  
+  --shadow-primary: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-secondary: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --bg-header: #1e293b;
+  --bg-dropdown: #334155;
+  --bg-sidebar: #1e293b;
+  --bg-loading: #1e293b;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  
+  --shadow-primary: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-secondary: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
 } 
 
 html,
 body,
 #root {
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @layer base {
@@ -87,7 +149,97 @@ body,
     border-radius: 9rem;
   }
 
+  /* Dark mode transition utilities */
+  .dark-mode-transition {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* Dark mode specific overrides */
+  .dark .bg-white {
+    background-color: var(--bg-card);
+  }
+
+  .dark .text-gray-900 {
+    color: var(--text-primary);
+  }
+
+  .dark .text-gray-600 {
+    color: var(--text-secondary);
+  }
+
+  .dark .text-gray-400 {
+    color: var(--text-tertiary);
+  }
+
+  .dark .border-gray-200 {
+    border-color: var(--border-primary);
+  }
+
+  .dark .border-gray-100 {
+    border-color: var(--border-secondary);
+  }
+
+  /* Additional dark mode overrides for navigation */
+  .dark .bg-gray-50 {
+    background-color: var(--bg-secondary);
+  }
+
+  .dark .bg-gray-100 {
+    background-color: var(--bg-tertiary);
+  }
+
+  /* Active route styling for dark mode */
+  .dark .active-route {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+
+  /* Button hover states for dark mode */
+  .dark .hover\:bg-gray-50:hover {
+    background-color: var(--bg-secondary);
+  }
+
+  .dark .hover\:bg-gray-100:hover {
+    background-color: var(--bg-tertiary);
+  }
+
   * {
+    /* Custom animations for class schedule */
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+    
+    .animate-scale-in {
+      animation: scaleIn 0.3s ease-out forwards;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    /* Line clamp utility */
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
     box-sizing: border-box !important;
   }
 
@@ -97,6 +249,7 @@ body,
     font-size: 16px;
     font-weight: 400;
     line-height: 150%;
+    scroll-behavior: smooth;
   }
 
   ::-webkit-scrollbar {
@@ -134,7 +287,7 @@ body,
 
 
   .active-route {
-    @apply bg-secondary text-white rounded-lg cursor-pointer
+    @apply bg-secondary text-white rounded-lg cursor-pointer transition-colors duration-300
   }
 
   .center-line {

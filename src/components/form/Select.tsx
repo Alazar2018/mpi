@@ -49,11 +49,6 @@ export default function Select({
       const option = options.find((opt) => opt.value === value);
       if (option) {
         setSelectedOption(option);
-        myForm.setValue &&
-          myForm.setValue(name, option.value, {
-            shouldValidate: true,
-            shouldDirty: true,
-          });
       }
     }
   }, [value, options]);
@@ -134,7 +129,7 @@ export default function Select({
       </div>
       {myForm?.errors?.[name]?.message && (
         <span className="text-danger ml-1 text-xs">
-          {myForm?.errors?.[name]?.message}
+          {String(myForm?.errors?.[name]?.message)}
         </span>
       )}
     </div>

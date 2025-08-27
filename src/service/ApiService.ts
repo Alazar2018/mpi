@@ -28,6 +28,9 @@ export default class ApiService {
         },
       })
     }
+    
+    // Set up axios interceptors for authentication
+    this.setupInterceptors();
   }
 
   async get<T>(url: string, config: AxiosRequestConfig = {}): Promise<AsyncResponse<T>> {
@@ -98,12 +101,103 @@ export default class ApiService {
     );
   }
 
-  addAuthenticationHeader() {
-    let tokens = localStorage.getItem('tokens') ?? '{accessToken: ""}'
-    if(tokens) {
-      tokens = JSON.parse(tokens) as any
+  /**
+   * Set up axios interceptors for automatic authentication and error handling
+   */
+  private setupInterceptors() {
+    // Request interceptor to add auth token
+    this.api.interceptors.request.use(
+      (config) => {
+        // Get tokens from localStorage
+        const tokens = localStorage.getItem('tokens');
+        if (tokens) {
+          try {
+            const parsedTokens = JSON.parse(tokens);
+            if (parsedTokens?.accessToken) {
+              config.headers.Authorization = `Bearer ${parsedTokens.accessToken}`;
+            }
+          } catch (error) {
+            console.error('Error parsing tokens:', error);
+          }
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor for handling auth errors
+    this.api.interceptors.response.use(
+      (response) => {
+        return response;
+      },
+      async (error) => {
+        if (error.response?.status === 401) {
+          // Token expired or invalid
+          console.log('Authentication failed, redirecting to login...');
+          
+          // Clear invalid tokens
+          localStorage.removeItem('tokens');
+          
+          // You can add redirect logic here
+          // window.location.href = '/login';
+          
+          // Or emit a custom event for the app to handle
+          window.dispatchEvent(new CustomEvent('auth:expired'));
+        }
+        
+        if (error.response?.status === 403) {
+          console.log('Access forbidden - insufficient permissions');
+          // Handle forbidden access
+        }
+        
+        if (error.response?.status >= 500) {
+          console.log('Server error occurred');
+          // Handle server errors
+        }
+        
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  /**
+   * Manually refresh authentication headers (useful after login)
+   */
+  refreshAuthHeaders() {
+    const tokens = localStorage.getItem('tokens');
+    if (tokens) {
+      try {
+        const parsedTokens = JSON.parse(tokens);
+        if (parsedTokens?.accessToken) {
+          this.api.defaults.headers.common.Authorization = `Bearer ${parsedTokens.accessToken}`;
+        }
+      } catch (error) {
+        console.error('Error parsing tokens:', error);
+      }
     }
-    this.api.defaults.headers.common.Authorization = `Bearer ${(tokens as any)?.accessToken}`;
+    return this;
+  }
+
+  /**
+   * Legacy method - kept for backward compatibility
+   * @deprecated Use interceptors instead
+   */
+  addAuthenticationHeader() {
+    let tokens = localStorage.getItem('tokens');
+    if (tokens) {
+      try {
+        const parsedTokens = JSON.parse(tokens);
+        if (parsedTokens?.accessToken) {
+          this.api.defaults.headers.common.Authorization = `Bearer ${parsedTokens.accessToken}`;
+        }
+      } catch (error) {
+        console.error('Error parsing tokens:', error);
+        // Clear invalid tokens
+        localStorage.removeItem('tokens');
+      }
+    }
     return this;
   }
 }

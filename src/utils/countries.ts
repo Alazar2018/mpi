@@ -5,7 +5,7 @@ import type { SearchableOption } from '@/components/form/SearchableSelect';
 export function getCountryOptions(): SearchableOption[] {
   return countryCodes.map((country) => ({
     label: country.name,
-    value: country.country, // Use country code (e.g., "US", "CA", "GB")
+    value: country.name, // Use full country name (e.g., "United States", "Ethiopia")
     flag: country.flag,
     searchTerms: [
       country.name,
@@ -41,7 +41,7 @@ function getAlternativeNames(countryName: string): string[] {
   return alternatives[countryName] || [];
 }
 
-// Get country by code
+// Get country by code (2-letter country code)
 export function getCountryByCode(code: string): SearchableOption | undefined {
   const countries = getCountryOptions();
   return countries.find(country => country.value === code);
@@ -58,18 +58,20 @@ export function getCountryByName(name: string): SearchableOption | undefined {
 
 // Get popular countries (commonly used ones first)
 export function getPopularCountries(): SearchableOption[] {
-  const popularCodes = [
-    "US", "CA", "GB", "AU", "DE", "FR", "JP", "BR", "IN", "CN",
-    "IT", "ES", "MX", "RU", "KR", "NL", "SE", "NO", "DK", "FI"
+  const popularNames = [
+    "United States", "Canada", "United Kingdom", "Australia", "Germany", 
+    "France", "Japan", "Brazil", "India", "China", "Italy", "Spain", 
+    "Mexico", "Russia", "South Korea", "Netherlands", "Sweden", 
+    "Norway", "Denmark", "Finland"
   ];
   
   const allCountries = getCountryOptions();
-  const popular = popularCodes
-    .map(code => allCountries.find(country => country.value === code))
+  const popular = popularNames
+    .map(name => allCountries.find(country => country.value === name))
     .filter(Boolean) as SearchableOption[];
   
   const remaining = allCountries.filter(
-    country => !popularCodes.includes(country.value)
+    country => !popularNames.includes(country.value)
   );
   
   return [...popular, ...remaining];

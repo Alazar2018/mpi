@@ -29,7 +29,7 @@ interface PaginationOptions<T = any> {
 }
 
 export function usePagination<T = any>(options: PaginationOptions<T> = {} as PaginationOptions<T>) {
-  const [paginationOptions, setPaginationOptions] = useState<PaginationOptions<T>>(options);
+
 
   const [search, setSearch] = useState("");
   const [perPage, setPerPage] = useState(paginationOptions.perPage || 25);
@@ -41,7 +41,7 @@ export function usePagination<T = any>(options: PaginationOptions<T> = {} as Pag
   
   // Use refs for controller and timeout to persist between renders
   const controllerRef = useRef<AbortController | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   // Watch for changes in the watch array
   useEffect(() => {
@@ -74,7 +74,7 @@ export function usePagination<T = any>(options: PaginationOptions<T> = {} as Pag
     }
   }, [searching, search, searchPagination.page, searchPagination.limit, pagination.page, pagination.limit]);
 
-  const fetch = useCallback((next = true, current = false, cache = false) => {
+  const fetch = useCallback((next = true, current = false) => {
     if (req.pending || (next && pagination.done)) return;
 
     // if(cache && paginationOptions.store && paginationOptions.store.getAll()?.length) return

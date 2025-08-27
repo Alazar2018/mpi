@@ -1,3 +1,5 @@
-import { OutletOnly } from "../home";
+import { Outlet } from "react-router-dom";
 
-export default OutletOnly
+export default function PlayersRoot() {
+  return <Outlet />;
+}

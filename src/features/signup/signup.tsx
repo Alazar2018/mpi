@@ -9,6 +9,8 @@ export default function CreateAccount() {
     { name: "otp", com: <EnterOtp /> },
     { name: "congrats", com: <AccountCreatedSuccessfully /> },
   ];
+  
+  console.log('Signup components:', components.map(c => c.name)); // Debug log
 
   return (
     <ProfileContext active='email' components={components} />

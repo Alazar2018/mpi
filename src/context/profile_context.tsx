@@ -1,5 +1,13 @@
 import { createContext, useContext } from "react";
-import type { Address } from "@/store/auth.store";
+
+export type Address = {
+  streetAddress: string;
+  streetAddress2?: string;
+  city: string;
+  stateProvince: string;
+  country: string;
+  zipCode: string;
+};
 
 export type CreateUser = {
   firstName: string;

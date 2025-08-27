@@ -18,7 +18,7 @@ export default function DefaultPage({
 
   return (
     <div
-      className={`flex flex-col gap-4 bg-white rounded-3xl p-4 px-6 ${className}`}
+      className={`flex flex-col gap-4 bg-[var(--bg-primary)] rounded-3xl p-4 px-6 transition-colors duration-300 ${className}`}
     >
       {
         showHeader &&

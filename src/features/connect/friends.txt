@@ -1,0 +1,40 @@
+Friends Module Documentation
+===========================
+
+This module handles friend management functionality including:
+
+1. Friend Requests
+   - Send friend requests to other users
+   - Accept/reject incoming friend requests
+   - View sent friend requests
+   - Cancel sent requests
+
+2. Connection Invites
+   - Send connection invites via email
+   - Role-based relationship selection
+   - Support for parent, coach, player relationships
+
+3. Friend Management
+   - View all friends
+   - Block/unblock friends
+   - Remove friends
+   - Send messages to friends
+
+4. User Search
+   - Search for users by name or email
+   - Filter by role
+   - Send friend requests to found users
+
+5. Role-Based Access
+   - Players can connect with parents and coaches
+   - Coaches can connect with players and parents
+   - Parents can connect with coaches and players
+
+API Endpoints Used:
+- /api/v1/friendship/friendRequest - Friend request operations
+- /api/v1/friendship/sent - Get sent friend requests
+- /api/v1/friendship - General friendship operations
+- /api/v1/users/search - User search
+- /api/v1/users/invite - Send connection invites
+
+The module automatically handles authentication and provides real-time updates for friend status changes.

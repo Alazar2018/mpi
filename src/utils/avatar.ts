@@ -36,8 +36,6 @@ export function generateAvatar(options: AvatarOptions = {}): string {
   const {
     name = 'User',
     size = 64,
-    backgroundColor = 'rgb(195, 248, 92)',
-    textColor = 'FFFFFF',
   } = options;
 
   // Create avatar with initials

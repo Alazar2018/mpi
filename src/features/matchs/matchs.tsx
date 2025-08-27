@@ -1,90 +1,707 @@
 import Button from "@/components/Button";
-import Versus from "@/components/Versus";
-import MatchResultCard from "@/components/MatchResultCard";
 import icons from "@/utils/icons";
 import { Link } from "react-router-dom";
 import { useApiRequest } from "@/hooks/useApiRequest";
-import { getAllMatchs } from "./api/matchs.api";
-import type { Match } from "@/interface";
-import { useEffect } from "react";
+import { getUpcomingMatches, getCompletedMatches, getSavedMatches, deleteMatch } from "./api/matchs.api";
+import { matchesService, type Match } from "@/service/matchs.server";
+import { useEffect, useState } from "react";
 import VersusSkeleton from "@/components/skeletons/VersusSkeleton";
-import MatchResultCardSkeleton from "@/components/skeletons/MatchResultCardSkeleton";
+import { useAuthStore } from "@/store/auth.store";
+import { Carousel } from "@/components/Carousel";
+import { toast } from "react-toastify";
+import { useDialog } from "@/components/Dialog";
 
-export default function Matchs() {
-  const matchesReq = useApiRequest({
-    cacheKey: "allmatches",
-		freshDuration: 1000 * 60 * 5,
-    staleWhileRevalidate: true,
-  });
+// Helper function to get player display name
+const getPlayerDisplayName = (match: Match, playerKey: 'p1' | 'p2'): string => {
+    const player = match[playerKey];
+    
+    if (player && typeof player === 'object' && 'firstName' in player) {
+        return `${player.firstName} ${player.lastName}`;
+    }
+    
+    // Handle case where p2 is a string name
+    if (playerKey === 'p2' && typeof player === 'string') {
+        return player;
+    }
+    
+    // Handle case where p2Name exists (fallback)
+    if (playerKey === 'p2' && match.p2Name) {
+        return match.p2Name;
+    }
+    
+    return `Player ${playerKey === 'p1' ? '1' : '2'}`;
+};
 
-  useEffect(() => {
-    matchesReq.send(
-      () => getAllMatchs(),
-      (res) => {
-        if (res.success && res.data) {
-          console.log(res.data);
-        }
-      }
-    );
-  }, []);
+// Helper function to get player avatar
+const getPlayerAvatar = (match: Match, playerKey: 'p1' | 'p2'): string => {
+    const player = match[playerKey];
+    if (player && typeof player === 'object' && 'avatar' in player) {
+        return player.avatar || "https://randomuser.me/api/portraits/men/32.jpg";
+    }
+    return "https://randomuser.me/api/portraits/men/32.jpg";
+};
 
-  const pendingMatches = (matchesReq.response?.matches || []).filter(
-    (match: Match) => match.status === "pending"
-  );
-  const recentMatches = (matchesReq.response?.matches || []).filter(
-    (match: Match) => match.status === "completed"
-  );
+// Helper function to get player USDTA rating
+const getPlayerUSDTA = (match: Match, playerKey: 'p1' | 'p2'): string => {
+    const player = match[playerKey];
+    if (player && typeof player === 'object' && 'usdtaRating' in player) {
+        return player.usdtaRating ? `USDTA: ${player.usdtaRating}` : 'USDTA: N/A';
+    }
+    return 'USDTA: N/A';
+};
 
-  return (
-    <div className="flex flex-col gap-4 bg-white rounded-3xl p-4 px-6">
-      <div className="flex items-center justify-between">
-        <span>Pending Match</span>
-        <Button type="action" className="rounded-full ">
-          Schedule Match
-        </Button>
-      </div>
-      <div className="grid grid-cols-2 gap-4 overflow-hidden">
-        {matchesReq.pending
-          ? Array(9)
-              .fill(1)
-              .map((el, idx) => {
-                return <VersusSkeleton key={idx} />;
-              })
-          : (pendingMatches || []).map((match: Match, idx: number) => (
-              <Link to={`detail/${match._id}`} key={idx}>
-                <Versus match={match} />
-              </Link>
-            ))}
-      </div>
-      <div className="mt-4 flex items-center justify-between">
-        <span>Recent Matchs</span>
-        <Button className="rounded-full border-0 bg-gray-1">View All</Button>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        {matchesReq.pending
-          ? Array(9)
-              .fill(1)
-              .map((el, idx) => {
-                return <MatchResultCardSkeleton key={idx} />;
-              })
-          : (recentMatches ? ["", ...recentMatches] : [""]).map(
-              (match, idx) => {
-                if (idx == 0) {
-                  return (
-                    <Link
-                      key={idx}
-                      to="/admin/matchs/new"
-                      className="h-[10.125rem] flex flex-col items-center justify-center gap-4 p-4 rounded-[1.5rem] border border-gray-1"
-                    >
-                      <i dangerouslySetInnerHTML={{ __html: icons.plus }} />
-                      <span className="text-base">Schedule New Match</span>
-                    </Link>
-                  );
+export default function Matches() {
+    const { user } = useAuthStore();
+    const [activeFilter, setActiveFilter] = useState<'completed' | 'saved' | 'all'>('completed');
+
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [matchesPerPage] = useState(9);
+    const { showDialog, Dialog } = useDialog();
+    
+    const upcomingMatchesReq = useApiRequest<{matches: Match[]}>({
+        cacheKey: "upcoming-matches",
+        freshDuration: 1000 * 60 * 2, // 2 minutes
+        staleWhileRevalidate: true,
+    });
+
+    const completedMatchesReq = useApiRequest<{matches: Match[]}>({
+        cacheKey: "completed-matches",
+        freshDuration: 1000 * 60 * 5, // 5 minutes
+        staleWhileRevalidate: true,
+    });
+
+    const savedMatchesReq = useApiRequest<{matches: Match[]}>({
+        cacheKey: "saved-matches",
+        freshDuration: 1000 * 60 * 2, // 2 minutes
+        staleWhileRevalidate: true,
+    });
+
+    useEffect(() => {
+        // Load upcoming matches
+            upcomingMatchesReq.send(
+                () => getUpcomingMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                        
+                       
+                    } else {
+                       
+                    }
+            }
+        );
+    }, []);
+
+    useEffect(() => {
+        // Load data based on active filter
+        if (activeFilter === 'completed') {
+            completedMatchesReq.send(
+                () => getCompletedMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                       
+                    }
                 }
-                return <MatchResultCard match={match as Match} key={idx} />;
-              }
-            )}
-      </div>
-    </div>
-  );
+            );
+        } else if (activeFilter === 'saved') {
+            savedMatchesReq.send(
+                () => getSavedMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                       
+                    }
+                }
+            );
+        }
+    }, [activeFilter]);
+
+    const upcomingMatches = upcomingMatchesReq.response?.matches || [];
+    const completedMatches = completedMatchesReq.response?.matches || [];
+    const savedMatches = savedMatchesReq.response?.matches || [];
+
+    // Get current matches based on active filter
+    const getCurrentMatches = () => {
+        switch (activeFilter) {
+            case 'completed':
+                return completedMatches;
+            case 'saved':
+                return savedMatches;
+            case 'all':
+                return [...completedMatches, ...savedMatches];
+            default:
+                return [];
+        }
+    };
+
+    const currentMatches = getCurrentMatches();
+    const isLoading = upcomingMatchesReq.pending || completedMatchesReq.pending || savedMatchesReq.pending;
+
+    // Pagination calculations
+    const totalMatches = currentMatches.length;
+    const totalPages = Math.ceil(totalMatches / matchesPerPage);
+    const startIndex = (currentPage - 1) * matchesPerPage;
+    const endIndex = startIndex + matchesPerPage;
+    const currentMatchesPage = currentMatches.slice(startIndex, endIndex);
+
+    // Reset to first page when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeFilter]);
+
+    // Pagination handlers
+    const goToPage = (page: number) => {
+        setCurrentPage(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const goToNextPage = () => {
+        if (currentPage < totalPages) {
+            goToPage(currentPage + 1);
+        }
+    };
+
+    const goToPreviousPage = () => {
+        if (currentPage > 1) {
+            goToPage(currentPage - 1);
+        }
+    };
+
+    const canScheduleMatch = ["coach", "parent", "player"].includes(user?.role || "");
+
+    // Delete match function
+    const handleDeleteMatch = async (matchId: string) => {
+        // Show confirmation dialog
+        showDialog({
+            title: "Delete Match",
+            message: "This action will permanently remove the match and all associated data. This cannot be undone. Are you sure you want to continue?",
+            buttons: [
+                {
+                    text: "Cancel",
+                    variant: "outlined",
+                    onClick: () => {
+                        // Do nothing, dialog will close automatically
+                    }
+                },
+                {
+                    text: "Delete Match",
+                    variant: "contained",
+                    onClick: async () => {
+                        // Show info toast that delete operation is starting
+                        toast.info('Starting delete operation... ⚠️');
+                        await performDelete(matchId);
+                    }
+                }
+            ]
+        });
+    };
+
+    // Perform the actual delete operation
+    const performDelete = async (matchId: string) => {
+        setIsDeleting(true);
+        
+        // Show loading toast
+        const loadingToast = toast.loading('Deleting match... 🗑️');
+        
+        try {
+            const response = await deleteMatch(matchId);
+            if (response.success) {
+                // Dismiss loading toast and show success
+                toast.dismiss(loadingToast);
+                toast.success('Match deleted successfully! 🗑️');
+                
+                // Refresh the current data based on active filter
+                if (activeFilter === 'completed') {
+                    completedMatchesReq.send(
+                        () => getCompletedMatches(),
+                        (res) => {
+                            if (res.success && res.data) {
+                               
+                            }
+                        }
+                    );
+                } else if (activeFilter === 'saved') {
+                    savedMatchesReq.send(
+                        () => getSavedMatches(),
+                        (res) => {
+                            if (res.success && res.data) {
+                               
+                            }
+                        }
+                    );
+                }
+                
+                // Also refresh upcoming matches
+                upcomingMatchesReq.send(
+                    () => getUpcomingMatches(),
+                    (res) => {
+                        if (res.success && res.data) {
+                                
+                        }
+                    }
+                );
+
+            } else {
+                // Dismiss loading toast and show error
+                toast.dismiss(loadingToast);
+                toast.error(`Failed to delete match: ${response.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting match:', error);
+            // Dismiss loading toast and show error
+            toast.dismiss(loadingToast);
+            toast.error('Failed to delete match. Please try again.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-lg text-[var(--text-secondary)] dark:text-gray-300">Loading user data...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-8 bg-[var(--bg-primary)] min-h-screen p-6">
+            <div className="bg-[var(--bg-card)] rounded-3xl p-4 sm:p-6 shadow-sm">
+            {/* Pending Match Section */}
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-white">Pending Match</h2>
+                    {canScheduleMatch && (
+                        <Link to="/admin/matchs/new">
+                            <Button type="action" className="rounded-full gap-2">
+                                <span dangerouslySetInnerHTML={{ __html: icons.plus }} />
+                                Schedule Match
+                            </Button>
+                        </Link>
+                    )}
+                </div>
+
+                {isLoading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {Array(2).fill(1).map((_, idx) => (
+                                <VersusSkeleton key={idx} />
+                            ))}
+                        </div>
+                ) : upcomingMatches.length > 0 ? (
+                    <div className="w-full">
+                        <Carousel items={upcomingMatches} className="w-full">
+                            {(match: Match) => (
+                                <div className="w-full px-2">
+                                    <Link to={`detail/${match._id}`} key={match._id}>
+                                        <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-xl p-6 shadow-sm cursor-pointer hover:shadow-md transition-all w-full">
+                                            <div className="flex items-center justify-between">
+                                                {/* Player 1 */}
+                                                <div className="flex flex-col items-center">
+                                                    <div className="relative">
+                                                        <img
+                                                            src={getPlayerAvatar(match, 'p1')}
+                                                            alt={getPlayerDisplayName(match, 'p1')}
+                                                            className="w-20 h-20 rounded-full object-cover border-2 border-[var(--border-primary)]"
+                                                        />
+                                                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                                                            B
+                                                        </div>
+                                                    </div>
+                                                    <span className="font-semibold text-base text-center mt-3 text-[var(--text-primary)] dark:text-white">
+                                                        {getPlayerDisplayName(match, 'p1')}
+                                                    </span>
+                                                    <span className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mt-1">
+                                                        {getPlayerUSDTA(match, 'p1')}
+                                                    </span>
+                                                </div>
+
+                                                {/* VS Card */}
+                                                <div className="bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-xl p-4 text-center min-w-[120px]">
+                                                    <p className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mb-3 font-medium">
+                                                        {matchesService.formatMatchDate(match.date)}
+                                                    </p>
+                                                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                        <span className="text-white text-lg font-bold">VS</span>
+                                                    </div>
+                                                    <div className="bg-green-500 text-white text-sm px-3 py-2 rounded-lg font-medium">
+                                                        {matchesService.formatMatchTime(match.date)}
+                                                    </div>
+                                                </div>
+
+                                                {/* Player 2 */}
+                                                <div className="flex flex-col items-center">
+                                                    <div className="relative">
+                                                        <img
+                                                            src={getPlayerAvatar(match, 'p2')}
+                                                            alt={getPlayerDisplayName(match, 'p2')}
+                                                            className="w-20 h-20 rounded-full object-cover border-2 border-[var(--border-primary)]"
+                                                        />
+                                                        <div className="absolute -top-1 -left-1 w-6 h-6 bg-gray-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                                                            A
+                                                        </div>
+                                                    </div>
+                                                    <span className="font-semibold text-base text-center mt-3 text-[var(--text-primary)] dark:text-white">
+                                                        {getPlayerDisplayName(match, 'p2')}
+                                                    </span>
+                                                    <span className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mt-1">
+                                                        {getPlayerUSDTA(match, 'p2')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+                            )}
+                        </Carousel>
+                    </div>
+                ) : (
+                    <div className="text-center py-8 bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-xl">
+                        <div className="w-16 h-16 mx-auto mb-3 bg-[var(--bg-tertiary)] dark:bg-gray-600 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">🎾</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-[var(--text-primary)] dark:text-white mb-2">No pending matches</h3>
+                        <p className="text-[var(--text-secondary)] dark:text-gray-300 mb-4">Schedule your first match to get started!</p>
+                        {canScheduleMatch && (
+                            <Link to="/admin/matchs/new">
+                                <Button type="action" className="rounded-full gap-2">
+                                    <span dangerouslySetInnerHTML={{ __html: icons.plus }} />
+                                    Schedule Match
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Recent Matches Section */}
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-white">Recent Matches</h2>
+                    <Link to="/admin/matchs">
+                        <Button type="secondary" className="rounded-full">
+                            View All
+                        </Button>
+                    </Link>
+                </div>
+
+                {/* Filter Tabs */}
+                <div className="flex gap-2 border-b border-[var(--border-primary)]">
+                    <button
+                        onClick={() => setActiveFilter('completed')}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                            activeFilter === 'completed'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-[var(--text-secondary)] dark:text-gray-400 hover:text-[var(--text-primary)] dark:hover:text-white'
+                        }`}
+                    >
+                        Completed
+                    </button>
+                    <button
+                        onClick={() => setActiveFilter('saved')}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                            activeFilter === 'saved'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-[var(--text-secondary)] dark:text-gray-400 hover:text-[var(--text-primary)] dark:hover:text-white'
+                        }`}
+                    >
+                        Saved
+                    </button>
+                    <button
+                        onClick={() => setActiveFilter('all')}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                            activeFilter === 'all'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-[var(--text-secondary)] dark:text-gray-400 hover:text-[var(--text-primary)] dark:hover:text-white'
+                        }`}
+                    >
+                        All
+                    </button>
+            </div>
+
+                {isLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Array(6).fill(1).map((_, idx) => (
+                            <div key={idx} className="bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-xl p-4 h-32 animate-pulse" />
+                        ))}
+                    </div>
+                ) : currentMatches.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {currentMatchesPage.map((match) => {
+                                // Calculate actual match statistics from the data
+                                const totalSets = match.sets?.length || 0;
+                                const p1WonSets = match.sets?.filter(set => set.p1Score > set.p2Score).length || 0;
+                                const p2WonSets = match.sets?.filter(set => set.p2Score > set.p1Score).length || 0;
+                                
+                                // Get actual statistics from match sets (if available)
+                                let p1TotalAces = 0;
+                                let p2TotalAces = 0;
+                                let p1TotalDoubleFaults = 0;
+                                let p2TotalDoubleFaults = 0;
+                                
+                                if (match.sets && match.sets.length > 0) {
+                                    match.sets.forEach(set => {
+                                        if (set.p1SetReport?.service) {
+                                            p1TotalAces += set.p1SetReport.service.aces || 0;
+                                            p1TotalDoubleFaults += set.p1SetReport.service.doubleFaults || 0;
+                                        }
+                                        if (set.p2SetReport?.service) {
+                                            p2TotalAces += set.p2SetReport.service.aces || 0;
+                                            p2TotalDoubleFaults += set.p2SetReport.service.doubleFaults || 0;
+                                        }
+                                    });
+                                }
+                                
+                                // Calculate total game time if available
+                                const totalGameTime = match.totalGameTime || 0;
+                                const gameTimeMinutes = Math.floor(totalGameTime / 60);
+                                const gameTimeSeconds = totalGameTime % 60;
+                                const formattedGameTime = totalGameTime > 0 
+                                    ? `${gameTimeMinutes.toString().padStart(2, '0')}:${gameTimeSeconds.toString().padStart(2, '0')}`
+                                    : '00:00';
+
+                                // Check if there's any meaningful data to display
+                                const hasMeaningfulData = formattedGameTime !== '00:00' || 
+                                                       (p1TotalAces > 0 || p2TotalAces > 0) || 
+                                                       (p1TotalDoubleFaults > 0 || p2TotalDoubleFaults > 0) || 
+                                                       totalSets > 0;
+
+                                // If no meaningful data, don't render the card
+                                if (!hasMeaningfulData) {
+                                    return null;
+                                }
+
+                                return (
+                                    <div key={match._id} className="bg-[var(--bg-secondary)] dark:bg-gray-700 border border-[var(--border-primary)] rounded-xl p-4 shadow-sm">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="font-bold text-[var(--text-primary)] dark:text-white text-sm">
+                                                {match.winner === 'playerOne' ? (
+                                                    <>
+                                                        <span className="text-lg text-green-600 font-bold">
+                                                            {getPlayerDisplayName(match, 'p1')}
+                                                        </span>
+                                                        <span className="text-[var(--text-primary)] dark:text-white"> Vs </span>
+                                                        <span className="text-[var(--text-secondary)] dark:text-gray-400">
+                                                            {getPlayerDisplayName(match, 'p2')}
+                                                        </span>
+                                                    </>
+                                                ) : match.winner === 'playerTwo' ? (
+                                                    <>
+                                                        <span className="text-[var(--text-secondary)] dark:text-gray-400">
+                                                            {getPlayerDisplayName(match, 'p1')}
+                                                        </span>
+                                                        <span className="text-[var(--text-primary)] dark:text-white"> Vs </span>
+                                                        <span className="text-lg text-green-600 font-bold">
+                                                            {getPlayerDisplayName(match, 'p2')}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-[var(--text-secondary)] dark:text-gray-400">
+                                                            {getPlayerDisplayName(match, 'p1')}
+                                                        </span>
+                                                        <span className="text-[var(--text-primary)] dark:text-white"> Vs </span>
+                                                        <span className="text-[var(--text-secondary)] dark:text-gray-400">
+                                                            {getPlayerDisplayName(match, 'p2')}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </h3>
+                                            {activeFilter === 'saved' && (
+                                                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                                                    Saved
+                                            </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mb-3">
+                                            {matchesService.formatMatchDate(match.date)} {matchesService.formatMatchTime(match.date)}
+                                        </p>
+                                        
+                                        <div className="space-y-2 mb-4">
+                                            {formattedGameTime !== '00:00' && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-[var(--text-secondary)] dark:text-gray-400">Time</span>
+                                                    <span className="font-medium">{formattedGameTime}</span>
+                                                </div>
+                                            )}
+                                            {(p1TotalAces > 0 || p2TotalAces > 0) && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-[var(--text-secondary)] dark:text-gray-400">Aces</span>
+                                                    <span className="font-medium">{p1TotalAces}-{p2TotalAces}</span>
+                                                </div>
+                                            )}
+                                            {(p1TotalDoubleFaults > 0 || p2TotalDoubleFaults > 0) && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-[var(--text-secondary)] dark:text-gray-400">Double Fault</span>
+                                                    <span className="font-medium">{p1TotalDoubleFaults}-{p2TotalDoubleFaults}</span>
+                                                </div>
+                                            )}
+                                            {totalSets > 0 && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-[var(--text-secondary)] dark:text-gray-400">Sets</span>
+                                                    <span className="font-medium">{p1WonSets}-{p2WonSets}</span>
+                                            </div>
+                                            )}
+                                        </div>
+
+                                        {/* Only show set scores section if there are meaningful scores */}
+                                        {match.sets && match.sets.length > 0 && match.sets.some(set => set.p1Score > set.p2Score || set.p2Score > set.p1Score) && (
+                                            <div className="mb-4">
+                                                                                        <p className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mb-1">Set Scores:</p>
+                                        <div className="text-xs text-[var(--text-tertiary)] dark:text-gray-500 space-y-1">
+                                                    {match.sets.map((set, index) => (
+                                                        <div key={set._id || index} className="flex justify-between">
+                                                            <span>Set {index + 1}:</span>
+                                                            <span>{set.p1Score}-{set.p2Score}</span>
+                                                    </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Only show statistics section if there's meaningful data */}
+                                        {((p1TotalAces > 0 || p2TotalAces > 0) || 
+                                          (p1TotalDoubleFaults > 0 || p2TotalDoubleFaults > 0) || 
+                                          (totalSets > 0)) && (
+                                            <div className="mb-4">
+                                                                                        <p className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mb-1">Match Statistics:</p>
+                                        <div className="text-xs text-[var(--text-tertiary)] dark:text-gray-500">
+                                                    {p1TotalAces > 0 || p2TotalAces > 0 ? (
+                                                        <div className="flex justify-between mb-1">
+                                                            <span>Aces:</span>
+                                                            <span>{p1TotalAces}-{p2TotalAces}</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {p1TotalDoubleFaults > 0 || p2TotalDoubleFaults > 0 ? (
+                                                        <div className="flex justify-between mb-1">
+                                                            <span>Double Faults:</span>
+                                                            <span>{p1TotalDoubleFaults}-{p2TotalDoubleFaults}</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {totalSets > 0 ? (
+                                                        <div className="flex justify-between">
+                                                            <span>Sets Won:</span>
+                                                            <span>{p1WonSets}-{p2WonSets}</span>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="flex justify-end gap-2">
+                                            <Link to={`detail/${match._id}`}>
+                                                <Button type="action" size="xs" className="rounded-full">
+                                                    {activeFilter === 'saved' ? 'View' : 'Result'}
+                                                </Button>
+                                            </Link>
+                                            <Button 
+                                                type="secondary" 
+                                                size="xs" 
+                                                className="rounded-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => handleDeleteMatch(match._id)}
+                                                disabled={isDeleting}
+                                                aria-label={`Delete match between ${getPlayerDisplayName(match, 'p1')} and ${getPlayerDisplayName(match, 'p2')}`}
+                                            >
+                                                {isDeleting ? 'Deleting...' : '🗑️ Delete'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2 mt-6">
+                                <Button
+                                
+                                    type="secondary"
+                                    size="xs"
+                                    onClick={goToPreviousPage}
+                                    disabled={currentPage === 1}
+                                    className="rounded-full"
+                                >
+                                    Previous
+                                </Button>
+                                
+                                {/* Page Numbers */}
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: totalPages }, (_, index) => {
+                                        const pageNumber = index + 1;
+                                        const isCurrentPage = pageNumber === currentPage;
+                                        
+                                        // Show first page, last page, current page, and pages around current
+                                        if (
+                                            pageNumber === 1 ||
+                                            pageNumber === totalPages ||
+                                            (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                                        ) {
+                                            return (
+                                                <button
+                                                    key={pageNumber}
+                                                    onClick={() => goToPage(pageNumber)}
+                                                    className={`w-8 h-8 rounded-full text-sm font-medium transition-colors ${
+                                                        isCurrentPage
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-[var(--bg-secondary)] dark:bg-gray-700 text-[var(--text-primary)] dark:text-white hover:bg-[var(--bg-tertiary)] dark:hover:bg-gray-600'
+                                                    }`}
+                                                >
+                                                    {pageNumber}
+                                                </button>
+                                            );
+                                        }
+                                        
+                                        // Show ellipsis for gaps
+                                        if (
+                                            pageNumber === currentPage - 2 ||
+                                            pageNumber === currentPage + 2
+                                        ) {
+                                            return (
+                                                <span key={pageNumber} className="text-[var(--text-secondary)] dark:text-gray-400">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
+                                        
+                                        return null;
+                                    })}
+                                </div>
+                                
+                                <Button
+                                    type="secondary"
+                                    size="xs"
+                                    onClick={goToNextPage}
+                                    disabled={currentPage === totalPages}
+                                    className="rounded-full"
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        )}
+                        
+                        {/* Results Summary */}
+                        <div className="text-center text-sm text-[var(--text-secondary)] dark:text-gray-400 mt-4">
+                            Showing {startIndex + 1}-{Math.min(endIndex, totalMatches)} of {totalMatches} matches
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-center py-8 bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-xl">
+                        <div className="w-16 h-16 mx-auto mb-3 bg-[var(--bg-tertiary)] dark:bg-gray-600 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">🏆</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-[var(--text-primary)] dark:text-white mb-2">
+                            {activeFilter === 'completed' ? 'No completed matches' : 
+                             activeFilter === 'saved' ? 'No saved matches' : 'No matches found'}
+                        </h3>
+                        <p className="text-[var(--text-secondary)] dark:text-gray-300">
+                            {activeFilter === 'completed' ? 'Complete your first match to see results here!' :
+                             activeFilter === 'saved' ? 'Save matches as drafts to resume later!' :
+                             'No matches available for the selected filter.'}
+                        </p>
+                    </div>
+                )}
+            </div>
+            </div>
+            <Dialog />
+        </div>
+    );
 }

@@ -1,13 +1,34 @@
-import { getApi } from "@/utils/utils";
+import { chatService } from "@/service/chat.server";
 import type { Chat, Message } from "./store/chat.store";
 
-const api = getApi('/chats')
-const messageApi = getApi('/messages')
+// Re-export the chat service methods for backward compatibility
+export const getChats = () => chatService.getChats();
+export const moreChat = (chatId: string) => chatService.getChatById(chatId);
 
-export function getChats() {
-	return api.addAuthenticationHeader().get<{chats: Chat[]}>('')
-}
-
-export function moreChat(chatId: string) {
-	return messageApi.addAuthenticationHeader().get<{messages: Message[]}>(`/${chatId}`)
-}
+// Export additional chat service methods
+export const {
+  createDirectChat,
+  createGroupChat,
+  getGroupChatById,
+  updateGroupChatName,
+  updateGroupChatPhoto,
+  addUsersToGroup,
+  removeUsersFromGroup,
+  leaveGroupChat,
+  deleteGroupChat,
+  getTotalUnreadCount,
+  archiveChat,
+  pinChat,
+  markChatAsRead,
+  muteChat,
+  transferGroupAdmin,
+  getChatStatistics,
+  searchChatMessages,
+  bulkChatOperations,
+  getDirectChatByUserId,
+  getChatsByFilter,
+  searchChats,
+  getUnreadChats,
+  getGroupChats,
+  getDirectChats
+} = chatService;

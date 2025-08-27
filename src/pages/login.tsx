@@ -7,10 +7,13 @@ import InputPassword from "@/components/form/InputPassword";
 import OrLoginWithGoogle from "@/components/OrLoginWithGoogle";
 import { login } from "@/features/auth/auth.api";
 import { useApiRequest } from "@/hooks/useApiRequest";
+import { decodeToken } from '@/utils/jwt';
 import type { LoginPayload, LoginResponse } from "@/interface";
 import { useAuthStore } from "@/store/auth.store";
 import icons from "@/utils/icons";
 import { required, toast } from "@/utils/utils";
+
+import { getDeviceInfo } from "@/utils/deviceInfo";
 
 export default function Login() {
   const authStore = useAuthStore()
@@ -20,22 +23,86 @@ export default function Login() {
   function sub(data: LoginPayload) {
 		if(loginReq.pending) return
 
-		loginReq.send(
-			() => login({email: data.email, password: data.password}),
-			(res) => {
+		// Get device info
+		const deviceInfo = getDeviceInfo();
 
-				if(res.success && res.data) {
-          authStore.setUser(res.data.user)
-          authStore.setToken(res.data.tokens.accessToken, res.data.tokens.refreshToken)
-          localStorage.setItem('user', JSON.stringify(res.data.user))
-          localStorage.setItem('tokens', JSON.stringify(res.data.tokens))
-          // document.cookie = `refreshToken=${res.data.tokens.refreshToken}`
-          navigate('/admin')
+		loginReq.send(
+			() => login({
+				email: data.email, 
+				password: data.password,
+				deviceInfo
+			}),
+			(res) => {
+				if(res.success && res.data) {				
+					// The response is already transformed, so res.data contains the API response
+					// API response structure: { status, message, data: { user, tokens, session } }
+					let userData, tokensData, sessionData;
+					
+					if (res.data.status === 'success' && res.data.data?.user && res.data.data?.tokens) {
+						// API response structure
+						userData = res.data.data.user;
+						tokensData = res.data.data.tokens;
+						sessionData = res.data.data.session;
+						
+						// Add nextStep to user data if it exists in the response
+						if (res.data.data.nextStep) {
+							userData.nextStep = res.data.data.nextStep;
+						}
+				
+					} else {
+						console.error('Invalid response structure:', res.data);
+						toast('e', 'Login failed', 'Invalid response structure');
+						return;
+					}
+
+					if (userData && tokensData) {
+						const tokenData = decodeToken(tokensData.accessToken);
+
+						
+						// Extract email from JWT token and add it to user data
+						if (tokenData && tokenData.email) {
+							userData.email = tokenData.email;
+						}
+						
+						authStore.setUser(userData);
+						authStore.setToken(tokensData.accessToken, tokensData.refreshToken);
+						
+						// Store session info if available
+						if (sessionData) {
+							authStore.setSession(sessionData);
+						}
+
+						// Navigate based on next step (not role-based)
+						if (userData.nextStep === 'profile_completion') {
+							navigate('/create_profile');
+						} else if (userData.nextStep === 'login') {
+							try {
+								navigate('/admin');
+							} catch (error) {
+								console.error('Navigation error:', error);
+							}
+						} else {
+							navigate('/'); // Default route for unknown cases
+						}
+
+						// Set refresh token cookie for future use
+						document.cookie = `refreshToken=${tokensData.refreshToken}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30 days
+					} else {
+						console.error('Invalid response structure:', res.data);
+						toast('e', 'Login failed', 'Invalid response structure');
+					}
+				} else {
+					console.error('Login failed:', res);
+					toast('e', 'Login failed', res.error || 'Unknown error');
 				}
-        toast(res.success ? 's' : 'e', 'Successfully Logged in', res.error)
 			}
 		)
 	}
+
+    function navigateToSignup() {
+        navigate('/signup')
+
+    }
 
   return (
     <div
@@ -74,9 +141,9 @@ export default function Login() {
                   <Checkbox name="agree">
                     Keep me logged in
                   </Checkbox>
-                  <span className="text-sm font-semibold">
+                  <Link to="/forgot-password" className="text-sm font-semibold text-blue-600 hover:underline cursor-pointer">
                     Forgot Password?
-                  </span>
+                  </Link>
                 </div>
                 <Button
                   pending={loginReq.pending}
@@ -92,7 +159,9 @@ export default function Login() {
           }}
         />
         <OrLoginWithGoogle>
-          <Link to='/create_account' className="text-center italic underline text-gray-2" >create account</Link>
+            <Button icon={icons.mail} className="!bg-[#EEF0FF] text-[#4E5969] !justify-center border-0" onClick={navigateToSignup}>
+                Register with Email
+            </Button>
         </OrLoginWithGoogle>
       </div>
     </div>

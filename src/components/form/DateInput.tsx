@@ -1,8 +1,16 @@
 import { type FieldValues, type RegisterOptions } from "react-hook-form";
 import { useMyForm } from "./Form";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { InputProps } from "./Input";
-import icons from "@/utils/icons";
+
+interface DateValidation {
+  required?: string;
+  min?: string;
+  max?: string;
+  validate?: (value: any) => true | string;
+  futureOnly?: boolean; // New prop to indicate if only future dates are allowed
+  maxYearsAhead?: number; // New prop to limit how many years ahead can be selected
+}
 
 export default function DatePicker({
   label,
@@ -10,90 +18,59 @@ export default function DatePicker({
   onUpdate,
   name,
   value,
-  placeholder = "Select a date",
+  placeholder = "Select your date of birth",
+  futureOnly = false,
+  maxYearsAhead = 1,
   ...rest
-}: Omit<InputProps, "password" | "right" | "left">) {
+}: Omit<InputProps, "password" | "right" | "left"> & { futureOnly?: boolean; maxYearsAhead?: number }) {
   const myForm = useMyForm();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isYearSelectorOpen, setIsYearSelectorOpen] = useState(false);
-  const [isMonthSelectorOpen, setIsMonthSelectorOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [displayValue, setDisplayValue] = useState<string>("");
-  const datePickerRef = useRef<HTMLDivElement>(null);
-  const yearSelectorRef = useRef<HTMLDivElement>(null);
-  const monthSelectorRef = useRef<HTMLDivElement>(null);
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [selectedDay, setSelectedDay] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
 
-  // Close calendar when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        datePickerRef.current &&
-        !datePickerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-        setIsYearSelectorOpen(false);
-        setIsMonthSelectorOpen(false);
-      }
-    }
+  // Generate days (1-31)
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Generate years for selector (current year ± 10 years)
-  const generateYears = () => {
-    const currentYear = currentMonth.getFullYear();
-    const years = [];
-    for (let i = currentYear - 30; i <= currentYear + 30; i++) {
-      years.push(i);
-    }
-    return years;
-  };
-
-  const years = generateYears();
-
+  // Months with full names
   const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" }
   ];
 
-  // Handle year selection
-  function selectYear(year: number) {
-    setCurrentMonth(new Date(year, currentMonth.getMonth(), 1));
-    setIsYearSelectorOpen(false);
-  }
-
-  function selectMonth(monthIndex: number) {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), monthIndex, 1));
-    setIsMonthSelectorOpen(false);
+  // Generate years based on futureOnly prop
+  const currentYear = new Date().getFullYear();
+  let years: number[];
+  
+  if (futureOnly) {
+    // For future dates: current year to current year + maxYearsAhead
+    years = Array.from({ length: maxYearsAhead + 1 }, (_, i) => currentYear + i);
+  } else {
+    // For birth dates: current year - 100 to current year - 13 (minimum age 13)
+    years = Array.from({ length: 87 }, (_, i) => currentYear - 13 - i);
   }
 
   // Set initial value if provided
   useEffect(() => {
     if (value) {
+      try {
       const date = new Date(value);
       if (!isNaN(date.getTime())) {
-        setSelectedDate(date);
-        setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-        setDisplayValue(formatDate(date));
-        myForm.setValue &&
-          myForm.setValue(name, formatDateForValue(date), {
-            shouldValidate: true,
-            shouldDirty: true,
-          });
+          setSelectedDay(date.getDate().toString());
+          setSelectedMonth((date.getMonth() + 1).toString().padStart(2, '0'));
+          setSelectedYear(date.getFullYear().toString());
+        }
+      } catch (error) {
+        console.error("Error parsing date value:", error);
       }
     }
   }, [value]);
@@ -104,296 +81,157 @@ export default function DatePicker({
     onUpdate && watchInput != undefined && onUpdate(watchInput);
   }, [watchInput]);
 
-  function formatDate(date: Date): string {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  function formatDateForValue(date: Date): string {
-    return date.toISOString().split("T")[0]; // YYYY-MM-DD
-  }
-
-  function handleSelect(date: Date) {
-    setSelectedDate(date);
-    setDisplayValue(formatDate(date));
-    setIsOpen(false);
-    myForm.setValue &&
-      myForm.setValue(name, formatDateForValue(date), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-  }
-
-  function getDaysInMonth(year: number, month: number) {
-    return new Date(year, month + 1, 0).getDate();
-  }
-
-  function getFirstDayOfMonth(year: number, month: number) {
-    return new Date(year, month, 1).getDay();
-  }
-
-  function generateCalendar() {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-
-    const daysInMonth = getDaysInMonth(year, month);
-    const firstDay = getFirstDayOfMonth(year, month);
-
-    const days = [];
-
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
-    }
-
-    // Add days of the month
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i));
-    }
-
-    return days;
-  }
-
-  function prevMonth() {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
-    );
-  }
-
-  function nextMonth() {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
-    );
-  }
-
-  function isToday(date: Date) {
-    const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
-  }
-
-  function isSelected(date: Date) {
-    return (
-      selectedDate &&
-      date.getDate() === selectedDate.getDate() &&
-      date.getMonth() === selectedDate.getMonth() &&
-      date.getFullYear() === selectedDate.getFullYear()
-    );
-  }
-
-  const calendar = generateCalendar();
-  const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-  useEffect(() => {
-    if (isYearSelectorOpen && yearSelectorRef.current) {
-      const currentYearElement = yearSelectorRef.current.querySelector(
-        `.year-${currentMonth.getFullYear()}`
-      );
-      if (currentYearElement) {
-        currentYearElement.scrollIntoView({
-          block: "center",
-          behavior: "smooth",
-        });
+  // Update form value when any selection changes
+  const updateFormValue = (day: string, month: string, year: string) => {
+    if (day && month && year) {
+      const dateString = `${year}-${month}-${day.padStart(2, '0')}`;
+      
+      // Additional validation for future dates
+      if (futureOnly) {
+        const selectedDate = new Date(dateString);
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < currentDate) {
+          // Don't update form if past date is selected
+          return;
+        }
       }
-    }
-
-    if (isMonthSelectorOpen && monthSelectorRef.current) {
-      const currentMonthElement = monthSelectorRef.current.querySelector(
-        `.month-${currentMonth.getMonth()}`
-      );
-      if (currentMonthElement) {
-        currentMonthElement.scrollIntoView({
-          block: "center",
-          behavior: "smooth",
+      
+      myForm.setValue &&
+          myForm.setValue(name, dateString, {
+          shouldValidate: true,
+          shouldDirty: true,
         });
-      }
     }
-  }, [isYearSelectorOpen, isMonthSelectorOpen]);
+  };
+
+  // Handle day selection
+  const handleDayChange = (day: string) => {
+    setSelectedDay(day);
+    updateFormValue(day, selectedMonth, selectedYear);
+  };
+
+  // Handle month selection
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    updateFormValue(selectedDay, month, selectedYear);
+  };
+
+  // Handle year selection
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    updateFormValue(selectedDay, selectedMonth, year);
+  };
+
+  // Get available days for selected month and year (handles leap years and month lengths)
+  const getAvailableDays = (month: string, year: string) => {
+    if (!month || !year) return days;
+    
+    const monthNum = parseInt(month);
+    const yearNum = parseInt(year);
+    
+    if (monthNum === 2) {
+      // February - check for leap year
+      const isLeapYear = (yearNum % 4 === 0 && yearNum % 100 !== 0) || (yearNum % 400 === 0);
+      return Array.from({ length: isLeapYear ? 29 : 28 }, (_, i) => i + 1);
+    } else if ([4, 6, 9, 11].includes(monthNum)) {
+      // April, June, September, November - 30 days
+      return Array.from({ length: 30 }, (_, i) => i + 1);
+    } else {
+      // January, March, May, July, August, October, December - 31 days
+      return Array.from({ length: 31 }, (_, i) => i + 1);
+    }
+  };
+
+  const availableDays = getAvailableDays(selectedMonth, selectedYear);
 
   return (
-    <div className="flex flex-col gap-1" ref={datePickerRef}>
+    <div className="flex flex-col gap-1">
+      {/* Error message - moved to top */}
+      {myForm?.errors?.[name]?.message && (
+        <span className="text-red-500 text-xs mb-1">
+          {String(myForm?.errors?.[name]?.message)}
+        </span>
+      )}
+
       {label ? (
         <span className={`text-base ${validation?.required && "required"}`}>
           {label}
         </span>
       ) : null}
-      <div className="relative">
-        <div
-          tabIndex={0}
-          onClick={() => setIsOpen(!isOpen)}
-          className="px-4 flex justify-between items-center overflow-hidden gap-2 bg-gray-1 rounded-lg h-[3.25rem] cursor-pointer"
-        >
-          <span
-            className={
-              displayValue ? "font-bold text-base" : "text-base opacity-50"
-            }
+      
+      <div className="grid grid-cols-3 gap-3">
+        {/* Day Selector */}
+        <div className="relative">
+          <select
+            value={selectedDay}
+            onChange={(e) => handleDayChange(e.target.value)}
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white cursor-pointer"
           >
-            {displayValue || placeholder}
-          </span>
-          <i
-            className="*:size-3.5 text-gray-2"
-            dangerouslySetInnerHTML={{ __html: icons.calender }}
-          />
+            <option value="">Day</option>
+            {availableDays.map((day) => (
+              <option key={day} value={day}>
+                {day}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <input type="hidden" {...myForm.register(name, validation)} />
+        {/* Month Selector */}
+        <div className="relative">
+          <select
+            value={selectedMonth}
+            onChange={(e) => handleMonthChange(e.target.value)}
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white cursor-pointer"
+          >
+            <option value="">Month</option>
+            {months.map((month) => (
+              <option key={month.value} value={month.value}>
+                {month.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {isOpen && (
-          <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg p-4">
-            <div className="flex justify-between items-center mb-4">
-              <button
-                type="button"
-                onClick={prevMonth}
-                className="p-1 rounded-full hover:bg-gray-1"
-              >
-                <i
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      icons.back ||
-                      '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-                  }}
-                />
-              </button>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMonthSelectorOpen(!isMonthSelectorOpen);
-                    setIsYearSelectorOpen(false);
-                  }}
-                  className="ml-2 font-bold hover:bg-gray-1 px-2 py-1 rounded-md"
-                >
-                  {currentMonth.toLocaleDateString("en-US", { month: "long" })}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsYearSelectorOpen(!isYearSelectorOpen);
-                    setIsMonthSelectorOpen(false);
-                  }}
-                  onMouseDown={(e) => {
-                    // Prevent focus loss when clicking
-                    e.preventDefault();
-                    setIsMonthSelectorOpen(!isMonthSelectorOpen);
-                    setIsYearSelectorOpen(false);
-                  }}
-                  className="font-bold hover:bg-gray-1 px-2 py-1 rounded-md"
-                >
-                  {currentMonth.toLocaleDateString("en-US", {
-                    year: "numeric",
-                  })}
-                </button>
-
-                {isYearSelectorOpen && (
-                  <div
-                    ref={yearSelectorRef}
-                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-white rounded-xl shadow-lg h-32 overflow-y-scroll w-24 z-20 snap-y snap-mandatory scrollbar-thin"
-                  >
-                    <div className="py-4">
-                      {years.map((year) => (
-                        <button
-                          key={year}
-                          type="button"
-                          onClick={() => selectYear(year)}
-                          className={`year-${year} w-full py-2 text-center snap-center ${
-                            year === currentMonth.getFullYear()
-                              ? "bg-secondary text-green-9 font-bold"
-                              : "hover:bg-gray-1"
-                          }`}
-                        >
-                          {year}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {isMonthSelectorOpen && (
-                  <div
-                    ref={monthSelectorRef}
-                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-white rounded-xl shadow-lg h-32 overflow-y-scroll w-32 z-20 snap-y snap-mandatory scrollbar-thin"
-                  >
-                    <div className="py-4">
-                      {months.map((month, idx) => (
-                        <button
-                          key={month}
-                          type="button"
-                          onClick={() => selectMonth(idx)}
-                          className={`month-${idx} w-full py-2 text-center hover:bg-gray-1 snap-center ${
-                            idx === currentMonth.getMonth()
-                              ? "bg-secondary text-green-9 font-bold"
-                              : ""
-                          }`}
-                        >
-                          {month}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={nextMonth}
-                className="p-1 rounded-full hover:bg-gray-1"
-              >
-                <i
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-                  }}
-                />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {weekdays.map((day) => (
-                <div key={day} className="text-xs font-bold text-gray-2 py-1">
-                  {day}
-                </div>
-              ))}
-
-              {calendar.map((date, index) => (
-                <div key={index} className="text-center">
-                  {date ? (
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(date)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm
-                        ${
-                          isSelected(date)
-                            ? "bg-secondary text-green-9 font-bold"
-                            : ""
-                        }
-                        ${
-                          isToday(date) && !isSelected(date)
-                            ? "border border-secondary"
-                            : ""
-                        }
-                        ${!isSelected(date) ? "hover:bg-gray-1" : ""}
-                      `}
-                    >
-                      {date.getDate()}
-                    </button>
-                  ) : (
-                    <div className="w-8 h-8"></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Year Selector */}
+        <div className="relative">
+          <select
+            value={selectedYear}
+            onChange={(e) => handleYearChange(e.target.value)}
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white cursor-pointer"
+          >
+            <option value="">Year</option>
+            {years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      {myForm?.errors?.[name]?.message && (
-        <span className="text-danger ml-1 text-xs">
-          {myForm?.errors?.[name]?.message}
-        </span>
+
+      {/* Hidden input for form validation */}
+      <input type="hidden" {...myForm.register(name, validation)} />
+
+      {/* Selected date display */}
+      {selectedDay && selectedMonth && selectedYear && (
+        <div className="text-sm text-gray-600 mt-2 p-2 bg-gray-50 rounded-lg">
+          Selected: {months.find(m => m.value === selectedMonth)?.label} {selectedDay}, {selectedYear}
+          {futureOnly && (
+            <span className="ml-2 text-blue-600">
+              ✓ Future date selected
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Help text for future dates */}
+      {futureOnly && (
+        <p className="text-xs text-blue-600 mt-1">
+          📅 Only future dates are allowed. Past dates cannot be selected.
+        </p>
       )}
     </div>
   );
