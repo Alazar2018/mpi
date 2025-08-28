@@ -113,14 +113,14 @@ export default function SearchableSelect({
         </div>
 
         {isOpen && (
-          <div className="absolute z-10 mt-1 w-full bg-white rounded-2xl shadow-lg max-h-60 overflow-hidden">
-            <div className="p-2 border-b border-gray-1">
+          <div className="absolute z-10 mt-1 w-full bg-[var(--bg-dropdown)] rounded-2xl shadow-[var(--shadow-primary)] max-h-60 overflow-hidden border border-[var(--border-primary)] transition-colors duration-300">
+            <div className="p-2 border-b border-[var(--border-primary)]">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoFocus
                 placeholder="Search..."
-                className="w-full px-3 py-2 border border-gray-2 rounded-lg focus:outline-none focus:border-primary"
+                className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:border-primary"
               />
             </div>
 

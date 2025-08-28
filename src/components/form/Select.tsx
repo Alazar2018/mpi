@@ -128,7 +128,7 @@ export default function Select({
         )}
       </div>
       {myForm?.errors?.[name]?.message && (
-        <span className="text-danger ml-1 text-xs">
+        <span className="text-danger ml-1 text-xs text-[var(--text-secondary)]">
           {String(myForm?.errors?.[name]?.message)}
         </span>
       )}
