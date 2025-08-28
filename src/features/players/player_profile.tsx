@@ -40,60 +40,60 @@ export default function PlayerProfile() {
 	if (!player) {
 		return (
 			<div className="p-6">
-				<div className="text-center text-gray-500 dark:text-gray-400">Loading player profile...</div>
+				<div className="text-center text-[var(--text-secondary)]">Loading player profile...</div>
 			</div>
 		);
 	}
 
-	return (
-		<div className="p-6">
-			{/* Parents Section */}
-			<div className="grid grid-cols-2 gap-6 border-t pt-8 border-gray-200 dark:border-gray-700">
-				<span className="col-span-2 text-lg font-semibold text-gray-800 dark:text-white">
-					Parents ({player.parents?.length || 0})
-				</span>
-				{player.parents && player.parents.length > 0 ? (
-					player.parents.map((parent, idx) => (
-						<div key={parent._id} className="flex gap-4 rounded-[1.25rem] p-4 border border-green-200 dark:border-green-700 bg-white dark:bg-gray-800">
-							{parent.avatar ? (
-								<img 
-									src={parent.avatar} 
-									alt={`${parent.firstName} ${parent.lastName}`}
-									className="size-12 rounded-full object-cover"
-								/>
-							) : (
-								<div className={`size-12 rounded-full bg-gradient-to-r ${getAvatarColor(parent.firstName, parent.lastName)} flex items-center justify-center text-white font-semibold`}>
-									{getInitials(parent.firstName, parent.lastName)}
+			return (
+			<div className="p-6">
+				{/* Parents Section */}
+				<div className="grid grid-cols-2 gap-6 border-t pt-8 border-[var(--border-secondary)]">
+					<span className="col-span-2 text-lg font-semibold text-[var(--text-primary)]">
+						Parents ({player.parents?.length || 0})
+					</span>
+					{player.parents && player.parents.length > 0 ? (
+						player.parents.map((parent, idx) => (
+							<div key={parent._id} className="flex gap-4 rounded-[1.25rem] p-4 border border-[var(--border-primary)] bg-[var(--bg-card)] transition-colors duration-300">
+								{parent.avatar ? (
+									<img 
+										src={parent.avatar} 
+										alt={`${parent.firstName} ${parent.lastName}`}
+										className="size-12 rounded-full object-cover"
+									/>
+								) : (
+									<div className="size-12 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-primary)] font-semibold border border-[var(--border-primary)]">
+										{getInitials(parent.firstName, parent.lastName)}
+									</div>
+								)}
+								<div className="flex flex-col justify-center">
+									<span className="text-base font-medium text-[var(--text-primary)]">
+										{parent.firstName} {parent.lastName}
+									</span>
+									<span className="text-[var(--text-secondary)] text-xs">
+										{parent.emailAddress?.email || 'No email'}
+									</span>
+									<span className="text-[var(--text-tertiary)] text-xs">
+										{formatPhoneNumber(parent.phoneNumber)} • Last online: {formatLastOnline(parent.lastOnline)}
+									</span>
 								</div>
-							)}
-							<div className="flex flex-col justify-center">
-								<span className="text-base font-medium text-gray-800 dark:text-white">
-									{parent.firstName} {parent.lastName}
-								</span>
-								<span className="text-gray-500 dark:text-gray-400 text-xs">
-									{parent.emailAddress?.email || 'No email'}
-								</span>
-								<span className="text-gray-400 dark:text-gray-500 text-xs">
-									{formatPhoneNumber(parent.phoneNumber)} • Last online: {formatLastOnline(parent.lastOnline)}
-								</span>
 							</div>
+						))
+					) : (
+						<div className="col-span-2 text-center text-[var(--text-secondary)] py-4">
+							No parents assigned
 						</div>
-					))
-				) : (
-					<div className="col-span-2 text-center text-gray-500 dark:text-gray-400 py-4">
-						No parents assigned
-					</div>
-				)}
-			</div>
+					)}
+				</div>
 			
 			{/* Coaches Section */}
-			<div className="grid grid-cols-3 gap-6 border-t pt-8 border-gray-200 dark:border-gray-700 mt-6">
-				<span className="col-span-3 text-lg font-semibold text-gray-800 dark:text-white">
+			<div className="grid grid-cols-3 gap-6 border-t pt-8 border-[var(--border-secondary)] mt-6">
+				<span className="col-span-3 text-lg font-semibold text-[var(--text-primary)]">
 					Coaches ({player.coaches?.length || 0})
 				</span>
 				{player.coaches && player.coaches.length > 0 ? (
 					player.coaches.map((coach, idx) => (
-						<div key={coach._id} className="flex gap-4 rounded-[1.25rem] p-4 border border-green-200 dark:border-green-700 bg-white dark:bg-gray-800">
+						<div key={coach._id} className="flex gap-4 rounded-[1.25rem] p-4 border border-[var(--border-primary)] bg-[var(--bg-card)] transition-colors duration-300">
 							{coach.avatar ? (
 								<img 
 									src={coach.avatar} 
@@ -101,15 +101,15 @@ export default function PlayerProfile() {
 									className="size-12 rounded-full object-cover"
 								/>
 							) : (
-								<div className={`size-12 rounded-full bg-gradient-to-r ${getAvatarColor(coach.firstName, coach.lastName)} flex items-center justify-center text-white font-semibold`}>
+								<div className="size-12 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-primary)] font-semibold border border-[var(--border-primary)]">
 									{getInitials(coach.firstName, coach.lastName)}
 								</div>
 							)}
 							<div className="flex flex-col justify-center">
-								<span className="text-base font-medium text-gray-800 dark:text-white">
+								<span className="text-base font-medium text-[var(--text-primary)]">
 									{coach.firstName} {coach.lastName}
 								</span>
-								<span className="text-gray-500 dark:text-gray-400 text-xs">
+								<span className="text-[var(--text-secondary)] text-xs">
 									{coach.emailAddress?.email || 'No email'}
 								</span>
 								<span className="text-gray-400 dark:text-gray-500 text-xs">
@@ -119,7 +119,7 @@ export default function PlayerProfile() {
 						</div>
 					))
 				) : (
-					<div className="col-span-3 text-center text-gray-500 py-4">
+					<div className="col-span-3 text-center text-[var(--text-secondary)] py-4">
 						No coaches assigned
 					</div>
 				)}

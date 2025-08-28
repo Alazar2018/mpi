@@ -49,15 +49,15 @@ export default function Input({
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <span className={`text-base ${validation?.required && "required"}`}>
+        <span className={`text-base text-gray-700 ${validation?.required && "required"}`}>
           {label}
         </span>
       ) : null}
-      <div tabIndex={-1} className="sys-focus px-4 flex overflow-hidden gap-2 bg-blue-1 rounded-lg h-[3.25rem]">
+      <div tabIndex={-1} className="sys-focus px-4 flex overflow-hidden gap-2 bg-gray-50 rounded-lg h-[3.25rem] border border-gray-200">
         <input
           {...rest}
           type={password ? "password" : "text"}
-          className="focus:shadow-none placeholder:opacity-50 placeholder:font-normal focus:outline-none h-full font-bold w-full rounded-2xl"
+          className="focus:shadow-none placeholder:opacity-50 placeholder:font-normal focus:outline-none h-full font-bold w-full rounded-2xl bg-transparent text-gray-800 placeholder-gray-500"
           defaultValue={value}
           {...myForm.register(name, validation)}
         />

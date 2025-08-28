@@ -23,6 +23,9 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
         }
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
+    const [systemTheme, setSystemTheme] = useState(() => 
+        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    );
     const [showNotifications, setShowNotifications] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showConnectModal, setShowConnectModal] = useState(false);
@@ -30,6 +33,7 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
     const notificationStore = useNotificationStore();
     const navigate = useNavigate();
     const notificationRef = useRef<HTMLDivElement>(null);
+    const settingsRef = useRef<HTMLDivElement>(null);
     
     // Initialize notification socket
     useNotificationSocket();
@@ -67,6 +71,23 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
         };
     }, [showNotifications]);
 
+    // Handle click outside settings dropdown
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+                setShowSettings(false);
+            }
+        };
+
+        if (showSettings) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showSettings]);
+
     // Apply dark mode class on mount and when isDarkMode changes
     useEffect(() => {
         if (isDarkMode) {
@@ -80,6 +101,9 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         const handleChange = (e: MediaQueryListEvent) => {
+            const newTheme = e.matches ? 'dark' : 'light';
+            setSystemTheme(newTheme);
+            
             if (localStorage.getItem('darkMode') === null) {
                 // Only auto-update if user hasn't manually set a preference
                 setIsDarkMode(e.matches);
@@ -256,18 +280,18 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
                             <div className="p-4 border-b border-[var(--border-secondary)] flex justify-between items-center">
                                 <h3 className="font-semibold text-[var(--text-primary)]">Notifications</h3>
                                 <div className="flex space-x-2">
-                                                                         <button
-                                         onClick={handleMarkAllAsRead}
-                                         className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                     >
-                                         Mark all read
-                                     </button>
-                                     <button
-                                         onClick={handleClearAll}
-                                         className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                     >
-                                         Clear all
-                                     </button>
+                                    <button
+                                        onClick={handleMarkAllAsRead}
+                                        className="text-xs text-blue-500 hover:text-blue-600 transition-colors duration-300"
+                                    >
+                                        Mark all read
+                                    </button>
+                                    <button
+                                        onClick={handleClearAll}
+                                        className="text-xs text-red-500 hover:text-red-600 transition-colors duration-300"
+                                    >
+                                        Clear all
+                                    </button>
                                 </div>
                             </div>
                             <div className="max-h-80 overflow-y-auto">
@@ -284,8 +308,8 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
                                         <div
                                             key={notification.id}
                                             onClick={() => handleNotificationClick(notification)}
-                                            className={`p-4 border-b border-[var(--border-secondary)] hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors ${
-                                                !notification.isRead ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                                            className={`p-4 border-b border-[var(--border-secondary)] hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors duration-300 ${
+                                                !notification.isRead ? 'bg-[var(--bg-secondary)] border-l-4 border-l-blue-500' : ''
                                             }`}
                                         >
                                             <div className="flex items-start space-x-3">
@@ -324,7 +348,7 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
                                         navigate("/admin/notifications");
                                         setShowNotifications(false);
                                     }}
-                                                                         className="w-full text-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium py-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                    className="w-full text-center text-sm text-blue-500 hover:text-blue-600 font-medium py-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors duration-300"
                                 >
                                     See All Notifications
                                 </button>
@@ -336,30 +360,35 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
                 {/* Dark Mode Toggle */}
                 <button
                     onClick={toggleDarkMode}
-                    className="p-1.5 rounded-l hover:bg-[var(--bg-secondary)] transition-colors bg-[var(--bg-tertiary)] transition-all duration-300"
-                    title={isDarkMode ? "Light Mode" : "Dark Mode"}
+                    className="p-1.5 rounded-l hover:bg-[var(--bg-secondary)] transition-colors bg-[var(--bg-tertiary)] transition-all duration-300 relative group"
+                    title={`${isDarkMode ? "Light Mode" : "Dark Mode"} (System: ${systemTheme})`}
                 >
-                                         <i
-                         className="*:size-4 text-[var(--text-secondary)]"
-                         dangerouslySetInnerHTML={{
-                             __html: isDarkMode
-                                 ? icons.sun
-                                 : icons.moon
-                         }}
-                     />
+                    <i
+                        className="*:size-4 text-[var(--text-secondary)]"
+                        dangerouslySetInnerHTML={{
+                            __html: isDarkMode
+                                ? icons.sun
+                                : icons.moon
+                        }}
+                    />
+                    
+                    {/* System theme indicator */}
+                    <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-300" 
+                         title={`System theme: ${systemTheme}`}>
+                    </div>
                 </button>
 
                 {/* Settings */}
-                <div className="relative">
+                <div className="relative" ref={settingsRef}>
                     <button
                         onClick={handleSettings}
                         className="p-1.5 rounded-l hover:bg-[var(--bg-secondary)] transition-colors bg-[var(--bg-tertiary)] transition-all duration-300"
                         title="Settings"
                     >
-                                                 <i
-                             className="*:size-4 text-[var(--text-secondary)]"
-                             dangerouslySetInnerHTML={{ __html: icons.settings }}
-                         />
+                        <i
+                            className="*:size-4 text-[var(--text-secondary)]"
+                            dangerouslySetInnerHTML={{ __html: icons.settings }}
+                        />
                     </button>
 
                     {showSettings && (
@@ -368,15 +397,54 @@ export default function Header({ setMobileMenuOpen, mobileMenuOpen = false }: He
                                 <h3 className="font-semibold text-[var(--text-primary)]">Settings</h3>
                             </div>
                             <div className="p-2">
-                                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-secondary)] text-sm text-[var(--text-primary)] transition-colors duration-300">
-                                    Account Settings
+                                {/* Theme Toggle Button */}
+                                <button 
+                                    onClick={toggleDarkMode}
+                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-secondary)] text-sm text-[var(--text-primary)] transition-colors duration-300 flex items-center justify-between"
+                                >
+                                    <span>Theme</span>
+                                    <div className="flex items-center gap-2">
+                                        <i
+                                            className="*:size-4 text-[var(--text-secondary)]"
+                                            dangerouslySetInnerHTML={{
+                                                __html: isDarkMode ? icons.sun : icons.moon
+                                            }}
+                                        />
+                                        <span className="text-xs text-[var(--text-secondary)]">
+                                            {isDarkMode ? 'Light' : 'Dark'}
+                                        </span>
+                                    </div>
                                 </button>
+                                
                                 <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-secondary)] text-sm text-[var(--text-primary)] transition-colors duration-300">
                                     Privacy
                                 </button>
                                 <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-secondary)] text-sm text-[var(--text-primary)] transition-colors duration-300">
                                     Help & Support
                                 </button>
+                                
+                                {/* Theme Information */}
+                                <div className="mt-3 pt-3 border-t border-[var(--border-secondary)]">
+                                    <div className="px-3 py-2 text-xs text-[var(--text-secondary)]">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span>Current Theme:</span>
+                                            <span className="font-medium text-[var(--text-primary)]">
+                                                {isDarkMode ? 'Dark' : 'Light'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span>System Theme:</span>
+                                            <span className="font-medium text-[var(--text-secondary)]">
+                                                {systemTheme === 'dark' ? 'Dark' : 'Light'}
+                                            </span>
+                                        </div>
+                                        {localStorage.getItem('darkMode') !== null && (
+                                            <div className="mt-1 text-[var(--text-tertiary)] text-center">
+                                                Manual override active
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

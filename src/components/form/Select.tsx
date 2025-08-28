@@ -72,7 +72,7 @@ export default function Select({
   return (
     <div className="flex flex-col gap-1" ref={selectRef}>
       {label ? (
-        <span className={`text-base ${validation?.required && "required"}`}>
+        <span className={`text-base text-[var(--text-primary)] ${validation?.required && "required"}`}>
           {label}
         </span>
       ) : null}
@@ -85,7 +85,7 @@ export default function Select({
             }
           }}
           onClick={() => setIsOpen(!isOpen)}
-          className="px-4 flex justify-between items-center overflow-hidden gap-2 bg-gray-1 rounded-lg h-[3.25rem] cursor-pointer"
+          className="px-4 flex justify-between items-center overflow-hidden gap-2 bg-[var(--bg-secondary)] rounded-lg h-[3.25rem] cursor-pointer border border-[var(--border-primary)] transition-colors duration-300"
         >
           <span
             className={
@@ -104,7 +104,7 @@ export default function Select({
         </div>
 
         {isOpen && (
-          <div className="absolute z-10 mt-1 w-full bg-white rounded-2xl shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-10 mt-1 w-full bg-[var(--bg-dropdown)] rounded-2xl shadow-[var(--shadow-primary)] max-h-60 overflow-auto border border-[var(--border-primary)] transition-colors duration-300">
             {options.map((option) => (
               <div
                 tabIndex={0}
@@ -115,9 +115,9 @@ export default function Select({
                 }}
                 key={option.value}
                 onClick={() => handleSelect(option)}
-                className={`px-4 py-3 hover:bg-gray-1 cursor-pointer ${
+                className={`px-4 py-3 hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors duration-300 ${
                   selectedOption?.value === option.value
-                    ? "bg-gray-1 font-bold"
+                    ? "bg-[var(--bg-secondary)] font-bold"
                     : ""
                 }`}
               >

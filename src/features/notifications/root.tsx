@@ -4,7 +4,7 @@ import NotificationsPage from './notifications';
 
 export default function NotificationsRoot() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--bg-primary)] transition-colors duration-300">
       <Outlet />
     </div>
   );

@@ -183,35 +183,35 @@ export default function NotificationsPage({}: NotificationsPageProps) {
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'match':
-        return 'text-blue-600 bg-blue-50';
-      case 'class':
-        return 'text-green-600 bg-green-50';
-      case 'friendship':
-        return 'text-purple-600 bg-purple-50';
-      case 'announcement':
-        return 'text-orange-600 bg-orange-50';
-      case 'user_added':
-        return 'text-indigo-600 bg-indigo-50';
-      case 'periodization':
-        return 'text-yellow-600 bg-yellow-50';
-      case 'comment':
-        return 'text-pink-600 bg-pink-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
+             case 'match':
+         return 'text-blue-600 bg-blue-50 dark:bg-blue-900/20';
+       case 'class':
+         return 'text-green-600 bg-green-50 dark:bg-green-900/20';
+       case 'friendship':
+         return 'text-purple-600 bg-purple-50 dark:bg-purple-900/20';
+       case 'announcement':
+         return 'text-orange-600 bg-orange-50 dark:bg-orange-900/20';
+       case 'user_added':
+         return 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20';
+       case 'periodization':
+         return 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
+             case 'comment':
+         return 'text-pink-600 bg-pink-50 dark:bg-pink-900/20';
+       default:
+         return 'text-[var(--text-secondary)] bg-[var(--bg-tertiary)]';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'text-red-600 bg-red-50 border-red-200';
-      case 'normal':
-        return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'low':
-        return 'text-gray-600 bg-gray-50 border-gray-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+             case 'high':
+         return 'text-red-600 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700';
+       case 'normal':
+         return 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700';
+             case 'low':
+         return 'text-[var(--text-secondary)] bg-[var(--bg-tertiary)] border-[var(--border-secondary)]';
+       default:
+         return 'text-[var(--text-secondary)] bg-[var(--bg-tertiary)] border-[var(--border-secondary)]';
     }
   };
 
@@ -236,14 +236,14 @@ export default function NotificationsPage({}: NotificationsPageProps) {
 
   if (isLoading && (!notifications || notifications.length === 0)) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen bg-[var(--bg-primary)] p-4 transition-colors duration-300">
         <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-secondary)] p-6 transition-colors duration-300">
             <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+                             <div className="h-8 bg-[var(--bg-tertiary)] rounded w-1/4 mb-6"></div>
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-20 bg-gray-200 rounded"></div>
+                  <div key={i} className="h-20 bg-[var(--bg-tertiary)] rounded"></div>
                 ))}
               </div>
             </div>
@@ -253,15 +253,15 @@ export default function NotificationsPage({}: NotificationsPageProps) {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-4">
+     return (
+     <div className="min-h-screen bg-[var(--bg-primary)] p-4 transition-colors duration-300">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-secondary)] p-6 mb-6 transition-colors duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-              <p className="text-gray-600 mt-1">
+              <h1 className="text-2xl font-bold text-[var(--text-primary)]">Notifications</h1>
+              <p className="text-[var(--text-secondary)] mt-1">
                 {unreadCount} unread • {pagination.totalNotifications} total
               </p>
             </div>
@@ -280,14 +280,14 @@ export default function NotificationsPage({}: NotificationsPageProps) {
 
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-secondary)] p-6 mb-6 transition-colors duration-300">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Type</label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-secondary)] text-[var(--text-primary)] transition-colors duration-300"
               >
                 <option value="all">All Types</option>
                 <option value="match">Match</option>
@@ -302,11 +302,11 @@ export default function NotificationsPage({}: NotificationsPageProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Priority</label>
               <select
                 value={selectedPriority}
                 onChange={(e) => setSelectedPriority(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-secondary)] text-[var(--text-primary)] transition-colors duration-300"
               >
                 <option value="all">All Priorities</option>
                 <option value="high">High</option>
@@ -316,14 +316,14 @@ export default function NotificationsPage({}: NotificationsPageProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Status</label>
               <select
                 value={showRead === null ? 'all' : showRead ? 'read' : 'unread'}
                 onChange={(e) => {
                   const value = e.target.value;
                   setShowRead(value === 'all' ? null : value === 'read');
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-secondary)] text-[var(--text-primary)] transition-colors duration-300"
               >
                 <option value="all">All</option>
                 <option value="unread">Unread</option>
@@ -332,11 +332,11 @@ export default function NotificationsPage({}: NotificationsPageProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sort</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Sort</label>
               <select
                 value={filters.sort}
                 onChange={(e) => handleFilterChange({ sort: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-secondary)] text-[var(--text-primary)] transition-colors duration-300"
               >
                 <option value="-createdAt">Newest First</option>
                 <option value="createdAt">Oldest First</option>
@@ -347,7 +347,7 @@ export default function NotificationsPage({}: NotificationsPageProps) {
         </div>
 
         {/* Notifications List */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-secondary)] overflow-hidden transition-colors duration-300">
           {error && (
             <div className="p-6 text-center">
               <div className="text-red-600 mb-2">
@@ -365,19 +365,19 @@ export default function NotificationsPage({}: NotificationsPageProps) {
 
           {!error && filteredNotifications.length === 0 && !isLoading && (
             <div className="p-12 text-center">
-              <div className="text-gray-400 mb-4">
-                <i className="text-6xl" dangerouslySetInnerHTML={{ __html: icons.bell }} />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications found</h3>
-              <p className="text-gray-500">Try adjusting your filters or check back later.</p>
+                          <div className="text-[var(--text-tertiary)] mb-4">
+              <i className="text-6xl" dangerouslySetInnerHTML={{ __html: icons.bell }} />
+            </div>
+            <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">No notifications found</h3>
+            <p className="text-[var(--text-secondary)]">Try adjusting your filters or check back later.</p>
             </div>
           )}
 
           {filteredNotifications.map((notification) => (
             <div
               key={notification._id}
-              className={`p-6 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                !notification.isRead ? 'bg-blue-50' : ''
+              className={`p-6 border-b border-[var(--border-secondary)] hover:bg-[var(--bg-secondary)] transition-colors duration-300 ${
+                !notification.isRead ? 'bg-[var(--bg-secondary)] border-l-4 border-l-blue-500' : ''
               }`}
             >
               <div className="flex items-start gap-4">
@@ -394,21 +394,21 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        <h3 className="text-sm font-semibold text-[var(--text-primary)] truncate">
                           {notification.title}
                         </h3>
                         {!notification.isRead && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            New
-                          </span>
+                                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">
+                             New
+                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                      <p className="text-sm text-[var(--text-secondary)] mb-2 line-clamp-2">
                         {notification.message}
                       </p>
                       
                       {/* Notification Metadata */}
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)]">
                         <span>{formatTimeAgo(notification.createdAt)}</span>
                         <span className={`px-2 py-1 rounded-full border ${getPriorityColor(notification.priority)}`}>
                           {notification.priority}
@@ -422,7 +422,7 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                       {!notification.isRead && (
                         <button
                           onClick={() => handleMarkAsRead(notification._id)}
-                          className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                                                     className="p-2 text-blue-600 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors duration-300"
                           title="Mark as read"
                         >
                           <i className="text-sm" dangerouslySetInnerHTML={{ __html: icons.check }} />
@@ -430,7 +430,7 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                       )}
                       <button
                         onClick={() => handleDeleteNotification(notification._id)}
-                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                                 className="p-2 text-red-600 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors duration-300"
                         title="Delete notification"
                       >
                         <i className="text-sm" dangerouslySetInnerHTML={{ __html: icons.trash }} />
@@ -442,7 +442,7 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                   {notification.data?.route && (
                     <button
                       onClick={() => handleNotificationClick(notification)}
-                      className="mt-3 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                             className="mt-3 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300"
                     >
                       View Details →
                     </button>
@@ -455,9 +455,9 @@ export default function NotificationsPage({}: NotificationsPageProps) {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+          <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-secondary)] p-6 mt-6 transition-colors duration-300">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-[var(--text-primary)]">
                 Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to{' '}
                 {Math.min(pagination.currentPage * pagination.limit, pagination.totalNotifications)} of{' '}
                 {pagination.totalNotifications} notifications
@@ -467,19 +467,19 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                 <button
                   onClick={() => handlePageChange(pagination.currentPage - 1)}
                   disabled={!pagination.hasPrevPage}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-3 py-2 text-sm border border-[var(--border-primary)] rounded-lg hover:bg-[var(--bg-secondary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300 bg-[var(--bg-card)] text-[var(--text-primary)]"
                 >
                   Previous
                 </button>
                 
-                <span className="px-3 py-2 text-sm text-gray-700">
+                <span className="px-3 py-2 text-sm text-[var(--text-primary)]">
                   Page {pagination.currentPage} of {pagination.totalPages}
                 </span>
                 
                 <button
                   onClick={() => handlePageChange(pagination.currentPage + 1)}
                   disabled={!pagination.hasNextPage}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-3 py-2 text-sm border border-[var(--border-primary)] rounded-lg hover:bg-[var(--bg-secondary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300 bg-[var(--bg-card)] text-[var(--text-primary)]"
                 >
                   Next
                 </button>

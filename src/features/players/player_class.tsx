@@ -253,7 +253,7 @@ export default function PlayerClass() {
       {/* Main Content - Calendar and Sidebar */}
       <div className="flex gap-6">
         {/* Calendar View - Smaller */}
-        <div className="flex-1 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="flex-1 bg-[var(--bg-card)] rounded-3xl shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] overflow-hidden transition-colors duration-300">
           <Calendar
             events={filteredEvents}
             view={currentView}
@@ -265,42 +265,42 @@ export default function PlayerClass() {
         </div>
 
         {/* Sidebar - Upcoming Classes */}
-        <div className="w-80 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="w-80 bg-[var(--bg-card)] rounded-3xl shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] p-6 transition-colors duration-300">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Upcoming Classes</h4>
-            <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                          <h4 className="text-lg font-semibold text-[var(--text-primary)]">Upcoming Classes</h4>
+            <span className="text-sm text-[var(--text-secondary)] bg-[var(--bg-secondary)] px-2 py-1 rounded-full border border-[var(--border-primary)]">
               {upcomingClasses.length}
             </span>
           </div>
 
           {upcomingClasses.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-400 text-4xl mb-3">📅</div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">No upcoming classes in the next 7 days</p>
+              <div className="text-[var(--text-tertiary)] text-4xl mb-3">📅</div>
+              <p className="text-[var(--text-secondary)] text-sm">No upcoming classes in the next 7 days</p>
                   </div>
           ) : (
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {upcomingClasses.map((event) => (
                 <div 
                   key={event.id} 
-                  className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-primary hover:shadow-sm transition-all cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-white dark:hover:bg-gray-600"
+                  className="p-4 border border-[var(--border-primary)] rounded-lg hover:border-[var(--border-secondary)] hover:shadow-[var(--shadow-secondary)] transition-all cursor-pointer bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]"
                   onClick={() => handleClassCardClick(event)}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]">
                       Class
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-[var(--text-secondary)]">
                       {new Date(event.date).toLocaleDateString()}
                     </span>
             </div>
 
-                  <h5 className="font-medium text-gray-800 dark:text-white mb-2 text-sm leading-tight">
+                  <h5 className="font-medium text-[var(--text-primary)] mb-2 text-sm leading-tight">
                               {event.title}
                   </h5>
                   
                   {event.time && (
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-1">
                       <span>🕐</span>
                       <span>{event.time}</span>
                       {event.duration && <span>• {event.duration}</span>}
@@ -308,7 +308,7 @@ export default function PlayerClass() {
                   )}
                   
                   {event.location && (
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                       <span>📍</span>
                       <span className="truncate">{event.location}</span>
                           </div>
@@ -320,10 +320,10 @@ export default function PlayerClass() {
 
           {/* View All Classes Button */}
           {events.length > upcomingClasses.length && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <div className="mt-4 pt-4 border-t border-[var(--border-secondary)]">
               <Button 
                 onClick={() => setCurrentView('month')}
-                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="w-full bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border-primary)]"
                 type="neutral"
               >
                 View All Classes
@@ -335,13 +335,13 @@ export default function PlayerClass() {
 
       {/* No Events State - Only show if no events at all */}
       {!isLoading && events.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-gray-400 text-6xl mb-4">📚</div>
-          <h4 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">No Classes Scheduled</h4>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <div className="text-center py-12 bg-[var(--bg-card)] rounded-3xl shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] transition-colors duration-300">
+          <div className="text-[var(--text-tertiary)] text-6xl mb-4">📚</div>
+          <h4 className="text-xl font-semibold text-[var(--text-secondary)] mb-2">No Classes Scheduled</h4>
+          <p className="text-[var(--text-secondary)] mb-4">
             You don't have any classes scheduled at the moment. Only class events (purple labels) are shown here.
           </p>
-          <Button onClick={() => fetchCalendarEvents()} className="bg-primary text-white">
+                        <Button onClick={() => fetchCalendarEvents()} className="bg-[var(--bg-primary)] text-[var(--text-primary)]">
             Refresh Schedule
                 </Button>
               </div>

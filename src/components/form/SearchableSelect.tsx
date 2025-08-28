@@ -86,7 +86,7 @@ export default function SearchableSelect({
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <span className={`text-base ${validation?.required && "required"}`}>
+        <span className={`text-base text-[var(--text-primary)] ${validation?.required && "required"}`}>
           {label}
         </span>
       ) : null}
@@ -94,7 +94,7 @@ export default function SearchableSelect({
       <div className="relative" ref={dropdownRef}>
         <div
           onClick={() => setIsOpen(!isOpen)}
-          className="px-4 flex justify-between items-center overflow-hidden gap-2 bg-gray-1 rounded-lg h-[3.25rem] cursor-pointer"
+          className="px-4 flex justify-between items-center overflow-hidden gap-2 bg-[var(--bg-secondary)] rounded-lg h-[3.25rem] cursor-pointer border border-[var(--border-primary)] transition-colors duration-300"
         >
           <div className="flex items-center gap-2">
             {selectedOption?.flag && (
@@ -130,20 +130,20 @@ export default function SearchableSelect({
                   <div
                     key={option.value}
                     onClick={() => handleOptionSelect(option)}
-                    className={`px-4 py-3 hover:bg-gray-1 cursor-pointer flex items-center gap-3 ${
+                    className={`px-4 py-3 hover:bg-[var(--bg-secondary)] cursor-pointer flex items-center gap-3 ${
                       selectedOption?.value === option.value
-                        ? "bg-gray-1 font-bold"
+                        ? "bg-[var(--bg-secondary)] font-bold"
                         : ""
                     }`}
                   >
                     {option.flag && (
-                      <span className="text-lg">{option.flag}</span>
-                    )}
-                    <span className="flex-1">{option.label}</span>
+                      <span className="text-lg text-[var(--text-primary)]">{option.flag}</span>
+                    )}    
+                    <span className="flex-1 text-[var(--text-primary)]">{option.label}</span>
                   </div>
                 ))
               ) : (
-                <div className="px-4 py-3 text-gray-2 text-center">
+                <div className="px-4 py-3 text-[var(--text-secondary)] text-center">
                   No options found
                 </div>
               )}
@@ -159,8 +159,8 @@ export default function SearchableSelect({
       />
 
       {myForm?.errors?.[name]?.message && (
-        <span className="text-danger ml-1 text-xs">
-          {myForm?.errors?.[name]?.message}
+        <span className="text-danger ml-1 text-xs text-[var(--text-secondary)]">
+          {String(myForm?.errors?.[name]?.message)} 
         </span>
       )}
     </div>

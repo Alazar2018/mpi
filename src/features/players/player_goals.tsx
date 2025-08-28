@@ -124,15 +124,15 @@ export default function PlayerGoals() {
   // Helper function to get goal type color
   const getGoalTypeColor = (goalType: string) => {
     const colors = {
-      technical: 'bg-green-500',
-      physical: 'bg-orange-500',
-      mental: 'bg-sky-500',
-      nutrition: 'bg-yellow-500',
-      recovery: 'bg-red-500',
-      strategic: 'bg-purple-500',
-      tactical: 'bg-purple-500'
+      technical: 'bg-[var(--bg-primary)]',
+      physical: 'bg-[var(--bg-primary)]',
+      mental: 'bg-[var(--bg-primary)]',
+      nutrition: 'bg-[var(--bg-primary)]',
+      recovery: 'bg-[var(--bg-primary)]',
+      strategic: 'bg-[var(--bg-primary)]',
+      tactical: 'bg-[var(--bg-primary)]'
     };
-    return colors[goalType as keyof typeof colors] || 'bg-gray-500';
+    return colors[goalType as keyof typeof colors] || 'bg-[var(--bg-primary)]';
   };
 
   // Helper function to get goal type label
@@ -414,13 +414,13 @@ export default function PlayerGoals() {
               toast.dismiss();
               deleteGoalConfirmed(goalId);
             }}
-            className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+            className="px-3 py-1 bg-[var(--bg-primary)] text-[var(--text-primary)] rounded text-sm hover:bg-[var(--bg-secondary)] transition-colors"
           >
             Delete
           </button>
           <button
             onClick={() => toast.dismiss()}
-            className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 transition-colors"
+            className="px-3 py-1 bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded text-sm hover:bg-[var(--bg-tertiary)] transition-colors"
           >
             Cancel
           </button>
@@ -513,7 +513,7 @@ export default function PlayerGoals() {
   if (!player) {
     return (
       <div className="p-6">
-        <div className="text-center text-gray-500">Loading player goals...</div>
+        <div className="text-center text-[var(--text-secondary)]">Loading player goals...</div>
       </div>
     );
   }
@@ -589,33 +589,33 @@ export default function PlayerGoals() {
     const goalStatus = getGoalStatus(goal);
 
   return (
-      <div key={goal._id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+      <div key={goal._id} className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] p-4 mb-4 transition-colors duration-300">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${getGoalTypeColor(goal.goal)}`}>
+                                      <span className={`px-3 py-1 rounded-full text-xs font-medium text-[var(--text-primary)] ${getGoalTypeColor(goal.goal)}`}>
                 {getGoalTypeLabel(goal.goal)}
               </span>
-              <span className="text-xs text-gray-500">Due: {formatDate(goal.achievementDate)}</span>
+                                      <span className="text-xs text-[var(--text-tertiary)]">Due: {formatDate(goal.achievementDate)}</span>
             </div>
 
             <div className="flex items-center gap-2 mb-2">
               {goalStatus === 'achieved' && (
                 <i dangerouslySetInnerHTML={{ __html: icons.check }} className="text-green-500" />
               )}
-              <h4 className="font-bold text-gray-800">{goal.description.toUpperCase()}</h4>
+              <h4 className="font-bold text-[var(--text-primary)]">{goal.description.toUpperCase()}</h4>
               {canEditGoal(goal) && (
                 <div className="flex items-center gap-2 ml-auto">
                   <button 
                     onClick={() => openEditModal(goal)}
-                    className="text-gray-400 hover:text-blue-500 transition-colors"
+                    className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                     title="Edit Goal"
                   >
                     <i dangerouslySetInnerHTML={{ __html: icons.edit }} className="text-sm" />
                   </button>
                   <button 
                     onClick={() => handleDeleteGoal(goal._id)}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                     title="Delete Goal"
                   >
                     <i dangerouslySetInnerHTML={{ __html: icons.trash }} className="text-sm" />
@@ -628,22 +628,22 @@ export default function PlayerGoals() {
         <div className="mb-3">
           {/* Overdue Banner */}
           {goalStatus === 'overdue' && (
-            <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded-md text-sm font-medium mb-2">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[var(--text-primary)] px-3 py-2 rounded-md text-sm font-medium mb-2">
               ⚠️ Overdue - Due date: {goal.achievementDate ? formatDate(goal.achievementDate) : 'No due date'}
             </div>
           )}
           
           {/* Status Badge */}
           {goalStatus === 'achieved' ? (
-            <div className="bg-green-100 border border-green-300 text-green-700 px-3 py-2 rounded-md text-sm font-medium">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[var(--text-primary)] px-3 py-2 rounded-md text-sm font-medium">
               ✓ Achieved
             </div>
           ) : goalStatus === 'overdue' ? (
-            <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded-md text-sm font-medium">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[var(--text-primary)] px-3 py-2 rounded-md text-sm font-medium">
               ⚠️ Overdue
             </div>
           ) : (
-            <div className="bg-blue-100 border border-blue-300 text-blue-700 px-3 py-2 rounded-md text-sm font-medium">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[var(--text-primary)] px-3 py-2 rounded-md text-sm font-medium">
               📋 Planned - Due: {goal.achievementDate ? formatDate(goal.achievementDate) : 'No due date'}
             </div>
           )}
@@ -651,23 +651,23 @@ export default function PlayerGoals() {
           </div>
           <button 
             onClick={() => toggleGoal(goal._id)}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
           >
             <i dangerouslySetInnerHTML={{ __html: isExpanded ? icons.chevronLeft : icons.chevronRight }} />
           </button>
         </div>
 
         {isExpanded && (
-          <div className="mt-4 space-y-4 pt-4 border-t border-gray-100">
+          <div className="mt-4 space-y-4 pt-4 border-t border-[var(--border-secondary)]">
             <div>
-              <h5 className="font-bold text-sm text-gray-700 mb-2">Measurement Type</h5>
-              <p className="text-sm text-gray-600">{goal.measurement}</p>
+              <h5 className="font-bold text-sm text-[var(--text-primary)] mb-2">Measurement Type</h5>
+                              <p className="text-sm text-[var(--text-secondary)]">{goal.measurement}</p>
             </div>
 
             {/* Actions */}
             {goal.actions && goal.actions.length > 0 && (
               <div className="mt-3">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Actions:</h4>
+                <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Actions:</h4>
                 <div className="space-y-2">
                   {goal.actions.map((action: any, index: number) => {
                     // Handle both old complex objects and new simple strings
@@ -679,14 +679,14 @@ export default function PlayerGoals() {
                         key={action._id || index} 
                         className={`px-3 py-2 rounded-md text-sm flex items-center justify-between ${
                           isDone 
-                            ? 'bg-green-100 text-green-700 border border-green-200' 
-                            : 'bg-blue-100 text-blue-700 border border-blue-200'
+                            ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                            : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]'
                         }`}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{actionText}</div>
                           {typeof action === 'object' && action.date && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-[var(--text-tertiary)]">
                               Due: {formatDate(action.date)}
                             </div>
                           )}
@@ -706,7 +706,7 @@ export default function PlayerGoals() {
             {/* Obstacles */}
             {goal.obstacles && goal.obstacles.length > 0 && (
               <div className="mt-3">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Potential Obstacles:</h4>
+                <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Potential Obstacles:</h4>
                 <div className="space-y-2">
                   {goal.obstacles.map((obstacle: any, index: number) => {
                     // Handle both old complex objects and new simple strings
@@ -718,14 +718,14 @@ export default function PlayerGoals() {
                         key={obstacle._id || index} 
                         className={`px-3 py-2 rounded-md text-sm flex items-center justify-between ${
                           isOvercome 
-                            ? 'bg-green-100 text-green-700 border border-green-200' 
-                            : 'bg-orange-100 text-orange-700 border border-orange-200'
+                            ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                            : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]'
                         }`}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{obstacleText}</div>
                           {typeof obstacle === 'object' && obstacle.date && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-[var(--text-tertiary)]">
                               Due: {formatDate(obstacle.date)}
                             </div>
                           )}
@@ -746,7 +746,7 @@ export default function PlayerGoals() {
               <div className="flex justify-end gap-2">
                 <Button 
                   onClick={() => handleMarkAsAchieved(goal._id)}
-                  className="bg-green-500 text-white hover:bg-green-600 rounded-lg px-4 py-2 text-sm"
+                  className="bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-lg px-4 py-2 text-sm transition-colors duration-300"
                 >
                   Mark as Achieved
                 </Button>
@@ -755,7 +755,7 @@ export default function PlayerGoals() {
             
             {goalStatus !== 'achieved' && !canMarkAsAchieved && (
               <div className="flex justify-end gap-2">
-                <div className="text-sm text-gray-500 italic">
+                <div className="text-sm text-[var(--text-secondary)] italic">
                   Only the player can mark goals as achieved
                 </div>
               </div>
@@ -770,22 +770,22 @@ export default function PlayerGoals() {
     <div className="space-y-6">
       {/* Role-based Information Banner */}
       {/* {(currentUserRole === 'parent' || currentUserRole === 'coach') && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-6 transition-colors duration-300">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm">ℹ️</span>
+                          <div className="w-8 h-8 bg-[var(--bg-primary)] rounded-full flex items-center justify-center border border-[var(--border-primary)]">
+                                      <span className="text-[var(--text-primary)] text-sm">ℹ️</span>
             </div>
-            <h3 className="text-lg font-semibold text-blue-800">
+                          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
               {currentUserRole === 'parent' ? 'Parent Goal Management' : 'Coach Goal Management'}
             </h3>
           </div>
-                      <p className="text-blue-700 text-sm">
+                      <p className="text-[var(--text-secondary)] text-sm">
               {currentUserRole === 'parent' 
                 ? 'As a parent, you can create new goals for your child and edit the ones you created. You can view all goals but cannot edit goals created by coaches. Your child can mark goals as achieved when they complete them.'
                 : 'As a coach, you can create new goals for your players and edit the ones you created. You can view all goals but cannot edit goals created by parents. Players can mark their own goals as achieved when they complete them.'
               }
             </p>
-            <div className="mt-3 text-xs text-blue-600">
+            <div className="mt-3 text-xs text-[var(--text-tertiary)]">
               💡 <strong>Tip:</strong> Click the "+" button to create new goals. Edit/delete buttons only appear on goals you created.
             </div>
         </div>
@@ -794,13 +794,13 @@ export default function PlayerGoals() {
       {/* Goals Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Short Term Goals */}
-        <div className="bg-gray-50 rounded-2xl p-4">
+        <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-800">Short Goals</h3>
+                          <h3 className="text-xl font-bold text-[var(--text-primary)]">Short Goals</h3>
             {canCreateGoals && (
               <button 
                 onClick={openCreateModal}
-                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600"
+                className="w-8 h-8 bg-[var(--bg-primary)] rounded-full flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-300 border border-[var(--border-primary)]"
                 title="Create New Goal"
               >
                 <i dangerouslySetInnerHTML={{ __html: icons.plus }} />
@@ -813,8 +813,8 @@ export default function PlayerGoals() {
               onClick={() => setShortGoalsTab('planned')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 shortGoalsTab === 'planned' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Planned
@@ -823,8 +823,8 @@ export default function PlayerGoals() {
               onClick={() => setShortGoalsTab('achieved')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 shortGoalsTab === 'achieved' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Achieved
@@ -833,8 +833,8 @@ export default function PlayerGoals() {
               onClick={() => setShortGoalsTab('overdue')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 shortGoalsTab === 'overdue' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Overdue
@@ -844,7 +844,7 @@ export default function PlayerGoals() {
           <div className="space-y-4">
             {getFilteredGoals(goalsByTerm.short[shortGoalsTab], shortGoalsTab).map(renderGoalCard)}
             {getFilteredGoals(goalsByTerm.short[shortGoalsTab], shortGoalsTab).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-[var(--text-secondary)]">
                 No {shortGoalsTab} short-term goals
               </div>
             )}
@@ -852,13 +852,13 @@ export default function PlayerGoals() {
         </div>
 
         {/* Medium Term Goals */}
-        <div className="bg-gray-50 rounded-2xl p-4">
+        <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-800">Medium Goals</h3>
+                          <h3 className="text-xl font-bold text-[var(--text-primary)]">Medium Goals</h3>
             {canCreateGoals && (
               <button 
                 onClick={openCreateModal}
-                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600"
+                className="w-8 h-8 bg-[var(--bg-primary)] rounded-full flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-300 border border-[var(--border-primary)]"
                 title="Create New Goal"
               >
                 <i dangerouslySetInnerHTML={{ __html: icons.plus }} />
@@ -871,8 +871,8 @@ export default function PlayerGoals() {
               onClick={() => setMediumGoalsTab('planned')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 mediumGoalsTab === 'planned' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Planned
@@ -881,8 +881,8 @@ export default function PlayerGoals() {
               onClick={() => setMediumGoalsTab('achieved')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 mediumGoalsTab === 'achieved' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Achieved
@@ -891,8 +891,8 @@ export default function PlayerGoals() {
               onClick={() => setMediumGoalsTab('overdue')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 mediumGoalsTab === 'overdue' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Overdue
@@ -902,7 +902,7 @@ export default function PlayerGoals() {
           <div className="space-y-4">
             {getFilteredGoals(goalsByTerm.medium[mediumGoalsTab], mediumGoalsTab).map(renderGoalCard)}
             {getFilteredGoals(goalsByTerm.medium[mediumGoalsTab], mediumGoalsTab).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-[var(--text-secondary)]">
                 No {mediumGoalsTab} medium-term goals
               </div>
             )}
@@ -910,13 +910,13 @@ export default function PlayerGoals() {
         </div>
 
         {/* Long Term Goals */}
-        <div className="bg-gray-50 rounded-2xl p-4">
+        <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-800">Long Goals</h3>
+                          <h3 className="text-xl font-bold text-[var(--text-primary)]">Long Goals</h3>
             {canCreateGoals && (
               <button 
                 onClick={openCreateModal}
-                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600"
+                className="w-8 h-8 bg-[var(--bg-primary)] rounded-full flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-300 border border-[var(--border-primary)]"
                 title="Create New Goal"
               >
                 <i dangerouslySetInnerHTML={{ __html: icons.plus }} />
@@ -929,8 +929,8 @@ export default function PlayerGoals() {
               onClick={() => setLongGoalsTab('planned')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 longGoalsTab === 'planned' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
           Planned
@@ -939,8 +939,8 @@ export default function PlayerGoals() {
               onClick={() => setLongGoalsTab('achieved')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 longGoalsTab === 'achieved' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Achieved
@@ -949,8 +949,8 @@ export default function PlayerGoals() {
               onClick={() => setLongGoalsTab('overdue')}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 longGoalsTab === 'overdue' 
-                  ? 'bg-white text-gray-800 shadow-sm' 
-                  : 'text-gray-600'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]' 
+                  : 'text-[var(--text-secondary)]'
               }`}
             >
               Overdue
@@ -960,7 +960,7 @@ export default function PlayerGoals() {
           <div className="space-y-4">
             {getFilteredGoals(goalsByTerm.long[longGoalsTab], longGoalsTab).map(renderGoalCard)}
             {getFilteredGoals(goalsByTerm.long[longGoalsTab], longGoalsTab).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-[var(--text-secondary)]">
                 No {longGoalsTab} long-term goals
               </div>
             )}
@@ -975,15 +975,15 @@ export default function PlayerGoals() {
           onKeyDown={handleModalKeyDown}
           tabIndex={-1}
         >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-[var(--shadow-primary)] w-full max-w-4xl max-h-[90vh] flex flex-col border border-[var(--border-primary)] transition-colors duration-300">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-              <h2 className="text-2xl font-bold text-gray-800">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--border-secondary)] flex-shrink-0">
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">
                 {isEditing ? 'Edit Goal' : 'Set Goal'}
               </h2>
                 <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] text-2xl font-bold"
                 aria-label="Close modal"
                 >
                 ×
@@ -1001,13 +1001,13 @@ export default function PlayerGoals() {
                 <div className="space-y-4">
                     {/* Goal Term */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Goal Term <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={formData.term}
                         onChange={(e) => setFormData(prev => ({ ...prev, term: e.target.value as 'short' | 'medium' | 'long' }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)]"
                         required
                       >
                         <option value="">Select goal term</option>
@@ -1019,13 +1019,13 @@ export default function PlayerGoals() {
 
                     {/* Goal Type */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Goal Type <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={formData.goal}
                         onChange={(e) => setFormData(prev => ({ ...prev, goal: e.target.value as any }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)]"
                         required
                       >
                         <option value="">Select goal type</option>
@@ -1040,14 +1040,14 @@ export default function PlayerGoals() {
 
                     {/* Due Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Due Date <span className="text-red-500">*</span>
                     </label>
                       <input
                         type="date"
                         value={formData.achievementDate}
                         onChange={(e) => setFormData(prev => ({ ...prev, achievementDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)]"
                         required
                       />
                     </div>
@@ -1057,14 +1057,14 @@ export default function PlayerGoals() {
                   <div className="space-y-4">
                     {/* Specific Goal */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Specific Goal <span className="text-red-500">*</span>
                     </label>
                       <textarea
                         value={formData.description}
                         onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Type specific goal"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)]"
                         rows={3}
                       required
                     />
@@ -1072,7 +1072,7 @@ export default function PlayerGoals() {
 
                     {/* Measurement Type */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Measurement Type <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1080,21 +1080,21 @@ export default function PlayerGoals() {
                         value={formData.measurement}
                         onChange={(e) => setFormData(prev => ({ ...prev, measurement: e.target.value }))}
                       placeholder="Type measurement type"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)]"
                       required
                     />
                     </div>
 
                     {/* Add Ons */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Additional Notes (Optional)
                       </label>
                       <textarea
                         value={formData.addOns}
                         onChange={(e) => setFormData(prev => ({ ...prev, addOns: e.target.value }))}
                         placeholder="Any additional notes or comments"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)]"
                         rows={2}
                       />
                     </div>
@@ -1106,39 +1106,39 @@ export default function PlayerGoals() {
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Actions & Obstacles</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Actions */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                          <div className="bg-[var(--bg-secondary)] rounded-lg p-4 border border-[var(--border-primary)] transition-colors duration-300">
+                      <h4 className="font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-[var(--bg-primary)] rounded-full"></span>
                         Actions
                       </h4>
                 <div className="space-y-3">
                         <div className="flex flex-col sm:flex-row gap-2">
-                    <input
+                                        <input
                       type="text"
                       value={newAction}
                       onChange={(e) => setNewAction(e.target.value)}
-                            onKeyDown={handleActionKeyPress}
-                            placeholder="Type action description (Press Enter to add)"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm min-w-0"
-                            aria-label="Action description"
-                          />
-                          <input
-                            type="date"
-                            value={newActionDate}
-                            onChange={(e) => setNewActionDate(e.target.value)}
-                            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                            aria-label="Action achievement date"
+                      onKeyDown={handleActionKeyPress}
+                      placeholder="Type action description (Press Enter to add)"
+                      className="flex-1 px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] text-sm min-w-0 bg-[var(--bg-card)] text-[var(--text-primary)]"
+                      aria-label="Action description"
                     />
+                                                      <input
+                              type="date"
+                              value={newActionDate}
+                              onChange={(e) => setNewActionDate(e.target.value)}
+                              className="w-32 px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] text-sm bg-[var(--bg-card)] text-[var(--text-primary)]"
+                              aria-label="Action achievement date"
+                            />
                     <button
                       type="button"
                       onClick={addAction}
                             disabled={isAddingAction || !newAction.trim() || !newActionDate}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                            className="px-4 py-2 bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-md hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                             aria-label="Add action"
                             title="Add action (Enter key also works)"
                           >
                             {isAddingAction ? (
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <div className="w-4 h-4 border-2 border-[var(--text-primary)] border-t-transparent rounded-full animate-spin"></div>
                             ) : (
                               '+'
                             )}
@@ -1152,10 +1152,10 @@ export default function PlayerGoals() {
                             const isDone = typeof action === 'object' ? action.isDone : false;
                             
                             return (
-                              <div key={action._id || index} className="bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm flex items-center justify-between">
+                              <div key={action._id || index} className="bg-[var(--bg-secondary)] text-[var(--text-primary)] px-3 py-2 rounded-md text-sm flex items-center justify-between border border-[var(--border-primary)]">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium truncate">{actionText}</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-[var(--text-tertiary)]">
                                     Due: {action.date ? formatDate(action.date) : 'N/A'}
                                   </div>
                                 </div>
@@ -1167,7 +1167,7 @@ export default function PlayerGoals() {
                                       newActions[index].isDone = !isDone;
                                       setFormData(prev => ({ ...prev, actions: newActions }));
                                     }}
-                                    className="text-blue-500 hover:text-blue-700 font-bold ml-2 flex-shrink-0"
+                                    className="text-[var(--text-primary)] hover:text-[var(--text-secondary)] font-bold ml-2 flex-shrink-0"
                                     title={isDone ? 'Mark as not done' : 'Mark as done'}
                                   >
                                     {isDone ? '✓' : '✗'}
@@ -1176,7 +1176,7 @@ export default function PlayerGoals() {
                                 <button
                                   type="button"
                           onClick={() => removeAction(index)}
-                                  className="text-blue-500 hover:text-blue-700 font-bold ml-2 flex-shrink-0"
+                                  className="text-[var(--text-primary)] hover:text-[var(--text-secondary)] font-bold ml-2 flex-shrink-0"
                         >
                                   ×
                         </button>
@@ -1184,18 +1184,18 @@ export default function PlayerGoals() {
                             );
                           })}
                           {formData.actions.length === 0 && (
-                            <div className="text-center py-4 text-gray-500 text-sm">
-                              No actions added yet
-                            </div>
+                                                      <div className="text-center py-4 text-[var(--text-secondary)] text-sm">
+                            No actions added yet
+                          </div>
                           )}
                         </div>
       </div>
     </div>
 
                     {/* Obstacles */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                    <div className="bg-[var(--bg-secondary)] rounded-lg p-4 border border-[var(--border-primary)] transition-colors duration-300">
+                      <h4 className="font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-[var(--bg-primary)] rounded-full"></span>
                         Potential Obstacles
                       </h4>
                 <div className="space-y-3">
@@ -1206,26 +1206,26 @@ export default function PlayerGoals() {
                       onChange={(e) => setNewObstacle(e.target.value)}
                             onKeyDown={handleObstacleKeyPress}
                             placeholder="Type obstacle description (Press Enter to add)"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm min-w-0"
+                            className="flex-1 px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] text-sm min-w-0 bg-[var(--bg-card)] text-[var(--text-primary)]"
                             aria-label="Obstacle description"
                           />
-                          <input
+                                                    <input
                             type="date"
                             value={newObstacleDate}
                             onChange={(e) => setNewObstacleDate(e.target.value)}
-                            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            className="w-32 px-3 py-2 border border-[var(--border-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] focus:border-[var(--border-primary)] text-sm bg-[var(--bg-card)] text-[var(--text-primary)]"
                             aria-label="Obstacle achievement date"
-                    />
+                          />
                     <button
                       type="button"
                       onClick={addObstacle}
                             disabled={isAddingObstacle || !newObstacle.trim() || !newObstacleDate}
-                            className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                            className="px-4 py-2 bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-md hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                             aria-label="Add obstacle"
                             title="Add obstacle (Enter key also works)"
                           >
                             {isAddingObstacle ? (
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <div className="w-4 h-4 border-2 border-[var(--text-primary)] border-t-transparent rounded-full animate-spin"></div>
                             ) : (
                               '+'
                             )}
@@ -1238,10 +1238,10 @@ export default function PlayerGoals() {
                             const obstacleText = typeof obstacle === 'string' ? obstacle : obstacle.description || '';
                             
                             return (
-                              <div key={obstacle._id || index} className="bg-orange-100 text-orange-700 px-3 py-2 rounded-md text-sm flex items-center justify-between">
+                              <div key={obstacle._id || index} className="bg-[var(--bg-secondary)] text-[var(--text-primary)] px-3 py-2 rounded-md text-sm flex items-center justify-between border border-[var(--border-primary)]">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium truncate">{obstacleText}</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-[var(--text-tertiary)]">
                                     Due: {obstacle.date ? formatDate(obstacle.date) : 'N/A'}
                                   </div>
                                 </div>
@@ -1253,7 +1253,7 @@ export default function PlayerGoals() {
                                       newObstacles[index].isOvercome = !obstacle.isOvercome;
                                       setFormData(prev => ({ ...prev, obstacles: newObstacles }));
                                     }}
-                                    className="text-orange-500 hover:text-orange-700 font-bold ml-2 flex-shrink-0"
+                                    className="text-[var(--text-primary)] hover:text-[var(--text-secondary)] font-bold ml-2 flex-shrink-0"
                                     title={obstacle.isOvercome ? 'Mark as not overcome' : 'Mark as overcome'}
                                   >
                                     {obstacle.isOvercome ? '✓' : '✗'}
@@ -1262,7 +1262,7 @@ export default function PlayerGoals() {
                                 <button
                                   type="button"
                           onClick={() => removeObstacle(index)}
-                                  className="text-orange-500 hover:text-orange-700 font-bold ml-2 flex-shrink-0"
+                                  className="text-[var(--text-primary)] hover:text-[var(--text-secondary)] font-bold ml-2 flex-shrink-0"
                         >
                                   ×
                         </button>
@@ -1270,8 +1270,8 @@ export default function PlayerGoals() {
                             );
                           })}
                           {formData.obstacles.length === 0 && (
-                            <div className="text-center py-4 text-gray-500 text-sm">
-                              No obstacles added yet
+                                                      <div className="text-center py-4 text-[var(--text-secondary)] text-sm">
+                            No obstacles added yet
                   </div>
                           )}
                         </div>
@@ -1283,11 +1283,11 @@ export default function PlayerGoals() {
                 </div>
 
             {/* Modal Footer - Fixed at bottom */}
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 flex-shrink-0">
+            <div className="flex justify-end gap-3 p-6 border-t border-[var(--border-secondary)] flex-shrink-0">
               <button
                 type="button"
                 onClick={closeModal}
-                className="px-6 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                className="px-6 py-2 text-[var(--text-secondary)] border border-[var(--border-primary)] rounded-md hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-colors"
               >
                 Cancel
               </button>
@@ -1295,7 +1295,7 @@ export default function PlayerGoals() {
                     type="submit"
                 disabled={isLoading}
                 onClick={handleSubmit}
-                className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-6 py-2 bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-md hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                 {isLoading ? 'Saving...' : (isEditing ? 'Update Goal' : 'Set Goal')}
                   </button>

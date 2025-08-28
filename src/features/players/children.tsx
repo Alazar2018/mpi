@@ -85,7 +85,7 @@ export default function Children() {
 
   return (
     <>
-      <div className="relative isolate rounded-2xl overflow-hidden min-h-[13.5rem] max-h-[13.5rem]">
+      <div className="relative isolate rounded-2xl overflow-hidden min-h-[13.5rem] max-h-[13.5rem] shadow-[var(--shadow-primary)] transition-colors duration-300">
         <div className="absolute pb-4 bg-primary/60 inset-0 flex flex-col justify-end gap-4 items-center">
           <span className="font-bold text-xl text-white">
             Add your child to the platform
@@ -102,16 +102,16 @@ export default function Children() {
 
       {/* Search Bar */}
       <div className="mt-4 flex items-center gap-4">
-        <div className="flex items-center w-80 bg-white dark:bg-gray-800 rounded-full pr-3 border border-gray-200 dark:border-gray-600">
+        <div className="flex items-center w-80 bg-[var(--bg-card)] rounded-full pr-3 border border-[var(--border-primary)] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
           <input
             placeholder="Search your children by name..."
             value={searchQuery}
             onChange={handleSearchChange}
             onKeyPress={handleSearchKeyPress}
-            className="w-full placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm pl-3 h-[2.5rem] bg-transparent rounded-full outline-none text-gray-900 dark:text-white"
+            className="w-full placeholder:text-[var(--text-tertiary)] text-sm pl-3 h-[2.5rem] bg-transparent rounded-full outline-none text-[var(--text-primary)]"
           />
           <div className="grid place-items-center">
-            <i dangerouslySetInnerHTML={{ __html: icons.search || '🔍' }} />
+            <i dangerouslySetInnerHTML={{ __html: icons.search || '🔍' }} className="text-[var(--text-tertiary)]" />
           </div>
         </div>
         <Button 
@@ -124,15 +124,15 @@ export default function Children() {
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-4">
-        <div className="rounded-3xl flex flex-col gap-4 p-4 px-6 col-span-2">
+        <div className="rounded-3xl flex flex-col gap-4 p-4 px-6 col-span-2 bg-[var(--bg-card)] shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] transition-colors duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <span className="font-semibold text-lg text-gray-900 dark:text-white">{getPageTitle()}</span>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{getPageDescription()}</p>
+              <span className="font-semibold text-lg text-[var(--text-primary)]">{getPageTitle()}</span>
+              <p className="text-sm text-[var(--text-secondary)] mt-1">{getPageDescription()}</p>
             </div>
             {!loading && totalChildren !== undefined && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-[var(--text-secondary)]">
                   {totalChildren} child{totalChildren !== 1 ? 'ren' : ''}
                 </span>
                 {children && children.length > 0 && (
@@ -153,16 +153,16 @@ export default function Children() {
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-300">Loading your children...</p>
+              <p className="text-[var(--text-secondary)]">Loading your children...</p>
               <div className="mt-4 grid grid-cols-3 gap-4">
                 {Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="p-4 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse">
+                  <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-xl animate-pulse transition-colors duration-300">
                     <div className="flex gap-4">
-                      <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-full"></div>
+                      <div className="w-12 h-12 bg-[var(--bg-tertiary)] rounded-full"></div>
                       <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-2/3"></div>
+                        <div className="h-4 bg-[var(--bg-tertiary)] rounded w-3/4"></div>
+                        <div className="h-3 bg-[var(--bg-tertiary)] rounded w-1/2"></div>
+                        <div className="h-3 bg-[var(--bg-tertiary)] rounded w-2/3"></div>
                       </div>
                     </div>
                   </div>
@@ -171,8 +171,8 @@ export default function Children() {
             </div>
           ) : error ? (
             <div className="text-center py-8">
-              <div className="text-red-500 text-6xl mb-4">⚠️</div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Error Loading Children</h3>
+              <div className="text-red-500 dark:text-red-400 text-6xl mb-4">⚠️</div>
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Error Loading Children</h3>
               <p className="text-red-500 dark:text-red-400 mb-4 max-w-md mx-auto">{error}</p>
               <div className="flex gap-3 justify-center">
                 <Button onClick={() => fetchChildren(currentPage, searchQuery)} className="bg-primary text-white">
@@ -185,7 +185,7 @@ export default function Children() {
             </div>
           ) : !children || children.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-[var(--text-secondary)] mb-4">
                 {searchQuery 
                   ? 'No children found matching your search.'
                   : 'No children found.'
@@ -229,7 +229,7 @@ export default function Children() {
                   <Button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                    className="px-3 py-1 text-sm bg-[var(--bg-secondary)] text-[var(--text-primary)] disabled:opacity-50 hover:bg-[var(--bg-tertiary)] transition-colors duration-300"
                   >
                     Previous
                   </Button>
@@ -241,7 +241,7 @@ export default function Children() {
                       className={`px-3 py-1 text-sm ${
                         currentPage === page
                           ? 'bg-primary text-white'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors duration-300'
                       }`}
                     >
                       {page}
@@ -251,7 +251,7 @@ export default function Children() {
                   <Button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                    className="px-3 py-1 text-sm bg-[var(--bg-secondary)] text-[var(--text-primary)] disabled:opacity-50 hover:bg-[var(--bg-tertiary)] transition-colors duration-300"
                   >
                     Next
                   </Button>
@@ -261,11 +261,11 @@ export default function Children() {
           )}
         </div>
         
-        <div className="rounded-3xl flex flex-col gap-4 p-4 px-6">
+        <div className="rounded-3xl flex flex-col gap-4 p-4 px-6 bg-[var(--bg-card)] shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] transition-colors duration-300">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-base text-gray-900 dark:text-white">Recent Activities</span>
+            <span className="font-bold text-base text-[var(--text-primary)]">Recent Activities</span>
             {!friendRequestsLoading && totalRequests > 0 && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-[var(--text-secondary)]">
                 {totalRequests} activity{totalRequests !== 1 ? 's' : ''}
               </span>
             )}
@@ -274,13 +274,13 @@ export default function Children() {
           {friendRequestsLoading ? (
             <div className="flex flex-col gap-4">
               {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="p-4 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse">
+                <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-xl animate-pulse transition-colors duration-300">
                   <div className="flex gap-3">
-                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-full"></div>
+                    <div className="w-12 h-12 bg-[var(--bg-tertiary)] rounded-full"></div>
                     <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
-                      <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+                      <div className="h-4 bg-[var(--bg-tertiary)] rounded w-3/4"></div>
+                      <div className="h-3 bg-[var(--bg-tertiary)] rounded w-1/2"></div>
+                      <div className="h-6 bg-[var(--bg-tertiary)] rounded w-full"></div>
                     </div>
                   </div>
                 </div>
@@ -310,7 +310,7 @@ export default function Children() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
+              <p className="text-[var(--text-secondary)] text-sm">
                 No recent activities
               </p>
             </div>

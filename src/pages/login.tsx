@@ -14,11 +14,24 @@ import icons from "@/utils/icons";
 import { required, toast } from "@/utils/utils";
 
 import { getDeviceInfo } from "@/utils/deviceInfo";
+import React from "react";
 
 export default function Login() {
   const authStore = useAuthStore()
 	const loginReq = useApiRequest<LoginResponse>()
   const navigate = useNavigate()
+
+  // Force light mode on login page for better visibility and security
+  React.useEffect(() => {
+    // Remove dark mode class to ensure light mode
+    document.documentElement.classList.remove('dark');
+    
+    // Clean up when component unmounts
+    return () => {
+      // Don't restore dark mode here - let the user's preference take effect
+      // when they log back in
+    };
+  }, []);
 
   function sub(data: LoginPayload) {
 		if(loginReq.pending) return
@@ -118,11 +131,11 @@ export default function Login() {
       >
         Go Back
       </Button>
-      <div className="flex flex-col gap-9 p-9 w-[30rem] rounded-[20px] bg-white">
+      <div className="flex flex-col gap-9 p-9 w-[30rem] rounded-[20px] bg-white shadow-lg border border-gray-200">
         <div className="flex flex-col gap-6 justify-center items-center">
           <img src="/logo.png" className="max-w-full w-[8rem]" />
           <div className="flex gap-2 items-center">
-            <span className="font-bold text-2xl">Welcome Back</span>
+            <span className="font-bold text-2xl text-gray-800">Welcome Back</span>
             👋
           </div>
         </div>  
@@ -141,7 +154,7 @@ export default function Login() {
                   <Checkbox name="agree">
                     Keep me logged in
                   </Checkbox>
-                  <Link to="/forgot-password" className="text-sm font-semibold text-blue-600 hover:underline cursor-pointer">
+                  <Link to="/forgot-password" className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                     Forgot Password?
                   </Link>
                 </div>

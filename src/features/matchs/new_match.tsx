@@ -307,22 +307,22 @@ export default function ScheduleMatch() {
                                     
                                     <div className="relative z-10">
                                         <div className="text-center mb-10">
-                                            <h2 className="text-4xl font-bold text-gray-800 mb-3">Player Selection</h2>
-                                            <p className="text-xl text-gray-600">Choose your players or add custom names</p>
+                                                                            <h2 className="text-4xl font-bold text-[var(--text-primary)] mb-3">Player Selection</h2>
+                                <p className="text-xl text-[var(--text-secondary)]">Choose your players or add custom names</p>
                                         </div>
                                         
                                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-12 items-center max-w-6xl mx-auto">
                                             {/* Player 1 */}
-                                            <div className="bg-white rounded-3xl p-8 shadow-lg border border-blue-200 hover:shadow-xl transition-all duration-300">
+                                            <div className="bg-[var(--bg-card)] rounded-3xl p-8 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
                                                 <div className="text-center mb-6">
                                                     <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                                                         <span className="text-3xl font-bold text-white">1</span>
                                                     </div>
-                                                    <h3 className="text-xl font-semibold text-gray-800">Player One</h3>
+                                                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">Player One</h3>
                                                 </div>
                                                 
                                                 <div className="space-y-5">
-                                                    <label className="flex items-center gap-3 cursor-pointer bg-blue-50 p-4 rounded-xl hover:bg-blue-100 transition-colors">
+                                                    <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-4 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors">
                                                         <input
                                                             type="checkbox"
                                                             checked={p1IsObject}
@@ -332,9 +332,9 @@ export default function ScheduleMatch() {
                                                                     setSelectedP1("");
                                                                 }
                                                             }}
-                                                            className="w-6 h-6 text-blue-600 bg-white border-2 border-blue-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                            className="w-6 h-6 text-blue-600 bg-[var(--bg-card)] border-2 border-blue-300 rounded focus:ring-blue-500 focus:ring-2"
                                                         />
-                                                        <span className="text-base font-medium text-blue-800">Registered Player</span>
+                                                        <span className="text-base font-medium text-blue-600">Registered Player</span>
                                                     </label>
                                                     
                                                     {p1IsObject ? (
@@ -350,7 +350,7 @@ export default function ScheduleMatch() {
                                                         <input
                                                             type="text"
                                                             placeholder="Enter player 1 name"
-                                                            className="w-full h-14 bg-white rounded-xl px-5 text-base border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                                                            className="w-full h-14 bg-[var(--bg-card)] rounded-xl px-5 text-base border-2 border-[var(--border-primary)] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-[var(--text-primary)]"
                                                             onChange={(e) => {
                                                                 setValue("p1Name", e.target.value);
                                                             }}
@@ -372,16 +372,16 @@ export default function ScheduleMatch() {
                                             </div>
                                             
                                             {/* Player 2 */}
-                                            <div className="bg-white rounded-3xl p-8 shadow-lg border border-purple-200 hover:shadow-xl transition-all duration-300">
+                                            <div className="bg-[var(--bg-card)] rounded-3xl p-8 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
                                                 <div className="text-center mb-6">
                                                     <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
                                                         <span className="text-3xl font-bold text-white">2</span>
                                                     </div>
-                                                    <h3 className="text-xl font-semibold text-gray-800">Player Two</h3>
+                                                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">Player Two</h3>
                                                 </div>
                                                 
                                                 <div className="space-y-5">
-                                                    <label className="flex items-center gap-3 cursor-pointer bg-purple-50 p-4 rounded-xl hover:bg-purple-100 transition-colors">
+                                                    <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-4 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors">
                                                         <input
                                                             type="checkbox"
                                                             checked={p2IsObject}
@@ -391,9 +391,9 @@ export default function ScheduleMatch() {
                                                                     setSelectedP2("");
                                                                 }
                                                             }}
-                                                            className="w-6 h-6 text-purple-600 bg-white border-2 border-purple-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                            className="w-6 h-6 text-purple-600 bg-[var(--bg-card)] border-2 border-purple-300 rounded focus:ring-blue-500 focus:ring-2"
                                                         />
-                                                        <span className="text-base font-medium text-purple-800">Registered Player</span>
+                                                        <span className="text-base font-medium text-purple-600">Registered Player</span>
                                                     </label>
                                                     
                                                     {p2IsObject ? (
@@ -409,7 +409,7 @@ export default function ScheduleMatch() {
                                                         <input
                                                             type="text"
                                                             placeholder="Enter player 2 name"
-                                                            className="w-full h-14 bg-white rounded-xl px-5 text-base border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                                                            className="w-full h-14 bg-[var(--bg-card)] rounded-xl px-5 text-base border-2 border-[var(--border-primary)] focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-[var(--text-primary)]"
                                                             onChange={(e) => {
                                                                 setValue("p2Name", e.target.value);
                                                             }}
@@ -422,15 +422,15 @@ export default function ScheduleMatch() {
                                 </div>
 
                                 {/* Match Details Section */}
-                                <div className="bg-white rounded-3xl p-10 shadow-xl border border-gray-100">
+                                <div className="bg-[var(--bg-card)] rounded-3xl p-10 shadow-[var(--shadow-primary)] border border-[var(--border-primary)] transition-colors duration-300">
                                     <div className="text-center mb-10">
-                                        <h2 className="text-4xl font-bold text-gray-800 mb-3">Match Details</h2>
-                                        <p className="text-xl text-gray-600">Configure your match settings and preferences</p>
+                                        <h2 className="text-4xl font-bold text-[var(--text-primary)] mb-3">Match Details</h2>
+                                        <p className="text-xl text-[var(--text-secondary)]">Configure your match settings and preferences</p>
                             </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
                                         <div className="space-y-3">
-                                            <label className="text-base font-medium text-gray-700">
+                                            <label className="text-base font-medium text-[var(--text-primary)]">
                                                 Match Date & Time *
                                             </label>
                                             <input
@@ -442,7 +442,7 @@ export default function ScheduleMatch() {
                                                 }}
                                                 min={new Date().toISOString().slice(0, 16)}
                                                 max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
-                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                                                className="w-full px-4 py-3 border-2 border-[var(--border-primary)] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-[var(--bg-secondary)] hover:bg-[var(--bg-card)] text-[var(--text-primary)]"
                                                 required
                                             />
                                             {errors.date && (
@@ -457,6 +457,7 @@ export default function ScheduleMatch() {
                                 <Select
                                                 options={matchTypeOptions}
                                                 label="Total Sets to Win"
+                                                
                                                 validation={{ required: required }}
                                                 name="matchType"
                                             />
@@ -490,29 +491,29 @@ export default function ScheduleMatch() {
                             </div>
 
                                         <div className="flex items-center justify-center">
-                                            <label className="flex items-center gap-3 cursor-pointer bg-gray-50 p-5 rounded-xl hover:bg-gray-100 transition-colors w-full justify-center">
+                                            <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-5 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors w-full justify-center">
                                                 <input
                                                     type="checkbox"
                                                     name="indoor"
-                                                    className="w-6 h-6 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                    className="w-6 h-6 text-blue-600 bg-[var(--bg-card)] border-2 border-[var(--border-primary)] rounded focus:ring-blue-500 focus:ring-2"
                                                 />
-                                                <span className="text-base font-medium text-gray-700">Indoor Court</span>
+                                                <span className="text-base font-medium text-[var(--text-primary)]">Indoor Court</span>
                                             </label>
                                         </div>
                                     </div>
 
                                                                         {/* Tournament fields - shown conditionally */}
                                     {matchCategory === 'tournament' && (
-                                        <div className="mt-10 p-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl border border-amber-200 max-w-5xl mx-auto">
-                                            <h3 className="text-2xl font-semibold text-amber-800 mb-6 flex items-center gap-3 text-center justify-center">
+                                        <div className="mt-10 p-8 bg-[var(--bg-secondary)] rounded-3xl border border-[var(--border-primary)] max-w-5xl mx-auto transition-colors duration-300">
+                                            <h3 className="text-2xl font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-3 text-center justify-center">
                                                 🏆 Tournament Information
                                             </h3>
-                                            <p className="text-center text-amber-700 mb-8 text-lg">
+                                            <p className="text-center text-[var(--text-secondary)] mb-8 text-lg">
                                                 Select the tournament type and level to categorize your match properly. 
                                                 The tournament level options will update based on your selection.
                                             </p>
-                                            <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                                                <div className="flex items-center gap-3 text-blue-800">
+                                            <div className="mb-6 p-4 bg-[var(--bg-tertiary)] rounded-xl border border-[var(--border-secondary)]">
+                                                <div className="flex items-center gap-3 text-[var(--text-primary)]">
                                                     <span className="text-xl">ℹ️</span>
                                                     <div className="flex-1">
                                                         <p className="font-medium">Tournament Match Requirements:</p>
@@ -521,10 +522,10 @@ export default function ScheduleMatch() {
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-medium">Progress:</span>
                                                         <div className="flex gap-1">
-                                                            <div className={`w-3 h-3 rounded-full ${currentTournamentType ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                                                            <div className={`w-3 h-3 rounded-full ${currentTournamentType && watch('tournamentLevel') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                            <div className={`w-3 h-3 rounded-full ${currentTournamentType ? 'bg-green-500' : 'bg-[var(--bg-tertiary)]'}`}></div>
+                                                            <div className={`w-3 h-3 rounded-full ${currentTournamentType && watch('tournamentLevel') ? 'bg-green-500' : 'bg-[var(--bg-tertiary)]'}`}></div>
                                                         </div>
-                                                        <span className="text-xs text-blue-600">
+                                                        <span className="text-xs text-[var(--text-secondary)]">
                                                             {currentTournamentType && watch('tournamentLevel') ? '2/2' : currentTournamentType ? '1/2' : '0/2'}
                                                         </span>
                                                     </div>
@@ -534,7 +535,7 @@ export default function ScheduleMatch() {
                                                 <div className="space-y-3">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <span className="text-2xl">🏆</span>
-                                                        <span className="text-lg font-medium text-amber-700">Tournament Type</span>
+                                                        <span className="text-lg font-medium text-[var(--text-primary)]">Tournament Type</span>
                                                     </div>
                                                     <Select
                                                         options={Object.keys(TOURNAMENT_LEVELS).map(type => ({ 
@@ -553,7 +554,7 @@ export default function ScheduleMatch() {
                                                 <div className="space-y-3">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <span className="text-2xl">📊</span>
-                                                        <span className="text-lg font-medium text-amber-700">Tournament Level</span>
+                                                        <span className="text-lg font-medium text-[var(--text-primary)]">Tournament Level</span>
                                                     </div>
                                                     <Select
                                                         options={currentTournamentType && TOURNAMENT_LEVELS[currentTournamentType] 
@@ -565,18 +566,18 @@ export default function ScheduleMatch() {
                                                         placeholder={currentTournamentType ? "Select tournament level" : "Select tournament type first"}
                                                     />
                                                     {!currentTournamentType && (
-                                                        <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
+                                                        <p className="text-sm text-[var(--text-secondary)] mt-2 flex items-center gap-2">
                                                             <span>⚠️</span>
                                                             <span>Please select a tournament type first to see available levels</span>
                                                         </p>
                                                     )}
                                                     {currentTournamentType && TOURNAMENT_LEVELS[currentTournamentType] && (
-                                                        <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                                                            <p className="text-sm text-green-700 flex items-center gap-2">
+                                                        <div className="mt-3 p-3 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-secondary)]">
+                                                            <p className="text-sm text-[var(--text-primary)] flex items-center gap-2">
                                                                 <span>📋</span>
                                                                 <span>Available levels for <strong>{currentTournamentType}</strong>: {TOURNAMENT_LEVELS[currentTournamentType].length} options</span>
                                                             </p>
-                                                            <p className="text-xs text-green-600 mt-1">
+                                                            <p className="text-xs text-[var(--text-secondary)] mt-1">
                                                                 {TOURNAMENT_LEVELS[currentTournamentType].slice(0, 5).join(', ')}
                                                                 {TOURNAMENT_LEVELS[currentTournamentType].length > 5 && '...'}
                                                             </p>
@@ -599,10 +600,10 @@ export default function ScheduleMatch() {
                                     </div> */}
 
                                     {/* Notes Section */}
-                                    <div className="mt-12 pt-8 border-t border-gray-200">
+                                    <div className="mt-12 pt-8 border-t border-[var(--border-secondary)]">
                                         <div className="text-center mb-8">
-                                            <h3 className="text-3xl font-bold text-gray-800 mb-3">📝 Match Notes</h3>
-                                            <p className="text-xl text-gray-600">Add any additional information about your match</p>
+                                            <h3 className="text-3xl font-bold text-[var(--text-primary)] mb-3">📝 Match Notes</h3>
+                                            <p className="text-xl text-[var(--text-secondary)]">Add any additional information about your match</p>
                                         </div>
                                         <div className="w-full max-w-4xl mx-auto">
                                             <Textarea

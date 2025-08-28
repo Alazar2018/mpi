@@ -82,12 +82,7 @@ export const coachNavs: NavItem[] = [
         icon: icons.matchs,
         roles: ["coach"]
     },
-    {
-        name: "Schedule Match",
-        path: "/admin/matchs/schedule",
-        icon: icons.matchs,
-        roles: ["coach"]
-    },
+   
     {
         name: "Connect",
         path: "/admin/connect",

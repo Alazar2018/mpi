@@ -106,18 +106,18 @@ export default function Players() {
   return (
     <div className="space-y-6">
       {/* Hero Section */}
-      <div className="relative isolate rounded-3xl overflow-hidden min-h-[16rem] max-h-[16rem] shadow-lg">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-700/90 flex flex-col justify-center items-center text-center px-8">
+      <div className="relative isolate rounded-3xl overflow-hidden min-h-[16rem] max-h-[16rem] shadow-[var(--shadow-primary)] transition-colors duration-300">
+        <div className="absolute inset-0 bg-[var(--bg-card)] flex flex-col justify-center items-center text-center px-8">
           <div className="mb-6">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-              <span className="text-3xl text-white">
+            <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center mb-4 mx-auto">
+              <span className="text-3xl text-[var(--text-primary)]">
                 {currentUserRole === 'parent' ? '👶' : '🎾'}
               </span>
             </div>
-            <h1 className="font-bold text-3xl text-white mb-2">
+            <h1 className="font-bold text-3xl text-[var(--text-primary)] mb-2">
               {currentUserRole === 'parent' ? 'Add your child to the platform' : 'Invite new player via email'}
             </h1>
-            <p className="text-blue-100 text-lg">
+            <p className="text-[var(--text-secondary)] text-lg">
               {currentUserRole === 'parent' 
                 ? 'Connect with coaches and track progress together'
                 : 'Expand your team with talented players'
@@ -126,26 +126,26 @@ export default function Players() {
           </div>
           
           {currentUserRole === 'coach' && (
-            <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-              <div className="flex items-center w-80 bg-white rounded-full pr-3 shadow-lg">
+            <div className="flex items-center gap-4 bg-[var(--bg-secondary)] backdrop-blur-sm rounded-2xl p-4 border border-[var(--border-primary)]">
+              <div className="flex items-center w-80 bg-[var(--bg-card)] rounded-full pr-3 border border-[var(--border-primary)]">
                 <input
                   placeholder="Enter Email"
-                  className="w-full placeholder:text-gray-500 text-sm pl-4 h-12 bg-white rounded-full outline-none"
+                  className="w-full placeholder:text-[var(--text-tertiary)] text-sm pl-4 h-12 bg-transparent rounded-full outline-none text-[var(--text-primary)]"
                 />
                 <div className="grid place-items-center px-3">
-                  <i dangerouslySetInnerHTML={{ __html: icons.mail }} className="text-gray-400" />
+                  <i dangerouslySetInnerHTML={{ __html: icons.mail }} className="text-[var(--text-tertiary)]" />
                 </div>
               </div>
-              <Button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full !h-12 px-8 shadow-lg hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all">
+              <Button className="bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-full !h-12 px-8 hover:bg-[var(--bg-secondary)] transition-colors duration-300">
                 Invite Player
               </Button>
             </div>
           )}
           
           {currentUserRole === 'parent' && (
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 max-w-md">
-              <p className="text-white text-lg font-medium mb-2">Contact your coach</p>
-              <p className="text-blue-100 text-sm">
+            <div className="bg-[var(--bg-secondary)] backdrop-blur-sm rounded-2xl p-6 max-w-md border border-[var(--border-primary)]">
+              <p className="text-[var(--text-primary)] text-lg font-medium mb-2">Contact your coach</p>
+              <p className="text-[var(--text-secondary)] text-sm">
                 Reach out to your child's coach to get them added to the platform and start tracking their progress
               </p>
             </div>
@@ -153,29 +153,29 @@ export default function Players() {
         </div>
         <img
           src="/stuff.jpg"
-          className="max-w-full object-cover w-full h-full"
+          className="max-w-full object-cover w-full h-full opacity-20"
           alt="Hero background"
         />
       </div>
 
       {/* Search Section */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+      <div className="bg-[var(--bg-card)] rounded-3xl p-6 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] transition-colors duration-300">
         <div className="flex items-center gap-4">
-          <div className="flex items-center flex-1 bg-gray-50 rounded-2xl pr-4 border border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all">
+          <div className="flex items-center flex-1 bg-[var(--bg-secondary)] rounded-2xl pr-4 border border-[var(--border-primary)] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <div className="pl-4 pr-2">
-              <span className="text-gray-400">🔍</span>
+              <span className="text-[var(--text-tertiary)]">🔍</span>
             </div>
             <input
               placeholder={currentUserRole === 'parent' ? 'Search your children by name...' : 'Search players by name or email...'}
               value={searchQuery}
               onChange={handleSearchChange}
               onKeyPress={handleSearchKeyPress}
-              className="w-full placeholder:text-gray-500 text-sm h-12 bg-transparent outline-none"
+              className="w-full placeholder:text-[var(--text-tertiary)] text-sm h-12 bg-transparent outline-none text-[var(--text-primary)]"
             />
           </div>
           <Button 
             onClick={handleSearch}
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl !h-12 px-8 shadow-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all"
+            className="bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-xl !h-12 px-8 hover:bg-[var(--bg-secondary)] transition-colors duration-300"
             disabled={loading}
           >
             {loading ? '🔍 Searching...' : currentUserRole === 'parent' ? 'Find Child' : 'Search'}
@@ -188,21 +188,21 @@ export default function Players() {
         {/* Players/Children Section */}
         <div className="lg:col-span-3 space-y-6">
           {/* Header */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-[var(--bg-card)] rounded-3xl p-6 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] transition-colors duration-300">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center">
-                  <span className="text-2xl text-white">
+                <div className="w-12 h-12 bg-[var(--bg-secondary)] rounded-2xl flex items-center justify-center border border-[var(--border-primary)]">
+                  <span className="text-2xl text-[var(--text-primary)]">
                     {currentUserRole === 'parent' ? '👶' : '🎾'}
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">{getPageTitle()}</h2>
-                  <p className="text-gray-600">{getPageDescription()}</p>
+                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">{getPageTitle()}</h2>
+                  <p className="text-[var(--text-secondary)]">{getPageDescription()}</p>
                 </div>
               </div>
               {!loading && totalPlayers !== undefined && (
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium">
+                <div className="bg-[var(--bg-primary)] text-[var(--text-primary)] px-4 py-2 rounded-full text-sm font-medium border border-[var(--border-primary)]">
                   {totalPlayers} {currentUserRole === 'parent' ? 'child' : 'player'}{totalPlayers !== 1 ? 'ren' : ''}
                 </div>
               )}
@@ -217,41 +217,41 @@ export default function Players() {
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="bg-gray-50 rounded-2xl p-6 animate-pulse">
+                  <div key={index} className="bg-[var(--bg-secondary)] rounded-2xl p-6 animate-pulse transition-colors duration-300">
                     <div className="flex gap-4">
-                      <div className="w-16 h-16 bg-gray-200 rounded-2xl"></div>
+                      <div className="w-16 h-16 bg-[var(--bg-tertiary)] rounded-2xl"></div>
                       <div className="flex-1 space-y-3">
-                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                        <div className="h-5 bg-[var(--bg-tertiary)] rounded w-3/4"></div>
+                        <div className="h-4 bg-[var(--bg-tertiary)] rounded w-1/2"></div>
+                        <div className="h-4 bg-[var(--bg-tertiary)] rounded w-2/3"></div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : error ? (
-              <div className="text-center py-12 bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl border border-red-200">
-                <div className="text-red-500 text-6xl mb-4">⚠️</div>
-                <p className="text-red-600 text-lg mb-6">{error}</p>
+              <div className="text-center py-12 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-2xl border border-red-200 dark:border-red-700 transition-colors duration-300">
+                <div className="text-red-500 dark:text-red-400 text-6xl mb-4">⚠️</div>
+                <p className="text-red-600 dark:text-red-400 text-lg mb-6">{error}</p>
                 <Button 
                   onClick={() => fetchPlayers(currentPage, searchQuery)} 
-                  className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-8 py-3 rounded-full hover:from-red-600 hover:to-pink-700 transform hover:scale-105 transition-all"
+                  className="bg-[var(--bg-primary)] text-[var(--text-primary)] px-8 py-3 rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-300"
                 >
                   {currentUserRole === 'parent' ? '🔄 Refresh Children' : '🔄 Try Again'}
                 </Button>
               </div>
             ) : !players || players.length === 0 ? (
-              <div className="text-center py-16 bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl border border-gray-200">
-                <div className="text-gray-400 text-8xl mb-6">
+              <div className="text-center py-16 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800/50 dark:to-blue-900/20 rounded-2xl border border-gray-200 dark:border-gray-600 transition-colors duration-300">
+                <div className="text-gray-400 dark:text-gray-500 text-8xl mb-6">
                   {currentUserRole === 'parent' ? '👶' : '🎾'}
                 </div>
-                <h3 className="text-2xl font-semibold text-gray-600 mb-4">
+                <h3 className="text-2xl font-semibold text-gray-600 dark:text-gray-300 mb-4">
                   {searchQuery 
                     ? `No ${currentUserRole === 'parent' ? 'children' : 'players'} found matching your search.`
                     : `No ${currentUserRole === 'parent' ? 'children' : 'players'} found.`
                   }
                 </h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
                   {searchQuery 
                     ? 'Try adjusting your search terms or check the spelling.'
                     : currentUserRole === 'parent' 
@@ -265,7 +265,7 @@ export default function Players() {
                       setSearchQuery('');
                       fetchPlayers();
                     }} 
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-3 rounded-full hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all"
+                    className="bg-[var(--bg-primary)] text-[var(--text-primary)] px-8 py-3 rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-300"
                   >
                     {currentUserRole === 'parent' ? '🔄 Show All Children' : '🔄 Clear Search'}
                   </Button>
@@ -300,7 +300,7 @@ export default function Players() {
                     <Button
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="px-4 py-2 text-sm bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-gray-600 hover:to-gray-700 transform hover:scale-105 transition-all"
+                      className="px-4 py-2 text-sm bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--bg-tertiary)] transition-colors duration-300"
                     >
                       ← Previous
                     </Button>
@@ -310,10 +310,10 @@ export default function Players() {
                         <Button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-4 py-2 text-sm rounded-xl transition-all transform hover:scale-105 ${
+                          className={`px-4 py-2 text-sm rounded-xl transition-all ${
                             currentPage === page
-                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-primary)]'
+                              : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
                           }`}
                         >
                           {page}
@@ -324,7 +324,7 @@ export default function Players() {
                     <Button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="px-4 py-2 text-sm bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-gray-600 hover:to-gray-700 transform hover:scale-105 transition-all"
+                      className="px-4 py-2 text-sm bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--bg-tertiary)] transition-colors duration-300"
                     >
                       Next →
                     </Button>
@@ -337,19 +337,19 @@ export default function Players() {
         
         {/* Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 sticky top-6">
+          <div className="bg-[var(--bg-card)] rounded-3xl p-6 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] sticky top-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <span className="text-white text-lg">
+              <div className="w-10 h-10 bg-[var(--bg-secondary)] rounded-xl flex items-center justify-center border border-[var(--border-primary)]">
+                <span className="text-[var(--text-primary)] text-lg">
                   {currentUserRole === 'parent' ? '📊' : '📨'}
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-lg text-gray-800">
+                <h3 className="font-bold text-lg text-[var(--text-primary)]">
                   {currentUserRole === 'parent' ? 'Recent Activities' : 'Recent Invitations'}
                 </h3>
                 {!friendRequestsLoading && totalRequests > 0 && (
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-[var(--text-secondary)]">
                     {totalRequests} {currentUserRole === 'parent' ? 'activity' : 'request'}{totalRequests !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -359,25 +359,25 @@ export default function Players() {
             {friendRequestsLoading ? (
               <div className="space-y-4">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="bg-gray-50 rounded-2xl p-4 animate-pulse">
+                  <div key={index} className="bg-[var(--bg-secondary)] rounded-2xl p-4 animate-pulse transition-colors duration-300">
                     <div className="flex gap-3">
-                      <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                      <div className="w-12 h-12 bg-[var(--bg-tertiary)] rounded-xl"></div>
                       <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                        <div className="h-6 bg-gray-200 rounded w-full"></div>
+                        <div className="h-4 bg-[var(--bg-tertiary)] rounded w-3/4"></div>
+                        <div className="h-3 bg-[var(--bg-tertiary)] rounded w-1/2"></div>
+                        <div className="h-6 bg-[var(--bg-tertiary)] rounded w-full"></div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : friendRequestsError ? (
-              <div className="text-center py-6 bg-red-50 rounded-2xl border border-red-200">
-                <div className="text-red-500 text-4xl mb-3">⚠️</div>
-                <p className="text-red-600 text-sm mb-4">{friendRequestsError}</p>
+              <div className="text-center py-6 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-700 transition-colors duration-300">
+                <div className="text-red-500 dark:text-red-400 text-4xl mb-3">⚠️</div>
+                <p className="text-red-600 dark:text-red-400 text-sm mb-4">{friendRequestsError}</p>
                 <Button 
                   onClick={refreshFriendRequests} 
-                  className="text-sm bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-full hover:from-red-600 hover:to-pink-700"
+                  className="text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] px-4 py-2 rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-300"
                 >
                   🔄 Try Again
                 </Button>
@@ -396,11 +396,11 @@ export default function Players() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 bg-gray-50 rounded-2xl">
-                <div className="text-gray-400 text-4xl mb-3">
+              <div className="text-center py-8 bg-[var(--bg-secondary)] rounded-2xl transition-colors duration-300">
+                <div className="text-[var(--text-tertiary)] text-4xl mb-3">
                   {currentUserRole === 'parent' ? '📊' : '📨'}
                 </div>
-                <p className="text-gray-500 text-sm">
+                <p className="text-[var(--text-secondary)] text-sm">
                   {currentUserRole === 'parent' ? 'No recent activities' : 'No pending friend requests'}
                 </p>
               </div>

@@ -71,26 +71,26 @@ const MatchAnalysisTabs: React.FC<MatchAnalysisTabsProps> = ({ matchData }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--bg-primary)] transition-colors duration-300">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-[var(--bg-card)] shadow-[var(--shadow-secondary)] border-b border-[var(--border-primary)] transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Match Analysis</h1>
-              <p className="text-sm text-gray-600">
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] transition-colors duration-300">Match Analysis</h1>
+              <p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
                 {matchData.p1.firstName} {matchData.p1.lastName} vs {matchData.p2Name}
               </p>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-500">Status</div>
+              <div className="text-sm text-[var(--text-tertiary)] transition-colors duration-300">Status</div>
               <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
                 matchData.status === 'completed' 
-                  ? 'bg-green-100 text-green-800'
+                  ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                   : matchData.status === 'in_progress'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
+                  ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
+              } transition-colors duration-300`}>
                 {matchData.status.replace('_', ' ').toUpperCase()}
               </div>
             </div>
@@ -99,7 +99,7 @@ const MatchAnalysisTabs: React.FC<MatchAnalysisTabsProps> = ({ matchData }) => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-[var(--bg-card)] shadow-[var(--shadow-secondary)] border-b border-[var(--border-primary)] transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
             {tabs.map((tab) => (
@@ -108,8 +108,8 @@ const MatchAnalysisTabs: React.FC<MatchAnalysisTabsProps> = ({ matchData }) => {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-[var(--border-primary)] text-[var(--text-primary)]'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                 }`}
               >
                 <span className="mr-2">{tab.icon}</span>

@@ -1406,19 +1406,19 @@ export default function Profile() {
         const goalStatus = getGoalStatus(goal);
 
         return (
-            <div key={goal._id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+            <div key={goal._id} className="bg-[var(--bg-card)] rounded-xl shadow-sm border border-[var(--border-primary)] p-4 mb-4">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${getGoalTypeColor(goal.goal)}`}>
                                 {getGoalTypeLabel(goal.goal)}
                             </span>
-                            <span className="text-xs text-gray-500">Due: {formatDate(goal.achievementDate)}</span>
+                            <span className="text-xs text-[var(--text-secondary)]">Due: {formatDate(goal.achievementDate)}</span>
                             {goal.coach && (
-                                <span className={`text-xs px-2 py-1 rounded ${
+                                <span className={`text-xs px-2 py-1 rounded transition-colors duration-300 ${
                                     canEditGoal(goal) 
-                                        ? 'text-green-700 bg-green-100' 
-                                        : 'text-gray-500 bg-gray-100'
+                                        ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30' 
+                                        : 'text-[var(--text-secondary)] bg-[var(--bg-tertiary)]'
                                 }`}>
                                     {canEditGoal(goal) ? '✓ My Goal' : `Coach: ${goal.coach.firstName} ${goal.coach.lastName}`}
                                 </span>
@@ -1429,51 +1429,51 @@ export default function Profile() {
                             {goalStatus === 'achieved' && (
                                 <span className="text-green-500">✓</span>
                             )}
-                            <h4 className="font-bold text-gray-800">{goal.description?.toUpperCase() || goal.title?.toUpperCase()}</h4>
+                            <h4 className="font-bold text-[var(--text-primary)]">{goal.description?.toUpperCase() || goal.title?.toUpperCase()}</h4>
                         </div>
 
                         {/* Goal Status Banner */}
                         <div className="mb-3">
                             {goalStatus === 'overdue' && (
-                                <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded-md text-sm font-medium mb-2">
+                                <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 px-3 py-2 rounded-md text-sm font-medium mb-2 transition-colors duration-300">
                                     ⚠️ Overdue - Due date: {goal.achievementDate ? formatDate(goal.achievementDate) : 'No due date'}
                                 </div>
                             )}
                             
                             {goalStatus === 'achieved' ? (
-                                <div className="bg-green-100 border border-green-300 text-green-700 px-3 py-2 rounded-md text-sm font-medium">
+                                <div className="bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300">
                                     ✓ Achieved
                                 </div>
                             ) : goalStatus === 'overdue' ? (
-                                <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded-md text-sm font-medium">
+                                <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300">
                                     ⚠️ Overdue
                                 </div>
                             ) : (
-                                <div className="bg-blue-100 border border-blue-300 text-blue-700 px-3 py-2 rounded-md text-sm font-medium">
+                                <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300">
                                     📋 Planned - Due: {goal.achievementDate ? formatDate(goal.achievementDate) : 'No due date'}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <button 
-                        onClick={() => toggleGoal(goal._id)}
-                        className="text-gray-400 hover:text-gray-600"
-                    >
-                        {isExpanded ? '‹' : '›'}
-                    </button>
+                                            <button 
+                            onClick={() => toggleGoal(goal._id)}
+                            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        >
+                            {isExpanded ? '‹' : '›'}
+                        </button>
                 </div>
 
                 {isExpanded && (
-                    <div className="mt-4 space-y-4 pt-4 border-t border-gray-100">
+                    <div className="mt-4 space-y-4 pt-4 border-t border-[var(--border-primary)]">
                         <div>
-                            <h5 className="font-bold text-sm text-gray-700 mb-2">Measurement Type</h5>
-                            <p className="text-sm text-gray-600">{goal.measurement || 'No measurement specified'}</p>
+                            <h5 className="font-bold text-sm text-[var(--text-primary)] mb-2">Measurement Type</h5>
+                            <p className="text-sm text-[var(--text-secondary)]">{goal.measurement || 'No measurement specified'}</p>
                         </div>
 
                         {/* Actions */}
                         {goal.actions && goal.actions.length > 0 && (
                             <div className="mt-3">
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Actions:</h4>
+                                <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Actions:</h4>
                                 <div className="space-y-2">
                                     {goal.actions.map((action: any, index: number) => {
                                         const actionText = typeof action === 'string' ? action : action.description || '';
@@ -1484,16 +1484,16 @@ export default function Profile() {
                                                 key={action._id || index} 
                                                 className={`px-3 py-2 rounded-md text-sm flex items-center justify-between ${
                                                     isDone 
-                                                        ? 'bg-green-100 text-green-700 border border-green-200' 
-                                                        : 'bg-blue-100 text-blue-700 border border-blue-200'
-                                                }`}
+                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700' 
+                                                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700'
+                                                } transition-colors duration-300`}
                                             >
                                                 <div className="flex-1 min-w-0">
                                                     <div className="font-medium truncate">{actionText}</div>
                                                     {typeof action === 'object' && action.date && (
-                                                        <div className="text-xs text-gray-500">
-                                                            Due: {formatDate(action.date)}
-                                                        </div>
+                                                                                                        <div className="text-xs text-[var(--text-secondary)]">
+                                                    Due: {formatDate(action.date)}
+                                                </div>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2 ml-2">
@@ -1511,7 +1511,7 @@ export default function Profile() {
                         {/* Obstacles */}
                         {goal.obstacles && goal.obstacles.length > 0 && (
                             <div className="mt-3">
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Potential Obstacles:</h4>
+                                <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Potential Obstacles:</h4>
                                 <div className="space-y-2">
                                     {goal.obstacles.map((obstacle: any, index: number) => {
                                         const obstacleText = typeof obstacle === 'string' ? obstacle : obstacle.description || '';
@@ -1522,16 +1522,16 @@ export default function Profile() {
                                                 key={obstacle._id || index} 
                                                 className={`px-3 py-2 rounded-md text-sm flex items-center justify-between ${
                                                     isOvercome 
-                                                        ? 'bg-green-100 text-green-700 border border-green-200' 
-                                                        : 'bg-orange-100 text-orange-700 border border-orange-200'
-                                                }`}
+                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700' 
+                                                        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-700'
+                                                } transition-colors duration-300`}
                                             >
                                                 <div className="flex-1 min-w-0">
                                                     <div className="font-medium truncate">{obstacleText}</div>
                                                     {typeof obstacle === 'object' && obstacle.date && (
-                                                        <div className="text-xs text-gray-500">
-                                                            Due: {formatDate(obstacle.date)}
-                                                        </div>
+                                                                                                        <div className="text-xs text-[var(--text-secondary)]">
+                                                    Due: {formatDate(obstacle.date)}
+                                                </div>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2 ml-2">
@@ -1572,7 +1572,7 @@ export default function Profile() {
                                     </button>
                                 </>
                             ) : (
-                                <div className="text-sm text-gray-500 italic">
+                                <div className="text-sm text-[var(--text-secondary)] italic">
                                     Assigned by {goal.coach?.firstName} {goal.coach?.lastName}
                                 </div>
                             )}
@@ -1595,7 +1595,7 @@ export default function Profile() {
                     <div className="space-y-4 sm:space-y-6">
                         {/* Form Header */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <h3 className="text-lg font-semibold text-gray-800">Basic Info</h3>
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Basic Info</h3>
                             <div className="flex gap-2 w-full sm:w-auto">
                                     {!isEditing ? (
                                         <button
@@ -1608,7 +1608,7 @@ export default function Profile() {
                                         <>
                                 <button
                                     onClick={handleCancel}
-                                    className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm sm:text-base w-1/2 sm:w-auto"
+                                    className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] text-sm sm:text-base w-1/2 sm:w-auto transition-colors duration-300"
                                 >
                                     Cancel
                                 </button>
@@ -1680,7 +1680,7 @@ export default function Profile() {
                                         }}
                                     />
                                 </div>
-                                <p className="text-sm text-gray-600 text-center">
+                                <p className="text-sm text-[var(--text-secondary)] text-center">
                                     Click the camera icon to upload a new profile picture
                                 </p>
                             </div>
@@ -1688,7 +1688,7 @@ export default function Profile() {
                             {/* Personal Information */}
                             <div className="space-y-3 sm:space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         First Name *
                                     </label>
                                     <input
@@ -1696,8 +1696,8 @@ export default function Profile() {
                                         value={formData.firstName}
                                         onChange={(e) => handleInputChange("firstName", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     />
                                 </div>
@@ -1711,22 +1711,22 @@ export default function Profile() {
                                         value={formData.lastName}
                                         onChange={(e) => handleInputChange("lastName", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         Gender *
                                     </label>
                                     <select
                                         value={formData.gender}
                                         onChange={(e) => handleInputChange("gender", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     >
                                         <option value="Male">Male</option>
@@ -1736,7 +1736,7 @@ export default function Profile() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         Date of birth *
                                     </label>
                                     <div className="relative">
@@ -1745,8 +1745,8 @@ export default function Profile() {
                                             value={formData.dateOfBirth}
                                             onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
                                             disabled={!isEditing}
-                                            className={`w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                                !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                            className={`w-full px-3 py-2 pr-10 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                                !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                             }`}
                                         />
                                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -1759,11 +1759,11 @@ export default function Profile() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         Phone Number *
                                     </label>
                                     <div className="flex gap-2">
-                                        <div className="flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-xs sm:text-sm">
+                                        <div className="flex items-center px-3 py-2 border border-[var(--border-primary)] rounded-lg bg-[var(--bg-tertiary)] text-xs sm:text-sm text-[var(--text-primary)]">
                                             <span>🇺🇸 +1</span>
                                         </div>
                                         <input
@@ -1771,8 +1771,8 @@ export default function Profile() {
                                             value={formData.phoneNumber}
                                             onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
                                             disabled={!isEditing}
-                                            className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                                !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                            className={`flex-1 px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                                !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                             }`}
                                         />
                                     </div>
@@ -1782,15 +1782,15 @@ export default function Profile() {
                             {/* Address Information */}
                             <div className="space-y-3 sm:space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         Country *
                                     </label>
                                     <select
                                         value={formData.country}
                                         onChange={(e) => handleInputChange("country", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     >
                                         <option value="Ethiopia">Ethiopia</option>
@@ -1801,15 +1801,15 @@ export default function Profile() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         State *
                                     </label>
                                     <select
                                         value={formData.state}
                                         onChange={(e) => handleInputChange("state", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     >
                                         <option value="Addis Ababa">Addis Ababa</option>
@@ -1820,15 +1820,15 @@ export default function Profile() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         City *
                                     </label>
                                     <select
                                         value={formData.city}
                                         onChange={(e) => handleInputChange("city", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     >
                                         <option value="Addis Ababa">Addis Ababa</option>
@@ -1839,7 +1839,7 @@ export default function Profile() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         Street Address *
                                     </label>
                                     <input
@@ -1847,14 +1847,14 @@ export default function Profile() {
                                         value={formData.streetAddress}
                                         onChange={(e) => handleInputChange("streetAddress", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1 sm:mb-2">
                                         Zip Code *
                                     </label>
                                     <input
@@ -1862,8 +1862,8 @@ export default function Profile() {
                                         value={formData.zipCode}
                                         onChange={(e) => handleInputChange("zipCode", e.target.value)}
                                         disabled={!isEditing}
-                                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base ${
-                                            !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                                        className={`w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-transparent text-sm sm:text-base bg-[var(--bg-card)] text-[var(--text-primary)] ${
+                                            !isEditing ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                     />
                                 </div>
@@ -1880,8 +1880,8 @@ export default function Profile() {
                         {/* Header */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div>
-                                <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Profile</h3>
-                                <p className="text-gray-600">Manage your profile information and preferences</p>
+                                <h3 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-2">Profile</h3>
+                                <p className="text-[var(--text-secondary)]">Manage your profile information and preferences</p>
                                 {loadingProfile && (
                                     <div className="flex items-center gap-2 text-sm text-blue-600">
                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
@@ -1892,7 +1892,7 @@ export default function Profile() {
                         </div>
 
                         {/* Profile Sub-tabs Navigation */}
-                        <div className="bg-white rounded-xl p-1 border border-gray-200 shadow-sm">
+                        <div className="bg-[var(--bg-card)] rounded-xl p-1 border border-[var(--border-primary)] shadow-sm">
                             <div className="flex">
                                 {profileSubTabs.map((tab) => (
                                     <button
@@ -1901,7 +1901,7 @@ export default function Profile() {
                                         className={`flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                                             profileActiveTab === tab.name
                                                 ? 'bg-blue-600 text-white shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
                                         }`}
                                     >
                                         <span className="mr-2">{tab.icon}</span>
@@ -1927,7 +1927,7 @@ export default function Profile() {
                                         <div className="flex gap-3">
                                             <button
                                                 onClick={handleCancel}
-                                                className="px-6 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                                                className="px-6 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] rounded-lg hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-300"
                                             >
                                                 Cancel
                                             </button>
@@ -1950,18 +1950,18 @@ export default function Profile() {
                         </div>
 
                                 {/* About You Section */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">About You</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">About You</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                            <div className="text-sm text-gray-600 mb-1">Experience Level</div>
-                                            <div className="text-lg font-semibold text-gray-800">
+                                        <div className="bg-[var(--bg-tertiary)] rounded-lg p-4 border border-[var(--border-primary)]">
+                                            <div className="text-sm text-[var(--text-secondary)] mb-1">Experience Level</div>
+                                            <div className="text-lg font-semibold text-[var(--text-primary)]">
                                                 {userProfile?.marketplaceProfile?.experience || "Not specified"}
                                 </div>
                                 </div>
-                                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                            <div className="text-sm text-gray-600 mb-1">Location</div>
-                                            <div className="text-lg font-semibold text-gray-800">
+                                        <div className="bg-[var(--bg-tertiary)] rounded-lg p-4 border border-[var(--border-primary)]">
+                                            <div className="text-sm text-[var(--text-secondary)] mb-1">Location</div>
+                                            <div className="text-lg font-semibold text-[var(--text-primary)]">
                                                 {userProfile?.marketplaceProfile?.zip || "Not specified"}
                             </div>
                                         </div>
@@ -1969,17 +1969,17 @@ export default function Profile() {
                                 </div>
 
                                 {/* Note Section */}
-                                <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Note</h4>
-                                    <p className="text-gray-700 leading-relaxed">
+                                <div className="bg-blue-50 dark:bg-blue-900/50 rounded-xl p-6 border border-blue-200 dark:border-blue-600 transition-colors duration-300">
+                                    <h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">Note</h4>
+                                    <p className="text-blue-700 dark:text-blue-100 leading-relaxed">
                                         Please provide your accurate information, as we will use it to connect you with the most suitable players.
                                     </p>
                             </div>
 
                                 {/* Services Section */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Which services do you offer?</h4>
-                                    <div className="text-xs text-gray-500 mb-2">
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Which services do you offer?</h4>
+                                    <div className="text-xs text-[var(--text-secondary)] mb-2">
                                         Debug: Current services: {JSON.stringify(marketplaceProfileData.services)}
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -1988,19 +1988,19 @@ export default function Profile() {
                                             console.log(`Service: ${service}, isSelected: ${isSelected}, current services:`, marketplaceProfileData.services);
                                             
                                             return (
-                                    <button
+                                                                        <button
                                         key={service}
-                                                    onClick={() => isEditing ? handleServiceToggle(service) : undefined}
-                                                    disabled={!isEditing}
-                                                    className={`p-3 rounded-lg border-2 transition-all duration-200 text-sm font-medium ${
-                                                        isSelected
-                                                            ? 'border-blue-500 bg-green-100 text-blue-700 shadow-sm'
-                                                            : 'border-gray-200 bg-white text-gray-600'
-                                                    } ${
-                                                        !isEditing 
-                                                            ? 'cursor-not-allowed opacity-60' 
-                                                            : 'hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
-                                        }`}
+                                        onClick={() => isEditing ? handleServiceToggle(service) : undefined}
+                                        disabled={!isEditing}
+                                        className={`p-3 rounded-lg border-2 transition-all duration-200 text-sm font-medium ${
+                                            isSelected
+                                                ? 'border-blue-500 bg-green-100 dark:bg-green-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                                                : 'border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-secondary)]'
+                                        } ${
+                                            !isEditing 
+                                                ? 'cursor-not-allowed opacity-60' 
+                                                : 'hover:border-[var(--border-primary)] hover:bg-[var(--bg-tertiary)] cursor-pointer'
+                                        } transition-colors duration-300`}
                                     >
                                         {service}
                                     </button>
@@ -2015,31 +2015,31 @@ export default function Profile() {
                             <div className="space-y-6">
                         {/* Level and Rank Section */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                        <h4 className="text-lg font-semibold text-gray-800 mb-4">What skill levels do you accept?</h4>
-                                        <div className="text-lg font-medium text-gray-800">
+                                    <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                        <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">What skill levels do you accept?</h4>
+                                        <div className="text-lg font-medium text-[var(--text-primary)]">
                                             {userProfile?.marketplaceProfile?.level || "Not specified"}
                                     </div>
                                     </div>
 
-                                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                        <h4 className="text-lg font-semibold text-gray-800 mb-4">Where are you based?</h4>
-                                        <div className="text-lg font-medium text-gray-800">
+                                    <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                        <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Where are you based?</h4>
+                                        <div className="text-lg font-medium text-[var(--text-primary)]">
                                             {userProfile?.marketplaceProfile?.zip || "Not specified"}
                                 </div>
                                     </div>
                             </div>
 
                                 {/* Availability Section */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">When are you available to coach?</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">When are you available to coach?</h4>
                                     <div className="space-y-3">
                                         {userProfile?.marketplaceProfile?.availability && userProfile.marketplaceProfile.availability.length > 0 ? (
                                             userProfile.marketplaceProfile.availability.map((slot, index) => (
-                                                <div key={index} className="p-4 rounded-lg border-2 border-green-500 bg-green-100">
+                                                <div key={index} className="p-4 rounded-lg border-2 border-green-500 bg-green-100 dark:bg-green-900/30 transition-colors duration-300">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
-                                                            <span className="font-medium text-gray-800">
+                                                            <span className="font-medium text-[var(--text-primary)]">
                                                                 Day {slot.day} - {slot.startTime}:00 to {slot.endTime}:00
                                                             </span>
                                     </div>
@@ -2047,39 +2047,39 @@ export default function Profile() {
                                 </div>
                                             ))
                                         ) : (
-                                            <div className="text-gray-500 italic">No availability set</div>
+                                            <div className="text-[var(--text-secondary)] italic">No availability set</div>
                                         )}
                             </div>
                         </div>
 
                                 {/* Session Duration */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Session Duration</h4>
-                                    <div className="text-lg font-medium text-gray-800">
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Session Duration</h4>
+                                    <div className="text-lg font-medium text-[var(--text-primary)]">
                                         {userProfile?.marketplaceProfile?.sessionDuration ? `${userProfile.marketplaceProfile.sessionDuration} minutes` : "Not specified"}
                                 </div>
                                 </div>
 
                                 {/* Court Surfaces */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Preferred Court Surfaces</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Preferred Court Surfaces</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {userProfile?.marketplaceProfile?.courtSurfaces && userProfile.marketplaceProfile.courtSurfaces.length > 0 ? (
                                             userProfile.marketplaceProfile.courtSurfaces.map((surface, index) => (
-                                                <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                                <span key={index} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm transition-colors duration-300">
                                                     {surface}
                                                 </span>
                                             ))
                                         ) : (
-                                            <span className="text-gray-500 italic">No court surfaces specified</span>
+                                            <span className="text-[var(--text-secondary)] italic">No court surfaces specified</span>
                                             )}
                             </div>
                             </div>
 
                                 {/* Playing Style */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Playing Style</h4>
-                                    <div className="text-lg font-medium text-gray-800">
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Playing Style</h4>
+                                    <div className="text-lg font-medium text-[var(--text-primary)]">
                                         {userProfile?.marketplaceProfile?.playingStyle || "Not specified"}
                         </div>
                                 </div>
@@ -2089,109 +2089,109 @@ export default function Profile() {
                                                 {profileActiveTab === "Certifications & Preferences" && (
                             <div className="space-y-6">
                                 {/* Desired Services Section */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Services You Offer</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Services You Offer</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {userProfile?.marketplaceProfile?.desiredServices && userProfile.marketplaceProfile.desiredServices.length > 0 ? (
                                             userProfile.marketplaceProfile.desiredServices.map((service, index) => (
-                                                <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                                                <span key={index} className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm">
                                                     {service}
                                                 </span>
                                             ))
                                         ) : (
-                                            <span className="text-gray-500 italic">No services specified</span>
+                                            <span className="text-[var(--text-secondary)] italic">No services specified</span>
                                         )}
                                 </div>
                                 </div>
 
                                 {/* Experience Section */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Experience Level</h4>
-                                    <div className="text-lg font-medium text-gray-800">
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Experience Level</h4>
+                                    <div className="text-lg font-medium text-[var(--text-primary)]">
                                         {userProfile?.marketplaceProfile?.experience || "Not specified"}
                             </div>
                                 </div>
 
                                 {/* Languages Section */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Languages You Speak</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Languages You Speak</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {userProfile?.marketplaceProfile?.languages && userProfile.marketplaceProfile.languages.length > 0 ? (
                                             userProfile.marketplaceProfile.languages.map((language, index) => (
-                                                <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                                <span key={index} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm">
                                                     {language}
                                                 </span>
                                             ))
                                         ) : (
-                                            <span className="text-gray-500 italic">No languages specified</span>
+                                            <span className="text-[var(--text-secondary)] italic">No languages specified</span>
                                         )}
                                 </div>
                                 </div>
 
                                 {/* Package Preferences */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Package Preferences</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-sm">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Package Preferences</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {userProfile?.marketplaceProfile?.packagePreference && userProfile.marketplaceProfile.packagePreference.length > 0 ? (
                                             userProfile.marketplaceProfile.packagePreference.map((pref, index) => (
-                                                <span key={index} className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                                                <span key={index} className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm">
                                                     {pref}
                                             </span>
                                         ))
                                         ) : (
-                                            <span className="text-gray-500 italic">No package preferences specified</span>
+                                            <span className="text-[var(--text-secondary)] italic">No package preferences specified</span>
                                         )}
                                 </div>
                                 </div>
 
                                 {/* Budget and Travel */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                        <h4 className="text-lg font-semibold text-gray-800 mb-4">Max Budget Per Session</h4>
-                                        <div className="text-lg font-medium text-gray-800">
+                                    <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-[var(--shadow-secondary)] transition-colors duration-300">
+                                        <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Max Budget Per Session</h4>
+                                        <div className="text-lg font-medium text-[var(--text-primary)]">
                                             {userProfile?.marketplaceProfile?.maxBudgetPerSession ? `$${userProfile.marketplaceProfile.maxBudgetPerSession}` : "Not specified"}
                             </div>
                         </div>
 
-                                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                        <h4 className="text-lg font-semibold text-gray-800 mb-4">Travel Distance</h4>
-                                        <div className="text-lg font-medium text-gray-800">
+                                    <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-[var(--shadow-secondary)] transition-colors duration-300">
+                                        <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Travel Distance</h4>
+                                        <div className="text-lg font-medium text-[var(--text-primary)]">
                                             {userProfile?.marketplaceProfile?.travelDistance ? `${userProfile.marketplaceProfile.travelDistance} miles` : "Not specified"}
                                     </div>
                                     </div>
                                 </div>
 
                                 {/* Goals */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Your Goals</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-[var(--shadow-secondary)] transition-colors duration-300">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Your Goals</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {userProfile?.marketplaceProfile?.goals && userProfile.marketplaceProfile.goals.length > 0 ? (
                                             userProfile.marketplaceProfile.goals.map((goal, index) => (
-                                                <span key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
+                                                <span key={index} className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 rounded-full text-sm transition-colors duration-300">
                                                     {goal}
                                                 </span>
                                             ))
                                         ) : (
-                                            <span className="text-gray-500 italic">No goals specified</span>
+                                            <span className="text-[var(--text-tertiary)] italic">No goals specified</span>
                                         )}
                                     </div>
                                     </div>
 
                                 {/* Active Search Status */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Active Search Status</h4>
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-[var(--shadow-secondary)] transition-colors duration-300">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Active Search Status</h4>
                                     <div className="flex items-center gap-2">
-                                        <div className={`w-3 h-3 rounded-full ${userProfile?.marketplaceProfile?.isActivelySearching ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                        <span className="text-lg font-medium text-gray-800">
+                                        <div className={`w-3 h-3 rounded-full ${userProfile?.marketplaceProfile?.isActivelySearching ? 'bg-green-500' : 'bg-[var(--text-tertiary)]'}`}></div>
+                                        <span className="text-lg font-medium text-[var(--text-primary)]">
                                             {userProfile?.marketplaceProfile?.isActivelySearching ? 'Actively searching for opportunities' : 'Not actively searching'}
                                         </span>
                                 </div>
                             </div>
 
                                 {/* Preferred Coach Gender */}
-                                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Preferred Coach Gender</h4>
-                                    <div className="text-lg font-medium text-gray-800">
+                                <div className="bg-[var(--bg-card)] rounded-xl p-6 border border-[var(--border-primary)] shadow-[var(--shadow-secondary)] transition-colors duration-300">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Preferred Coach Gender</h4>
+                                    <div className="text-lg font-medium text-[var(--text-primary)]">
                                         {userProfile?.marketplaceProfile?.preferredCoachGender || "No preference"}
                                     </div>
                                     </div>
@@ -2206,19 +2206,19 @@ export default function Profile() {
                         {/* Header */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                     <div>
-                                <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">My Goals</h3>
-                                <p className="text-gray-600">Track and manage your tennis goals across different timeframes</p>
+                                <h3 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-2">My Goals</h3>
+                                <p className="text-[var(--text-secondary)]">Track and manage your tennis goals across different timeframes</p>
                             </div>
                                                         <div className="flex flex-col sm:flex-row gap-3">
                                 {/* Goal Filter */}
-                                <div className="flex bg-gray-100 rounded-lg p-1">
+                                <div className="flex bg-[var(--bg-tertiary)] rounded-lg p-1">
                                     <button
                                         onClick={() => setGoalFilter('all')}
                                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                                             goalFilter === 'all'
-                                                ? 'bg-white text-gray-800 shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-800'
-                                        }`}
+                                                ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+                                                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                        } transition-colors duration-300`}
                                     >
                                         All Goals
                                     </button>
@@ -2226,9 +2226,9 @@ export default function Profile() {
                                         onClick={() => setGoalFilter('coach')}
                                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                                             goalFilter === 'coach'
-                                                ? 'bg-white text-gray-800 shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-800'
-                                        }`}
+                                                ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+                                                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                        } transition-colors duration-300`}
                                     >
                                         Other Coaches
                                     </button>
@@ -2236,9 +2236,9 @@ export default function Profile() {
                                         onClick={() => setGoalFilter('personal')}
                                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                                             goalFilter === 'personal'
-                                                ? 'bg-white text-gray-800 shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-800'
-                                        }`}
+                                                ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+                                                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                        } transition-colors duration-300`}
                                     >
                                         I Created
                                     </button>
@@ -2246,7 +2246,7 @@ export default function Profile() {
                                 <div className="flex gap-2">
                                     <button 
                                         onClick={refreshGoals}
-                                        className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
+                                        className="px-4 py-3 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium transition-colors duration-300"
                                         title="Refresh goals"
                                     >
                                         🔄 Refresh
@@ -2262,23 +2262,23 @@ export default function Profile() {
                             </div>
 
                         {/* Goals Summary */}
-                        <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                        <div className="bg-[var(--bg-secondary)] rounded-xl p-4 mb-6 border border-[var(--border-primary)] transition-colors duration-300">
                             <div className="flex flex-wrap gap-4 text-sm">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-700">Total Goals:</span>
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                    <span className="font-medium text-[var(--text-primary)]">Total Goals:</span>
+                                    <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full text-xs font-medium transition-colors duration-300">
                                         {goals.length}
                                     </span>
                                     </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-700">Other Coaches:</span>
-                                    <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                    <span className="font-medium text-[var(--text-primary)]">Other Coaches:</span>
+                                    <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 px-2 py-1 rounded-full text-xs font-medium transition-colors duration-300">
                                         {goals.filter(goal => goal.coach && goal.coach._id !== authStore.user?._id).length}
                                     </span>
                                     </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-700">I Created:</span>
-                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                    <span className="font-medium text-[var(--text-primary)]">I Created:</span>
+                                    <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full text-xs font-medium transition-colors duration-300">
                                         {goals.filter(goal => goal.coach && goal.coach._id === authStore.user?._id).length}
                                     </span>
                                 </div>
@@ -2290,49 +2290,49 @@ export default function Profile() {
                             {loadingGoals ? (
                                 // Loading state for all three columns
                                 <>
-                                    <div className="bg-gray-50 rounded-2xl p-4">
+                                                                        <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
                                         <div className="animate-pulse">
-                                            <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                                            <div className="h-6 bg-[var(--bg-tertiary)] rounded mb-4"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-2"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-2"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-4"></div>
                                             <div className="space-y-3">
-                                                <div className="h-20 bg-gray-200 rounded"></div>
-                                                <div className="h-20 bg-gray-200 rounded"></div>
+                                                <div className="h-20 bg-[var(--bg-tertiary)] rounded"></div>
+                                                <div className="h-20 bg-[var(--bg-tertiary)] rounded"></div>
                                     </div>
                                     </div>
                                 </div>
-                                    <div className="bg-gray-50 rounded-2xl p-4">
+                                    <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
                                         <div className="animate-pulse">
-                                            <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                                            <div className="h-6 bg-[var(--bg-tertiary)] rounded mb-4"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-2"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-2"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-4"></div>
                                             <div className="space-y-3">
-                                                <div className="h-20 bg-gray-200 rounded"></div>
-                                                <div className="h-20 bg-gray-200 rounded"></div>
+                                                <div className="h-20 bg-[var(--bg-tertiary)] rounded"></div>
+                                                <div className="h-20 bg-[var(--bg-tertiary)] rounded"></div>
                                     </div>
-                                        </div>
                                     </div>
-                                    <div className="bg-gray-50 rounded-2xl p-4">
-                                        <div className="animate-pulse">
-                                            <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                                            <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                                            <div className="space-y-3">
-                                                <div className="h-20 bg-gray-200 rounded"></div>
-                                                <div className="h-20 bg-gray-200 rounded"></div>
                                 </div>
-                            </div>
+                                    <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
+                                        <div className="animate-pulse">
+                                            <div className="h-6 bg-[var(--bg-tertiary)] rounded mb-4"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-2"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-2"></div>
+                                            <div className="h-4 bg-[var(--bg-tertiary)] rounded mb-4"></div>
+                                            <div className="space-y-3">
+                                                <div className="h-20 bg-[var(--bg-tertiary)] rounded"></div>
+                                                <div className="h-20 bg-[var(--bg-tertiary)] rounded"></div>
                                     </div>
+                                    </div>
+                                </div>
                                 </>
                             ) : (
                                 <>
                                     {/* No Goals Message */}
                                     {getFilteredGoals(goals).length === 0 && (
                                         <div className="col-span-full text-center py-12">
-                                            <div className="text-gray-500 mb-4">
+                                            <div className="text-[var(--text-tertiary)] mb-4">
                                                 {goalFilter === 'coach' && 'No goals assigned by other coaches'}
                                                 {goalFilter === 'personal' && 'No goals created by you'}
                                                 {goalFilter === 'all' && 'No goals found'}
@@ -2347,12 +2347,12 @@ export default function Profile() {
                                     )}
                                     
                                     {/* Short Term Goals */}
-                                    <div className="bg-gray-50 rounded-2xl p-4">
+                                    <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-xl font-bold text-gray-800">Short Goals</h3>
+                                            <h3 className="text-xl font-bold text-[var(--text-primary)]">Short Goals</h3>
                                             <button 
                                                 onClick={() => openCreateGoalModal('short')}
-                                                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600"
+                                                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition-colors duration-300"
                                             >
                                                 +
                                             </button>
@@ -2361,14 +2361,14 @@ export default function Profile() {
                                         <div className="flex gap-2 mb-4">
                                             <button
                                                 onClick={() => setShortGoalsTab('planned')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     shortGoalsTab === 'planned' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Planned
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'short' || !goal.term),
                                                         'planned'
@@ -2377,14 +2377,14 @@ export default function Profile() {
                                             </button>
                                             <button
                                                 onClick={() => setShortGoalsTab('achieved')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     shortGoalsTab === 'achieved' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Achieved
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'short' || !goal.term),
                                                         'achieved'
@@ -2393,14 +2393,14 @@ export default function Profile() {
                                             </button>
                                             <button
                                                 onClick={() => setShortGoalsTab('overdue')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     shortGoalsTab === 'overdue' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Overdue
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'short' || !goal.term),
                                                         'overdue'
@@ -2418,7 +2418,7 @@ export default function Profile() {
                                                 getFilteredGoals(goals).filter(goal => goal.term === 'short' || !goal.term),
                                                 shortGoalsTab
                                             ).length === 0 && (
-                                                <div className="text-center py-8 text-gray-500">
+                                                <div className="text-center py-8 text-[var(--text-tertiary)]">
                                                     No {shortGoalsTab} short-term goals
                                 </div>
                                             )}
@@ -2426,12 +2426,12 @@ export default function Profile() {
                         </div>
 
                                     {/* Medium Term Goals */}
-                                    <div className="bg-gray-50 rounded-2xl p-4">
+                                    <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-xl font-bold text-gray-800">Medium Goals</h3>
+                                            <h3 className="text-xl font-bold text-[var(--text-primary)]">Medium Goals</h3>
                                             <button 
                                                 onClick={() => openCreateGoalModal('medium')}
-                                                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600"
+                                                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition-colors duration-300"
                                             >
                                                 +
                                             </button>
@@ -2440,14 +2440,14 @@ export default function Profile() {
                                         <div className="flex gap-2 mb-4">
                                             <button
                                                 onClick={() => setMediumGoalsTab('planned')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     mediumGoalsTab === 'planned' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Planned
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'medium'),
                                                         'planned'
@@ -2456,14 +2456,14 @@ export default function Profile() {
                                             </button>
                                             <button
                                                 onClick={() => setMediumGoalsTab('achieved')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     mediumGoalsTab === 'achieved' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Achieved
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'medium'),
                                                         'achieved'
@@ -2472,14 +2472,14 @@ export default function Profile() {
                                             </button>
                                             <button
                                                 onClick={() => setMediumGoalsTab('overdue')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     mediumGoalsTab === 'overdue' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Overdue
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'medium'),
                                                         'overdue'
@@ -2497,7 +2497,7 @@ export default function Profile() {
                                                 getFilteredGoals(goals).filter(goal => goal.term === 'medium'),
                                                 mediumGoalsTab
                                             ).length === 0 && (
-                                                <div className="text-center py-8 text-gray-500">
+                                                <div className="text-center py-8 text-[var(--text-tertiary)]">
                                                     No {mediumGoalsTab} medium-term goals
                                         </div>
                                             )}
@@ -2505,12 +2505,12 @@ export default function Profile() {
                                     </div>
                                     
                                     {/* Long Term Goals */}
-                                    <div className="bg-gray-50 rounded-2xl p-4">
+                                    <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-primary)] transition-colors duration-300">
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-xl font-bold text-gray-800">Long Goals</h3>
+                                            <h3 className="text-xl font-bold text-[var(--text-primary)]">Long Goals</h3>
                                             <button 
                                                 onClick={() => openCreateGoalModal('long')}
-                                                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600"
+                                                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition-colors duration-300"
                                             >
                                                 +
                                             </button>
@@ -2519,14 +2519,14 @@ export default function Profile() {
                                         <div className="flex gap-2 mb-4">
                                             <button
                                                 onClick={() => setLongGoalsTab('planned')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     longGoalsTab === 'planned' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Planned
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'long'),
                                                         'planned'
@@ -2535,14 +2535,14 @@ export default function Profile() {
                                         </button>
                                             <button
                                                 onClick={() => setLongGoalsTab('achieved')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     longGoalsTab === 'achieved' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Achieved
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'long'),
                                                         'achieved'
@@ -2551,14 +2551,14 @@ export default function Profile() {
                                             </button>
                                             <button
                                                 onClick={() => setLongGoalsTab('overdue')}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
                                                     longGoalsTab === 'overdue' 
-                                                        ? 'bg-white text-gray-800 shadow-sm' 
-                                                        : 'text-gray-600'
+                                                        ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm' 
+                                                        : 'text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 Overdue
-                                                <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="ml-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full transition-colors duration-300">
                                                     {getGoalsByStatus(
                                                         getFilteredGoals(goals).filter(goal => goal.term === 'long'),
                                                         'overdue'
@@ -2576,7 +2576,7 @@ export default function Profile() {
                                                 getFilteredGoals(goals).filter(goal => goal.term === 'long'),
                                                 longGoalsTab
                                             ).length === 0 && (
-                                                <div className="text-center py-4 text-gray-500">
+                                                <div className="text-center py-4 text-[var(--text-tertiary)]">
                                                     No {longGoalsTab} long-term goals
                                 </div>
                                             )}
@@ -2592,7 +2592,7 @@ export default function Profile() {
                 return (
                     <div className="space-y-4 sm:space-y-6">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <h3 className="text-lg font-semibold text-gray-800">Privacy & Security</h3>
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Privacy & Security</h3>
                             <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm w-full sm:w-auto">
                                 Save Changes
                             </button>
@@ -2600,10 +2600,10 @@ export default function Profile() {
 
                         <div className="space-y-3 sm:space-y-4">
                             {securitySettings.map((setting) => (
-                                <div key={setting.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200 gap-3">
+                                <div key={setting.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] gap-3 transition-colors duration-300">
                                     <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-800 mb-1">{setting.name}</h4>
-                                        <p className="text-sm text-gray-600">{setting.description}</p>
+                                        <h4 className="font-semibold text-[var(--text-primary)] mb-1">{setting.name}</h4>
+                                        <p className="text-sm text-[var(--text-secondary)]">{setting.description}</p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input 
@@ -2611,31 +2611,31 @@ export default function Profile() {
                                             className="sr-only peer"
                                             defaultChecked={setting.enabled}
                                         />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div className="w-11 h-6 bg-[var(--bg-tertiary)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--border-primary)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 transition-colors duration-300"></div>
                                     </label>
                                 </div>
                             ))}
                         </div>
 
                         {/* Change Password Section */}
-                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-white rounded-lg border border-gray-200">
+                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-[var(--bg-card)] rounded-lg border border-[var(--border-primary)] transition-colors duration-300">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h4 className="font-semibold text-gray-800 mb-1">Change Password</h4>
-                                    <p className="text-sm text-gray-600">Update your account password for enhanced security</p>
+                                    <h4 className="font-semibold text-[var(--text-primary)] mb-1">Change Password</h4>
+                                    <p className="text-sm text-[var(--text-secondary)]">Update your account password for enhanced security</p>
                                 </div>
                                 <button
                                     onClick={() => setShowChangePasswordModal(true)}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium transition-colors"
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium transition-colors duration-300"
                                 >
                                     Change Password
                                 </button>
                             </div>
                         </div>
 
-                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
-                            <h4 className="font-semibold text-blue-800 mb-2">Security Tips</h4>
-                            <ul className="text-sm text-blue-700 space-y-1">
+                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                            <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Security Tips</h4>
+                            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                                 <li>• Use a strong, unique password</li>
                                 <li>• Enable two-factor authentication</li>
                                 <li>• Regularly review your login activity</li>
@@ -2651,15 +2651,15 @@ export default function Profile() {
                         {/* Header with session count and refresh */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                             <div>
-                                <h3 className="text-xl sm:text-2xl font-bold text-gray-800">Active Sessions</h3>
-                                <p className="text-gray-600">Manage your device sessions and security</p>
+                                <h3 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">Active Sessions</h3>
+                                <p className="text-[var(--text-secondary)]">Manage your device sessions and security</p>
                                 {sessions.length > 0 && (
-                                    <p className="text-sm text-gray-500 mt-1">
+                                    <p className="text-sm text-[var(--text-tertiary)] mt-1">
                                         Showing {startIndex + 1}-{Math.min(endIndex, sessions.length)} of {sessions.length} sessions
                                     </p>
                                 )}
                                 {/* Debug info */}
-                                <div className="text-xs text-gray-400 mt-2">
+                                <div className="text-xs text-[var(--text-tertiary)] mt-2">
                                     <p>Debug: Sessions count: {sessions.length}</p>
                                     <p>Debug: Loading: {loadingSessions ? 'Yes' : 'No'}</p>
                                     <p>Debug: Current page: {currentPage}</p>
@@ -2695,7 +2695,7 @@ export default function Profile() {
                             <div className="flex justify-center items-center py-8 sm:py-16">
                                 <div className="flex flex-col items-center gap-3 sm:gap-4">
                                     <div className="animate-spin rounded-full h-10 sm:h-12 w-10 sm:w-12 border-4 border-blue-200 border-t-blue-500"></div>
-                                    <p className="text-gray-500 text-sm sm:text-lg font-medium">Loading sessions...</p>
+                                    <p className="text-[var(--text-secondary)] text-sm sm:text-lg font-medium">Loading sessions...</p>
                                 </div>
                             </div>
                         ) : sessions.length === 0 ? (
@@ -2705,15 +2705,15 @@ export default function Profile() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                     </svg>
                                 </div>
-                                <p className="text-gray-500 text-lg sm:text-xl font-medium mb-1 sm:mb-2">No active sessions found</p>
-                                <p className="text-gray-400 text-sm sm:text-base">Your device sessions will appear here</p>
+                                <p className="text-[var(--text-secondary)] text-lg sm:text-xl font-medium mb-1 sm:mb-2">No active sessions found</p>
+                                <p className="text-[var(--text-tertiary)] text-sm sm:text-base">Your device sessions will appear here</p>
                             </div>
                         ) : (
                             <>
                                 {/* Sessions List - One per row */}
                                 <div className="space-y-3 sm:space-y-4">
                                     {currentSessions.map((session) => (
-                                        <div key={session._id} className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-300 sm:hover:transform sm:hover:scale-[1.02]">
+                                        <div key={session._id} className="bg-[var(--bg-card)] rounded-lg sm:rounded-xl border border-[var(--border-primary)] p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-300 sm:hover:transform sm:hover:scale-[1.02] transition-colors duration-300">
                                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
                                                 {/* Left side - Device info */}
                                                 <div className="flex items-center gap-4 sm:gap-6 flex-1">
@@ -2732,17 +2732,17 @@ export default function Profile() {
                                                     {/* Device details */}
                                                     <div className="flex-1">
                                                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-2">
-                                                            <span className="text-base sm:text-lg font-semibold text-gray-800">
+                                                            <span className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
                                                                 {session.deviceInfo.platform === 'web' ? 'Web Browser' : 
                                                                  session.deviceInfo.platform === 'ios' ? 'iOS Device' :
                                                                  session.deviceInfo.platform === 'android' ? 'Android Device' :
                                                                  session.deviceInfo.platform === 'desktop' ? 'Desktop App' :
                                                                  'Mobile Device'}
                                                             </span>
-                                                            <span className={`px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm font-medium rounded-full ${
+                                                            <span className={`px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm font-medium rounded-full transition-colors duration-300 ${
                                                                 session.isActive 
-                                                                    ? 'bg-green-100 text-green-700 border border-green-200' 
-                                                                    : 'bg-gray-100 text-gray-600 border border-gray-200'
+                                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700' 
+                                                                    : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-primary)]'
                                                             }`}>
                                                                 {session.isActive ? '🟢 Active' : '⚫ Inactive'}
                                                             </span>
@@ -2750,14 +2750,14 @@ export default function Profile() {
                                                         
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 text-xs sm:text-sm">
                                                             <div>
-                                                                <span className="text-gray-500">Device ID:</span>
-                                                                <span className="ml-1 sm:ml-2 font-mono text-gray-700 bg-gray-50 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg">
+                                                                <span className="text-[var(--text-tertiary)]">Device ID:</span>
+                                                                <span className="ml-1 sm:ml-2 font-mono text-[var(--text-primary)] bg-[var(--bg-tertiary)] px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg transition-colors duration-300">
                                                                     {session.deviceInfo.deviceId.substring(0, 8)}...
                                                                 </span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-gray-500">Created:</span>
-                                                                <span className="ml-1 sm:ml-2 text-gray-700 font-medium">
+                                                                <span className="text-[var(--text-tertiary)]">Created:</span>
+                                                                <span className="ml-1 sm:ml-2 text-[var(--text-primary)] font-medium">
                                                                     {new Date(session.createdAt).toLocaleDateString('en-US', {
                                                                         month: 'short',
                                                                         day: 'numeric',
@@ -2767,8 +2767,8 @@ export default function Profile() {
                                                                 </span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-gray-500">Expires:</span>
-                                                                <span className="ml-1 sm:ml-2 text-gray-700 font-medium">
+                                                                <span className="text-[var(--text-tertiary)]">Expires:</span>
+                                                                <span className="ml-1 sm:ml-2 text-[var(--text-primary)] font-medium">
                                                                     {new Date(session.expiresAt).toLocaleDateString('en-US', {
                                                                         month: 'short',
                                                                         day: 'numeric',
@@ -2784,8 +2784,8 @@ export default function Profile() {
                                                 {/* Right side - Actions */}
                                                 <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
                                                     <div className="text-right sm:text-left">
-                                                        <p className="text-xs sm:text-sm text-gray-500">Created via</p>
-                                                        <p className="text-xs sm:text-sm font-medium text-gray-700 capitalize">{session.createdBy}</p>
+                                                        <p className="text-xs sm:text-sm text-[var(--text-tertiary)]">Created via</p>
+                                                        <p className="text-xs sm:text-sm font-medium text-[var(--text-primary)] capitalize">{session.createdBy}</p>
                                                     </div>
                                                     <button
                                                         onClick={() => handleTerminateSession(session._id)}
@@ -2804,9 +2804,9 @@ export default function Profile() {
                                 
                                 {/* Pagination Controls */}
                                 {totalPages > 1 && (
-                                    <div className="flex flex-col sm:flex-row items-center justify-between bg-white rounded-lg sm:rounded-xl border border-gray-200 p-3 sm:p-4 gap-3 sm:gap-0">
+                                    <div className="flex flex-col sm:flex-row items-center justify-between bg-[var(--bg-card)] rounded-lg sm:rounded-xl border border-[var(--border-primary)] p-3 sm:p-4 gap-3 sm:gap-0 transition-colors duration-300">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs sm:text-sm text-gray-600">
+                                            <span className="text-xs sm:text-sm text-[var(--text-secondary)]">
                                                 Page {currentPage} of {totalPages}
                                             </span>
                                         </div>
@@ -2815,7 +2815,7 @@ export default function Profile() {
                                             <button
                                                 onClick={goToPreviousPage}
                                                 disabled={currentPage === 1}
-                                                className="px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                                                className="px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transition-colors duration-300"
                                             >
                                                 <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -2831,7 +2831,7 @@ export default function Profile() {
                                                         className={`px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
                                                             page === currentPage
                                                                 ? 'bg-blue-500 text-white shadow-md'
-                                                                : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-700'
+                                                                : 'text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border-primary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] transition-colors duration-300'
                                                         }`}
                                                     >
                                                         {page}
@@ -2842,7 +2842,7 @@ export default function Profile() {
                                             <button
                                                 onClick={goToNextPage}
                                                 disabled={currentPage === totalPages}
-                                                className="px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                                                className="px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transition-colors duration-300"
                                             >
                                                 <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -2855,14 +2855,14 @@ export default function Profile() {
                         )}
                         
                         {/* Security Tips Section */}
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg sm:rounded-xl p-4 sm:p-6">
-                            <h4 className="font-semibold text-blue-800 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3 text-base sm:text-lg">
+                        <div className="bg-gradient-to-r from-blue-50 dark:from-blue-900/30 to-indigo-50 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-700 rounded-lg sm:rounded-xl p-4 sm:p-6 transition-colors duration-300">
+                            <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3 text-base sm:text-lg">
                                 <svg className="w-4 sm:w-6 h-4 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                                 </svg>
                                 Security Tips
                             </h4>
-                            <ul className="text-xs sm:text-sm text-blue-700 space-y-2 sm:space-y-3">
+                            <ul className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 space-y-2 sm:space-y-3">
                                 <li className="flex items-start gap-2 sm:gap-3">
                                     <span className="text-blue-500 mt-1 text-sm sm:text-lg">•</span>
                                     <span>Regularly review your active sessions and terminate unknown devices</span>
@@ -2888,7 +2888,7 @@ export default function Profile() {
                 return (
                     <div className="space-y-4 sm:space-y-6">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <h3 className="text-lg font-semibold text-gray-800">Purchase History</h3>
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Purchase History</h3>
                             <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm w-full sm:w-auto">
                                 Download Receipts
                             </button>
@@ -2896,18 +2896,18 @@ export default function Profile() {
 
                         <div className="space-y-3 sm:space-y-4">
                             {purchases.map((purchase) => (
-                                <div key={purchase.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+                                <div key={purchase.id} className="bg-[var(--bg-secondary)] rounded-lg p-3 sm:p-4 border border-[var(--border-primary)] transition-colors duration-300">
                                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-2">
                                         <div>
-                                            <h4 className="font-semibold text-gray-800">{purchase.item}</h4>
-                                            <p className="text-sm text-gray-600">Date: {purchase.date}</p>
+                                            <h4 className="font-semibold text-[var(--text-primary)]">{purchase.item}</h4>
+                                            <p className="text-sm text-[var(--text-secondary)]">Date: {purchase.date}</p>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-base sm:text-lg font-bold text-gray-800">{purchase.amount}</div>
-                                            <span className={`px-2 py-0.5 sm:py-1 text-xs rounded-full ${
-                                                purchase.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                                purchase.status === 'Delivered' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-gray-100 text-gray-800'
+                                            <div className="text-base sm:text-lg font-bold text-[var(--text-primary)]">{purchase.amount}</div>
+                                            <span className={`px-2 py-0.5 sm:py-1 text-xs rounded-full transition-colors duration-300 ${
+                                                purchase.status === 'Active' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                                                purchase.status === 'Delivered' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                                                'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
                                             }`}>
                                                 {purchase.status}
                                             </span>
@@ -2915,10 +2915,10 @@ export default function Profile() {
                                     </div>
                                     
                                     <div className="flex gap-2">
-                                        <button className="px-2 sm:px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
+                                        <button className="px-2 sm:px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-300">
                                             View Details
                                         </button>
-                                        <button className="px-2 sm:px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                                        <button className="px-2 sm:px-3 py-1 text-xs bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded hover:bg-[var(--bg-secondary)] transition-colors duration-300">
                                             Download Receipt
                                         </button>
                                     </div>
@@ -2926,10 +2926,10 @@ export default function Profile() {
                             ))}
                         </div>
 
-                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
-                            <h4 className="font-semibold text-green-800 mb-1 sm:mb-2">Total Spent</h4>
-                            <div className="text-xl sm:text-2xl font-bold text-green-600">$444.98</div>
-                            <p className="text-sm text-green-700">Across {purchases.length} purchases</p>
+                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-700 transition-colors duration-300">
+                            <h4 className="font-semibold text-green-800 dark:text-green-300 mb-1 sm:mb-2">Total Spent</h4>
+                            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">$444.98</div>
+                            <p className="text-sm text-green-700 dark:text-green-300">Across {purchases.length} purchases</p>
                         </div>
                     </div>
                 );
@@ -2939,7 +2939,7 @@ export default function Profile() {
                     <div className="space-y-4 sm:space-y-6">
                         {/* Header */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <h3 className="text-lg font-semibold text-gray-800">Uploads</h3>
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Uploads</h3>
                             <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm w-full sm:w-auto flex items-center gap-2">
                                 <i className="*:size-4" dangerouslySetInnerHTML={{ __html: icons.plus }} />
                                 Upload
@@ -2955,10 +2955,10 @@ export default function Profile() {
                                     placeholder="Q Search Media"
                                     value={uploadsData.searchQuery}
                                     onChange={(e) => handleUploadsSearch(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className="w-full pl-10 pr-4 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                 />
                                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                                    <i className="*:size-4 text-gray-400" dangerouslySetInnerHTML={{ __html: icons.search }} />
+                                    <i className="*:size-4 text-[var(--text-tertiary)]" dangerouslySetInnerHTML={{ __html: icons.search }} />
                                 </div>
                             </div>
 
@@ -2968,19 +2968,19 @@ export default function Profile() {
                                 <div className="relative filter-dropdown">
                                     <button 
                                         onClick={toggleFilterDropdown}
-                                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-2"
+                                        className="px-3 py-2 border border-[var(--border-primary)] rounded-lg hover:bg-[var(--bg-secondary)] text-sm flex items-center gap-2 transition-colors duration-300"
                                     >
                                         <i className="*:size-4" dangerouslySetInnerHTML={{ __html: icons.menu }} />
                                         Filter
                                     </button>
                                     {uploadsData.isFilterOpen && (
-                                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-32">
+                                        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] z-10 min-w-32 transition-colors duration-300">
                                             {["All", "Forehand", "Backhand", "Volley", "Serve"].map((filter) => (
                                                 <button
                                                     key={filter}
                                                     onClick={() => handleUploadsFilterChange(filter)}
-                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
-                                                        uploadsData.activeFilter === filter ? "bg-blue-50 text-blue-600" : "text-gray-700"
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] first:rounded-t-lg last:rounded-b-lg transition-colors duration-300 ${
+                                                        uploadsData.activeFilter === filter ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-[var(--text-primary)]"
                                                     }`}
                                                 >
                                                     {filter}
@@ -3189,13 +3189,13 @@ export default function Profile() {
 
                         {/* Bottom Navigation */}
                         <div className="flex justify-center">
-                            <div className="bg-gray-100 rounded-lg p-1 flex">
+                            <div className="bg-[var(--bg-tertiary)] rounded-lg p-1 flex transition-colors duration-300">
                                 <button
                                     onClick={() => handleUploadsTabChange("Videos")}
                                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
                                         uploadsData.activeTab === "Videos" 
-                                            ? "bg-white text-blue-600 shadow-sm" 
-                                            : "text-gray-600 hover:text-gray-800"
+                                            ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" 
+                                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                     }`}
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3207,8 +3207,8 @@ export default function Profile() {
                                     onClick={() => handleUploadsTabChange("Photos")}
                                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
                                         uploadsData.activeTab === "Photos" 
-                                            ? "bg-white text-blue-600 shadow-sm" 
-                                            : "text-gray-600 hover:text-gray-800"
+                                            ? "bg-[var(--bg-card)] text-blue-600 shadow-sm" 
+                                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                     }`}
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3227,17 +3227,17 @@ export default function Profile() {
     };
 
     return (
-        <div className="flex flex-col h-auto bg-white">
+        <div className="flex flex-col h-auto bg-[var(--bg-primary)] transition-colors duration-300">
             {/* Header with Tabs */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 pb-2 sm:pb-4 gap-3 sm:gap-4">
                 <div className="flex items-center gap-3 sm:gap-4">
-                    <button className="p-2 rounded-lg hover:bg-gray-100">
+                    <button className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors">
                         <i
-                            className="*:size-4 sm:*:size-5 text-gray-600"
+                            className="*:size-4 sm:*:size-5 text-[var(--text-secondary)]"
                             dangerouslySetInnerHTML={{ __html: icons.back }}
                         />
                     </button>
-                    <h1 className="text-lg sm:text-xl font-semibold">User Profile</h1>
+                    <h1 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)]">User Profile</h1>
                 </div>
 
                 {/* Responsive Tabs */}
@@ -3249,7 +3249,7 @@ export default function Profile() {
                             className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                                 activeTab === tab.name
                                     ? "bg-lime-500 text-white"
-                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    : "bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
                             }`}
                         >
                             <span className="hidden sm:inline-block mr-1">{tab.icon}</span>
@@ -3259,14 +3259,14 @@ export default function Profile() {
                 </div>
             </div>
 
-            <div className="border-b border-gray-200 mx-3 sm:mx-6"></div>
+            <div className="border-b border-[var(--border-primary)] mx-3 sm:mx-6 transition-colors duration-300"></div>
 
             {/* Main Content */}
             <div className={`flex flex-col gap-4 p-4 sm:p-6 flex-1 overflow-auto lg:flex-row `}>
                 {/* Left Panel - Profile Summary - Hidden for all tabs except Basic */}
                 {activeTab === "Basic" && (
                 <div className="w-full lg:w-1/3 xl:w-1/2 flex justify-center items-center lg:sticky lg:top-0 lg:self-start lg:h-screen lg:overflow-y-auto lg:pt-6 lg:pb-20 hidden lg:flex">
-                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl overflow-hidden w-full max-w-md transition-all duration-300 hover:shadow-2xl h-fit flex-shrink-0 sm:transform sm:hover:scale-105">
+                    <div className="bg-[var(--bg-card)] rounded-xl sm:rounded-2xl shadow-[var(--shadow-secondary)] overflow-hidden w-full max-w-md transition-all duration-300 hover:shadow-[var(--shadow-primary)] h-fit flex-shrink-0 sm:transform sm:hover:scale-105 border border-[var(--border-primary)]">
                         {/* Profile Header */}
                         <div className="bg-gradient-to-br from-[#C3F85C] to-[#A3D94C] p-4 sm:p-6 flex flex-col justify-center items-center text-center relative">
                             {/* Decorative elements */}
@@ -3381,7 +3381,7 @@ export default function Profile() {
                 )}
 
                 {/* Right Panel - Tab Content - Full width for all tabs except Basic */}
-                <div className={`bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 md:p-8 min-h-0 flex-1 ${
+                <div className={`bg-[var(--bg-card)] rounded-xl sm:rounded-2xl shadow-[var(--shadow-secondary)] p-4 sm:p-6 md:p-8 min-h-0 flex-1 border border-[var(--border-primary)] transition-colors duration-300 ${
                     activeTab === "Basic" 
                         ? 'w-full lg:w-2/3 xl:w-1/2' 
                         : 'w-full'
@@ -3394,13 +3394,13 @@ export default function Profile() {
             {/* Share Modal */}
             {uploadsData.isShareModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                    <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] w-full max-w-md mx-4 border border-[var(--border-primary)] transition-colors duration-300">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between p-4 border-b">
-                            <h3 className="text-lg font-semibold text-gray-800">Share Media</h3>
+                        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Share Media</h3>
                             <button
                                 onClick={closeShareModal}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3409,20 +3409,20 @@ export default function Profile() {
                         </div>
 
                         {/* Search Connections */}
-                        <div className="p-4 border-b">
+                        <div className="p-4 border-b border-[var(--border-primary)]">
                             <div className="relative">
                                 <input
                                     type="text"
                                     placeholder="Search Connections"
                                     value={shareFormData.searchQuery}
                                     onChange={(e) => handleSearchInputChange(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full pl-10 pr-4 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                 />
                                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                                     {shareFormData.isSearching ? (
                                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
                                     ) : (
-                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                         </svg>
                                     )}
@@ -3431,11 +3431,11 @@ export default function Profile() {
                         </div>
 
                         {/* Share with Section */}
-                        <div className="p-4 border-b">
-                            <h4 className="font-medium text-gray-800 mb-3">Share with</h4>
+                        <div className="p-4 border-b border-[var(--border-primary)]">
+                            <h4 className="font-medium text-[var(--text-primary)] mb-3">Share with</h4>
                             <div className="space-y-2 max-h-48 overflow-y-auto">
                                 {shareFormData.searchResults.length === 0 && !shareFormData.isSearching ? (
-                                    <div className="text-center py-4 text-gray-500">
+                                    <div className="text-center py-4 text-[var(--text-tertiary)]">
                                         {shareFormData.searchQuery ? 'No connections found' : 'Start typing to search connections'}
                                     </div>
                                 ) : (
@@ -3444,13 +3444,13 @@ export default function Profile() {
                                             key={contact._id}
                                             className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
                                                 shareFormData.selectedContacts.includes(contact._id)
-                                                    ? "bg-blue-50 border border-blue-200"
-                                                    : "hover:bg-gray-50"
+                                                    ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700"
+                                                    : "hover:bg-[var(--bg-secondary)]"
                                             }`}
                                             onClick={() => toggleContactSelection(contact._id)}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg overflow-hidden">
+                                                <div className="w-10 h-10 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-lg overflow-hidden">
                                                     {contact.avatar ? (
                                                         <img 
                                                             src={contact.avatar} 
@@ -3458,16 +3458,16 @@ export default function Profile() {
                                                             className="w-full h-full object-cover"
                                                         />
                                                     ) : (
-                                                        <span className="text-gray-600 font-medium">
+                                                        <span className="text-[var(--text-secondary)] font-medium">
                                                             {contact.firstName.charAt(0)}{contact.lastName.charAt(0)}
                                                         </span>
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium text-gray-800">
+                                                    <div className="font-medium text-[var(--text-primary)]">
                                                         {contact.firstName} {contact.lastName}
                                                     </div>
-                                                    <div className="text-sm text-gray-500 capitalize">
+                                                    <div className="text-sm text-[var(--text-secondary)] capitalize">
                                                         {contact.role}
                                                     </div>
                                                 </div>
@@ -3475,7 +3475,7 @@ export default function Profile() {
                                             <div className={`w-5 h-5 rounded-full border-2 ${
                                                 shareFormData.selectedContacts.includes(contact._id)
                                                     ? "bg-blue-500 border-blue-500"
-                                                    : "border-gray-300"
+                                                    : "border-[var(--border-primary)]"
                                             }`}>
                                                 {shareFormData.selectedContacts.includes(contact._id) && (
                                                     <div className="w-full h-full rounded-full bg-white scale-75"></div>
@@ -3488,13 +3488,13 @@ export default function Profile() {
                         </div>
 
                         {/* Message Section */}
-                        <div className="p-4 border-b">
-                            <h4 className="font-medium text-gray-800 mb-3">Message</h4>
+                        <div className="p-4 border-b border-[var(--border-primary)]">
+                            <h4 className="font-medium text-[var(--text-primary)] mb-3">Message</h4>
                             <textarea
                                 value={shareFormData.message}
                                 onChange={(e) => setShareFormData(prev => ({ ...prev, message: e.target.value }))}
                                 placeholder="Achieve 70% first serve accuracy in practice within 2 weeks."
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                 rows={3}
                             />
                         </div>
@@ -3503,7 +3503,7 @@ export default function Profile() {
                         <div className="flex gap-3 p-4">
                             <button
                                 onClick={closeShareModal}
-                                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                                className="flex-1 px-4 py-2 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
                             >
                                 Cancel
                             </button>
@@ -3522,7 +3522,7 @@ export default function Profile() {
             {/* Edit Modal */}
             {uploadsData.isEditModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                    <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] w-full max-w-md mx-4 border border-[var(--border-primary)] transition-colors duration-300">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between p-4 border-b">
                             <h3 className="text-lg font-semibold text-gray-800">Edit Media</h3>
@@ -3607,7 +3607,7 @@ export default function Profile() {
             {/* Delete Modal */}
             {uploadsData.isDeleteModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                    <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] w-full max-w-md mx-4 border border-[var(--border-primary)] transition-colors duration-300">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between p-4 border-b">
                             <h3 className="text-lg font-semibold text-gray-800">Delete Media</h3>
@@ -3661,15 +3661,15 @@ export default function Profile() {
             {/* Goal Modal */}
             {isGoalModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-secondary)] w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto border border-[var(--border-primary)] transition-colors duration-300">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h3 className="text-2xl font-bold text-gray-800">
+                        <div className="flex items-center justify-between p-6 border-b border-[var(--border-primary)]">
+                            <h3 className="text-2xl font-bold text-[var(--text-primary)]">
                                 {isEditingGoal ? 'Edit Goal' : 'Create New Goal'}
                             </h3>
                             <button
                                 onClick={closeGoalModal}
-                                className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+                                className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors p-2"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3682,13 +3682,13 @@ export default function Profile() {
                             {/* Basic Goal Information */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                         Goal Type *
                                     </label>
                                     <select
                                         value={goalFormData.goal}
                                         onChange={(e) => setGoalFormData(prev => ({ ...prev, goal: e.target.value as any }))}
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300"
                                         required
                                     >
                                         <option value="technical">Technical</option>
@@ -3701,13 +3701,13 @@ export default function Profile() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                         Timeframe *
                                     </label>
                                     <select
                                         value={goalFormData.term}
                                         onChange={(e) => setGoalFormData(prev => ({ ...prev, term: e.target.value as any }))}
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300"
                                         required
                                     >
                                         <option value="short">Short Term</option>
@@ -3718,27 +3718,27 @@ export default function Profile() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                     Goal Description *
                                 </label>
                                 <input
                                     type="text"
                                     value={goalFormData.description}
                                     onChange={(e) => setGoalFormData(prev => ({ ...prev, description: e.target.value }))}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                     placeholder="e.g., Improve backhand consistency"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                     Measurement Criteria *
                                 </label>
                                 <textarea
                                     value={goalFormData.measurement}
                                     onChange={(e) => setGoalFormData(prev => ({ ...prev, measurement: e.target.value }))}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                     placeholder="e.g., Achieve 80% accuracy in backhand shots"
                                     rows={3}
                                     required
@@ -3746,14 +3746,14 @@ export default function Profile() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                     Target Achievement Date *
                                 </label>
                                 <input
                                     type="date"
                                     value={goalFormData.achievementDate}
                                     onChange={(e) => setGoalFormData(prev => ({ ...prev, achievementDate: e.target.value }))}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300"
                                     required
                                 />
                             </div>
@@ -3893,12 +3893,12 @@ export default function Profile() {
             {/* Change Password Modal */}
             {showChangePasswordModal && (
                 <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                    <div className="bg-[var(--bg-card)] rounded-lg max-w-md w-full p-6 border border-[var(--border-primary)] transition-colors duration-300">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-semibold text-gray-800">Change Password</h3>
+                            <h3 className="text-xl font-semibold text-[var(--text-primary)]">Change Password</h3>
                             <button
                                 onClick={handleCancelChangePassword}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3908,41 +3908,41 @@ export default function Profile() {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                     Current Password
                                 </label>
                                 <input
                                     type="password"
                                     value={changePasswordData.oldPassword}
                                     onChange={(e) => handleChangePasswordInput("oldPassword", e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                     placeholder="Enter your current password"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                     New Password
                                 </label>
                                 <input
                                     type="password"
                                     value={changePasswordData.newPassword}
                                     onChange={(e) => handleChangePasswordInput("newPassword", e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                     placeholder="Enter your new password"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters long</p>
+                                <p className="text-xs text-[var(--text-tertiary)] mt-1">Password must be at least 8 characters long</p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                     Confirm New Password
                                 </label>
                                 <input
                                     type="password"
                                     value={changePasswordData.confirmPassword}
                                     onChange={(e) => handleChangePasswordInput("confirmPassword", e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
                                     placeholder="Confirm your new password"
                                 />
                             </div>
@@ -3951,14 +3951,14 @@ export default function Profile() {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={handleCancelChangePassword}
-                                className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                className="flex-1 px-4 py-3 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors duration-300 font-medium"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleChangePassword}
                                 disabled={changingPassword || !changePasswordData.oldPassword || !changePasswordData.newPassword || !changePasswordData.confirmPassword}
-                                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300 font-medium"
                             >
                                 {changingPassword ? 'Changing...' : 'Change Password'}
                             </button>

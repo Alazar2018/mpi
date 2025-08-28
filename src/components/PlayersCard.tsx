@@ -102,7 +102,7 @@ export default function PlayersCard({ player }: PlayersCardProps) {
   };
 
 	return (
-		<div className="p-4 flex gap-4 card-shadow rounded-xl bg-gray-50 dark:bg-gray-800 hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border border-gray-100 dark:border-gray-700 group cursor-pointer">
+		<div className="p-4 flex gap-4 card-shadow rounded-xl bg-[var(--bg-secondary)] hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border border-[var(--border-primary)] group cursor-pointer">
 			<div className="relative">
 				{player ? (
 					// Real player data
@@ -114,7 +114,7 @@ export default function PlayersCard({ player }: PlayersCardProps) {
 								{getPlayerInitials(player.firstName, player.lastName)}
 							</div>
 						)}
-						<div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getOnlineStatus(player.lastOnline).color} rounded-full border-2 border-white dark:border-gray-800`}></div>
+						<div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getOnlineStatus(player.lastOnline).color} rounded-full border-2 border-[var(--bg-card)]`}></div>
 					</>
 				) : (
 					// Default player data
@@ -122,42 +122,42 @@ export default function PlayersCard({ player }: PlayersCardProps) {
 						<div className={`size-12 rounded-full bg-gradient-to-r ${currentPlayer.avatarColor} flex items-center justify-center text-white font-semibold text-lg`}>
 							{currentPlayer.initials}
 						</div>
-						<div className={`absolute -bottom-1 -right-1 w-4 h-4 ${currentPlayer.status === 'active' ? 'bg-green-500' : currentPlayer.status === 'away' ? 'bg-yellow-500' : 'bg-gray-500'} rounded-full border-2 border-white dark:border-gray-800`}></div>
+						<div className={`absolute -bottom-1 -right-1 w-4 h-4 ${currentPlayer.status === 'active' ? 'bg-green-500' : currentPlayer.status === 'away' ? 'bg-yellow-500' : 'bg-gray-500'} rounded-full border-2 border-[var(--bg-card)]`}></div>
 					</>
 				)}
 			</div>
 			<div className="flex flex-col flex-1">
 				<div className="flex items-center justify-between mb-1">
-					<span className="font-bold text-gray-800 dark:text-white group-hover:text-primary transition-colors">
+					<span className="font-bold text-[var(--text-primary)] group-hover:text-primary transition-colors">
 						{player ? getPlayerFullName(player.firstName, player.lastName) : currentPlayer.name}
 					</span>
 					<div className="flex items-center gap-1">
 						<i dangerouslySetInnerHTML={{ __html: '★' }} className="text-yellow-400 text-xs" />
-						<span className="text-xs text-gray-500 dark:text-gray-400">
+						<span className="text-xs text-[var(--text-secondary)]">
 							{player ? (player.goals?.length || 0) : currentPlayer.rating}
 						</span>
 					</div>
 				</div>
-				<span className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+				<span className="text-xs text-[var(--text-secondary)] mb-2">
 					{player ? `Goals: ${player.goals?.length || 0}` : `USDTA: ${currentPlayer.usdta}`}
 				</span>
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						{player ? (
 							<>
-								<span className="text-xs text-gray-500 dark:text-gray-400">{getOnlineStatus(player.lastOnline).text}</span>
-								<span className="text-xs text-gray-500 dark:text-gray-400">{player.emailAddress?.email || 'No email'}</span>
+								<span className="text-xs text-[var(--text-secondary)]">{getOnlineStatus(player.lastOnline).text}</span>
+								<span className="text-xs text-[var(--text-secondary)]">{player.emailAddress?.email || 'No email'}</span>
 							</>
 						) : (
 							<>
-								<span className={`px-2 py-1 ${currentPlayer.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : currentPlayer.status === 'away' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'} rounded-full text-xs font-medium`}>
+								<span className={`px-2 py-1 ${currentPlayer.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : currentPlayer.status === 'away' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'} rounded-full text-xs font-medium`}>
 									{currentPlayer.status === 'active' ? 'Active' : currentPlayer.status === 'away' ? 'Away' : 'Inactive'}
 								</span>
-								<span className="text-xs text-gray-500 dark:text-gray-400">Last seen {currentPlayer.lastSeen}</span>
+								<span className="text-xs text-[var(--text-secondary)]">Last seen {currentPlayer.lastSeen}</span>
 							</>
 						)}
 					</div>
-					<div className="flex items-center gap-1 text-gray-400 group-hover:text-primary transition-colors">
+					<div className="flex items-center gap-1 text-[var(--text-tertiary)] group-hover:text-primary transition-colors">
 						<i dangerouslySetInnerHTML={{ __html: '→' }} className="text-xs" />
 					</div>
 				</div>

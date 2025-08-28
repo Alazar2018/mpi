@@ -2,14 +2,14 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChat } from './useChat';
 import { useAuthStore } from '@/store/auth.store';
+import { useChatStore } from '@/features/connect/store/chat.store';
 import { toast } from 'react-toastify';
 
 export const usePlayerMessaging = () => {
   const navigate = useNavigate();
   const { createDirectChat, selectChat } = useChat({ autoRefresh: false });
   const { user } = useAuthStore();
-
-
+  const { getChatWith } = useChatStore();
 
   // Send message to player - either create new chat or navigate to existing
   const sendMessageToPlayer = useCallback(async (playerId: string, playerName: string) => {
@@ -35,9 +35,21 @@ export const usePlayerMessaging = () => {
     }
   }, [user?._id, navigate, createDirectChat, selectChat]);
 
+  // Check if a player has unread messages
+  const hasUnreadMessages = useCallback((playerId: string): boolean => {
+    const chat = getChatWith(playerId);
+    return chat ? chat.unreadCount > 0 : false;
+  }, [getChatWith]);
 
+  // Get unread message count for a player
+  const getUnreadCount = useCallback((playerId: string): number => {
+    const chat = getChatWith(playerId);
+    return chat ? chat.unreadCount : 0;
+  }, [getChatWith]);
 
   return {
-    sendMessageToPlayer
+    sendMessageToPlayer,
+    hasUnreadMessages,
+    getUnreadCount
   };
 };

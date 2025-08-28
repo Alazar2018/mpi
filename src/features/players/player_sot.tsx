@@ -93,16 +93,16 @@ export default function PlayerSOT() {
   }, [player]);
 
   const getAvatarColor = useCallback(() => {
-    if (!player) return 'from-gray-400 to-purple-500';
+    if (!player) return 'bg-[var(--bg-primary)]';
     const name = player.firstName || player.lastName || '';
-    if (!name) return 'from-gray-400 to-purple-500';
+    if (!name) return 'bg-[var(--bg-primary)]';
     const colors = [
-      'from-blue-400 to-purple-500',
-      'from-green-400 to-blue-500',
-      'from-orange-400 to-red-500',
-      'from-purple-400 to-pink-500',
-      'from-teal-400 to-green-500',
-      'from-indigo-400 to-purple-500'
+      'bg-[var(--bg-primary)]',
+      'bg-[var(--bg-primary)]',
+      'bg-[var(--bg-primary)]',
+      'bg-[var(--bg-primary)]',
+      'bg-[var(--bg-primary)]',
+      'bg-[var(--bg-primary)]'
     ];
     const index = name.charCodeAt(0) % colors.length;
     return colors[index];
@@ -445,7 +445,7 @@ export default function PlayerSOT() {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
         <div className="text-red-500 text-xl font-semibold">Error Loading SOT Data</div>
-        <div className="text-gray-600">{error}</div>
+        <div className="text-[var(--text-secondary)]">{error}</div>
         <Button onClick={clearError} className="!px-4 !py-2 !bg-blue-600 !text-white">
           Retry
         </Button>
@@ -462,13 +462,13 @@ export default function PlayerSOT() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6 bg-gray-50 min-h-screen">
+    <div className="flex flex-col gap-6 p-4 md:p-6 bg-[var(--bg-tertiary)] min-h-screen transition-colors duration-300">
       {/* Header Section */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-white rounded-2xl md:rounded-3xl p-6 shadow-sm"
+        className="bg-[var(--bg-card)] rounded-2xl md:rounded-3xl p-6 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] transition-colors duration-300"
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-4">
@@ -479,21 +479,21 @@ export default function PlayerSOT() {
               className="w-12 h-12 rounded-full object-cover border-2 border-white shadow"
             />
              ) : (
-               <div className={`w-12 h-12 rounded-full border-2 border-white shadow bg-gradient-to-r ${getAvatarColor()} flex items-center justify-center text-white font-bold text-lg`}>
+               <div className="w-12 h-12 rounded-full border-2 border-[var(--border-primary)] shadow bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-primary)] font-bold text-lg">
                  {getPlayerInitials()}
                </div>
              )}
             <div>
-                             <h2 className="text-xl font-bold text-gray-800">{getPlayerFullName()}</h2>
-              <div className="flex items-center gap-2 text-gray-600 text-sm">
+                             <h2 className="text-xl font-bold text-[var(--text-primary)]">{getPlayerFullName()}</h2>
+              <div className="flex items-center gap-2 text-[var(--text-secondary)] text-sm">
                 <i dangerouslySetInnerHTML={{ __html: icons.calendar }} />
                 <span className="font-medium">{dateRange}</span>
                 {currentPeriodization && (
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    currentPeriodization.status === 'active' ? 'bg-green-100 text-green-800' :
-                    currentPeriodization.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                    currentPeriodization.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
+                    currentPeriodization.status === 'active' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]' :
+                    currentPeriodization.status === 'completed' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]' :
+                    currentPeriodization.status === 'pending' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]' :
+                    'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)]'
                   }`}>
                     {currentPeriodization.status.charAt(0).toUpperCase() + currentPeriodization.status.slice(1)}
                   </span>
@@ -502,7 +502,7 @@ export default function PlayerSOT() {
               {periodizations.length > 1 && (
                 <div className="mt-2">
                                      <select 
-                     className="text-sm border border-gray-300 rounded px-2 py-1"
+                     className="text-sm border border-[var(--border-primary)] rounded px-2 py-1 bg-[var(--bg-card)] text-[var(--text-primary)]"
                      value={currentPeriodization?._id || ''}
                      onChange={(e) => handlePeriodizationChange(e.target.value)}
                    >
@@ -520,7 +520,7 @@ export default function PlayerSOT() {
                                                                    periodizations.length === 0 ? (
                                                                      <Button
                                                                        onClick={handleCreateNewPeriodization}
-                                                                       className="!px-4 !py-2 !bg-gradient-to-r !from-green-600 !to-green-800 !text-white !rounded-lg !flex !items-center !gap-2 hover:shadow-lg transition-all duration-200"
+                                                                       className="!px-4 !py-2 !bg-[var(--bg-primary)] !text-[var(--text-primary)] !rounded-lg !flex !items-center !gap-2 hover:!bg-[var(--bg-secondary)] transition-all duration-200"
                                                                        icon={icons.plus}
                                                                      >
                                                                        Create New Periodization
@@ -528,7 +528,7 @@ export default function PlayerSOT() {
                                                                    ) : (
                                                                      <Button
                                                                        onClick={handleOpenCreateSOTModal}
-                                                                       className="!px-4 !py-2 !bg-gradient-to-r !from-blue-600 !to-blue-800 !text-white !rounded-lg !flex !items-center !gap-2 hover:shadow-lg transition-all duration-200"
+                                                                       className="!px-4 !py-2 !bg-[var(--bg-primary)] !text-[var(--text-primary)] !rounded-lg !flex !items-center !gap-2 hover:!bg-[var(--bg-secondary)] transition-all duration-200"
                                                                        icon={icons.plus}
                                                                      >
                                                                        Add SOT Period
@@ -536,7 +536,7 @@ export default function PlayerSOT() {
                                                                    )
                                                                  )}
                                                                  {!canCreateSOT && (
-                                                                   <div className="text-sm text-gray-500 italic">
+                                                                   <div className="text-sm text-[var(--text-secondary)] italic">
                                                                      SOT creation is restricted to coaches and administrators
                                                                    </div>
                                                                  )}
@@ -544,34 +544,34 @@ export default function PlayerSOT() {
 
         {/* Progress Section */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">Season Progress</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Season Progress</h3>
           <div className="flex items-center gap-4">
-            <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div className="flex-1 bg-[var(--bg-tertiary)] rounded-full h-3 overflow-hidden">
               <motion.div 
-                className="bg-gradient-to-r from-blue-500 to-blue-700 h-3 rounded-full"
+                className="bg-[var(--bg-primary)] h-3 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${currentPlayerSOT.overallProgress}%` }}
                 transition={{ duration: 1, delay: 0.3 }}
               ></motion.div>
             </div>
-            <span className="text-lg font-bold text-gray-800">{currentPlayerSOT.overallProgress}%</span>
+            <span className="text-lg font-bold text-[var(--text-primary)]">{currentPlayerSOT.overallProgress}%</span>
           </div>
           <div className="flex items-center justify-between mt-3">
             <div>
-              <div className="text-2xl font-bold text-gray-800">Day {currentPlayerSOT.currentDay}</div>
-              <div className="text-sm text-gray-600">{currentPlayerSOT.totalDays - currentPlayerSOT.currentDay} days remaining</div>
+              <div className="text-2xl font-bold text-[var(--text-primary)]">Day {currentPlayerSOT.currentDay}</div>
+              <div className="text-sm text-[var(--text-secondary)]">{currentPlayerSOT.totalDays - currentPlayerSOT.currentDay} days remaining</div>
             </div>
             {canCreateSOT && (
               <div className="flex gap-2">
                 <button 
                   onClick={() => currentPeriodization && handleEditPeriodization(currentPeriodization)}
-                  className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
+                  className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                 >
                   <i dangerouslySetInnerHTML={{ __html: icons.edit }} />
                 </button>
                 <button 
                   onClick={() => currentPeriodization && handleDeletePeriodization(currentPeriodization._id)}
-                  className="p-2 text-gray-500 hover:text-red-600 transition-colors"
+                  className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                 >
                   <i dangerouslySetInnerHTML={{ __html: icons.trash }} />
                 </button>
@@ -593,14 +593,14 @@ export default function PlayerSOT() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-2xl md:rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300"
+            className="bg-[var(--bg-card)] rounded-2xl md:rounded-3xl p-6 shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300 border border-[var(--border-primary)]"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${period.color} text-white`}>
                   <i dangerouslySetInnerHTML={{ __html: period.icon }} className="text-xl" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800">{period.name}</h3>
+                <h3 className="text-xl font-semibold text-[var(--text-primary)]">{period.name}</h3>
               </div>
               <div className="flex gap-2">
                 {canCreateSOT && period.goals.length > 0 && (
@@ -614,7 +614,7 @@ export default function PlayerSOT() {
                         handleEditTransitionPhase();
                       }
                     }}
-                    className="!px-3 !py-1.5 !bg-blue-600 !text-white !rounded-lg !flex !items-center !gap-1 hover:!bg-blue-700"
+                    className="!px-3 !py-1.5 !bg-[var(--bg-primary)] !text-[var(--text-primary)] !rounded-lg !flex !items-center !gap-1 hover:!bg-[var(--bg-secondary)]"
                     size="xs"
                   >
                     Edit
@@ -623,7 +623,7 @@ export default function PlayerSOT() {
                 {canCreateSOT && (
                   <Button
                     onClick={() => handlePeriodTypeAction(period.type)}
-                    className="!px-3 !py-1.5 !bg-gray-800 !text-white !rounded-lg !flex !items-center !gap-1 hover:!bg-gray-700"
+                    className="!px-3 !py-1.5 !bg-[var(--bg-primary)] !text-[var(--text-primary)] !rounded-lg !flex !items-center !gap-1 hover:!bg-[var(--bg-secondary)]"
                     icon={icons.plus}
                     size="xs"
                   >
@@ -639,7 +639,7 @@ export default function PlayerSOT() {
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center h-32 text-gray-400"
+                  className="flex flex-col items-center justify-center h-32 text-[var(--text-tertiary)]"
                 >
                   <div className="text-4xl mb-2">
                     <i dangerouslySetInnerHTML={{ __html: icons.tennisServer }} />
@@ -654,7 +654,7 @@ export default function PlayerSOT() {
                     </button>
                   )}
                   {!canCreateSOT && (
-                    <div className="mt-2 text-sm text-gray-500 italic">
+                    <div className="mt-2 text-sm text-[var(--text-secondary)] italic">
                       Goal creation is restricted to coaches and administrators
                     </div>
                   )}
@@ -667,12 +667,12 @@ export default function PlayerSOT() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
                     >
                       <div className={`w-2 h-2 ${period.color} rounded-full mt-2 flex-shrink-0`}></div>
-                      <span className="text-gray-700">{goal}</span>
+                      <span className="text-[var(--text-primary)]">{goal}</span>
                       {canCreateSOT && (
-                        <button className="ml-auto text-gray-400 hover:text-gray-600">
+                        <button className="ml-auto text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
                           <i dangerouslySetInnerHTML={{ __html: icons.menu }} />
                         </button>
                       )}
@@ -683,8 +683,8 @@ export default function PlayerSOT() {
             </div>
 
             {/* Phase-specific training content based on active tab */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
+            <div className="mt-4 p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)]">
+              <h4 className="text-sm font-medium text-[var(--text-primary)] mb-2">
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Training Focus
               </h4>
               
@@ -692,51 +692,51 @@ export default function PlayerSOT() {
                 <div className="space-y-2">
                   {activeTab === 'physical' && (
                     <>
-                      <div className="text-xs text-gray-600">• Strength building exercises</div>
-                      <div className="text-xs text-gray-600">• Endurance training</div>
-                      <div className="text-xs text-gray-600">• Flexibility work</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Strength building exercises</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Endurance training</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Flexibility work</div>
                     </>
                   )}
                   {activeTab === 'technical' && (
                     <>
-                      <div className="text-xs text-gray-600">• Skill development drills</div>
-                      <div className="text-xs text-gray-600">• Technique refinement</div>
-                      <div className="text-xs text-gray-600">• Practice routines</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Skill development drills</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Technique refinement</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Practice routines</div>
                     </>
                   )}
                   {activeTab === 'nutrition' && (
                     <>
-                      <div className="text-xs text-gray-600">• Meal planning</div>
-                      <div className="text-xs text-gray-600">• Supplement strategy</div>
-                      <div className="text-xs text-gray-600">• Hydration plan</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Meal planning</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Supplement strategy</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Hydration plan</div>
                     </>
                   )}
                   {activeTab === 'recovery' && (
                     <>
-                      <div className="text-xs text-gray-600">• Rest protocols</div>
-                      <div className="text-xs text-gray-600">• Sleep optimization</div>
-                      <div className="text-xs text-gray-600">• Active recovery</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Rest protocols</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Sleep optimization</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Active recovery</div>
                     </>
                   )}
                   {activeTab === 'prevention' && (
                     <>
-                      <div className="text-xs text-gray-600">• Injury prevention</div>
-                      <div className="text-xs text-gray-600">• Warm-up routines</div>
-                      <div className="text-xs text-gray-600">• Mobility work</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Injury prevention</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Warm-up routines</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Mobility work</div>
                     </>
                   )}
                   {activeTab === 'immunity' && (
                     <>
-                      <div className="text-xs text-gray-600">• Immune support</div>
-                      <div className="text-xs text-gray-600">• Health monitoring</div>
-                      <div className="text-xs text-gray-600">• Wellness practices</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Immune support</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Health monitoring</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Wellness practices</div>
                     </>
                   )}
                   {activeTab === 'wellness' && (
                     <>
-                      <div className="text-xs text-gray-600">• Mental preparation</div>
-                      <div className="text-xs text-gray-600">• Stress management</div>
-                      <div className="text-xs text-gray-600">• Goal setting</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Mental preparation</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Stress management</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Goal setting</div>
                     </>
                   )}
                 </div>
@@ -746,51 +746,51 @@ export default function PlayerSOT() {
                 <div className="space-y-2">
                   {activeTab === 'physical' && (
                     <>
-                      <div className="text-xs text-gray-600">• Peak performance</div>
-                      <div className="text-xs text-gray-600">• Match fitness</div>
-                      <div className="text-xs text-gray-600">• Energy management</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Peak performance</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Match fitness</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Energy management</div>
                     </>
                   )}
                   {activeTab === 'technical' && (
                     <>
-                      <div className="text-xs text-gray-600">• Match strategies</div>
-                      <div className="text-xs text-gray-600">• Tactical execution</div>
-                      <div className="text-xs text-gray-600">• Performance under pressure</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Match strategies</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Tactical execution</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Performance under pressure</div>
                     </>
                   )}
                   {activeTab === 'nutrition' && (
                     <>
-                      <div className="text-xs text-gray-600">• Pre-match fueling</div>
-                      <div className="text-xs text-gray-600">• During match nutrition</div>
-                      <div className="text-xs text-gray-600">• Quick energy sources</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Pre-match fueling</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• During match nutrition</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Quick energy sources</div>
                     </>
                   )}
                   {activeTab === 'recovery' && (
                     <>
-                      <div className="text-xs text-gray-600">• Post-match recovery</div>
-                      <div className="text-xs text-gray-600">• Fatigue management</div>
-                      <div className="text-xs text-gray-600">• Quick recovery protocols</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Post-match recovery</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Fatigue management</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Quick recovery protocols</div>
                     </>
                   )}
                   {activeTab === 'prevention' && (
                     <>
-                      <div className="text-xs text-gray-600">• Injury risk reduction</div>
-                      <div className="text-xs text-gray-600">• Protective measures</div>
-                      <div className="text-xs text-gray-600">• Safe play techniques</div>
+                        <div className="text-xs text-[var(--text-secondary)]">• Injury risk reduction</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Protective measures</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Safe play techniques</div>
                     </>
                   )}
                   {activeTab === 'immunity' && (
                     <>
-                      <div className="text-xs text-gray-600">• Health maintenance</div>
-                      <div className="text-xs text-gray-600">• Immune support</div>
-                      <div className="text-xs text-gray-600">• Wellness during competition</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Health maintenance</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Immune support</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Wellness during competition</div>
                     </>
                   )}
                   {activeTab === 'wellness' && (
                     <>
-                      <div className="text-xs text-gray-600">• Mental toughness</div>
-                      <div className="text-xs text-gray-600">• Focus and concentration</div>
-                      <div className="text-xs text-gray-600">• Pressure handling</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Mental toughness</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Focus and concentration</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Pressure handling</div>
                     </>
                   )}
                 </div>
@@ -800,51 +800,51 @@ export default function PlayerSOT() {
                 <div className="space-y-2">
                   {activeTab === 'physical' && (
                     <>
-                      <div className="text-xs text-gray-600">• Active rest</div>
-                      <div className="text-xs text-gray-600">• Light conditioning</div>
-                      <div className="text-xs text-gray-600">• Recovery maintenance</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Active rest</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Light conditioning</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Recovery maintenance</div>
                     </>
                   )}
                   {activeTab === 'technical' && (
                     <>
-                      <div className="text-xs text-gray-600">• Skill assessment</div>
-                      <div className="text-xs text-gray-600">• Future planning</div>
-                      <div className="text-xs text-gray-600">• Learning integration</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Skill assessment</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Future planning</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Learning integration</div>
                     </>
                   )}
                   {activeTab === 'nutrition' && (
                     <>
-                      <div className="text-xs text-gray-600">• Recovery nutrition</div>
-                      <div className="text-xs text-gray-600">• Rebuilding phase</div>
-                      <div className="text-xs text-gray-600">• Long-term planning</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Recovery nutrition</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Rebuilding phase</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Long-term planning</div>
                     </>
                   )}
                   {activeTab === 'recovery' && (
                     <>
-                      <div className="text-xs text-gray-600">• Deep recovery</div>
-                      <div className="text-xs text-gray-600">• Rest and rejuvenation</div>
-                      <div className="text-xs text-gray-600">• Next cycle preparation</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Deep recovery</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Rest and rejuvenation</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Next cycle preparation</div>
                     </>
                   )}
                   {activeTab === 'prevention' && (
                     <>
-                      <div className="text-xs text-gray-600">• Injury assessment</div>
-                      <div className="text-xs text-gray-600">• Prevention planning</div>
-                      <div className="text-xs text-gray-600">• Future safeguards</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Injury assessment</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Prevention planning</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Future safeguards</div>
                     </>
                   )}
                   {activeTab === 'immunity' && (
                     <>
-                      <div className="text-xs text-gray-600">• Health restoration</div>
-                      <div className="text-xs text-gray-600">• Immune rebuilding</div>
-                      <div className="text-xs text-gray-600">• Wellness foundation</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Health restoration</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Immune rebuilding</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Wellness foundation</div>
                     </>
                   )}
                   {activeTab === 'wellness' && (
                     <>
-                      <div className="text-xs text-gray-600">• Mental recovery</div>
-                      <div className="text-xs text-gray-600">• Reflection and growth</div>
-                      <div className="text-xs text-gray-600">• Future mindset</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Mental recovery</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Reflection and growth</div>
+                      <div className="text-xs text-[var(--text-secondary)]">• Future mindset</div>
                     </>
                   )}
                 </div>
@@ -854,10 +854,10 @@ export default function PlayerSOT() {
             {period.goals.length > 0 && (
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Progress</span>
-                  <span className="text-sm font-medium text-gray-800">{period.progress}%</span>
+                  <span className="text-sm text-[var(--text-secondary)]">Progress</span>
+                  <span className="text-sm font-medium text-[var(--text-primary)]">{period.progress}%</span>
                 </div>
-                <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                                  <div className="bg-[var(--bg-tertiary)] rounded-full h-2 overflow-hidden">
                   <motion.div 
                     className={`h-2 rounded-full ${period.color}`}
                     initial={{ width: 0 }}
@@ -884,7 +884,7 @@ export default function PlayerSOT() {
                initial={{ scale: 0.9, opacity: 0 }}
                animate={{ scale: 1, opacity: 1 }}
                exit={{ scale: 0.9, opacity: 0 }}
-               className="bg-white rounded-2xl md:rounded-3xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"
+               className="bg-[var(--bg-card)] rounded-2xl md:rounded-3xl p-6 w-full max-w-2xl shadow-[var(--shadow-primary)] max-h-[90vh] overflow-y-auto border border-[var(--border-primary)] transition-colors duration-300"
              >
                <div className="flex items-center justify-between mb-6">
                  <div className="flex items-center gap-3">
@@ -902,7 +902,7 @@ export default function PlayerSOT() {
                    >
                      <i dangerouslySetInnerHTML={{ __html: icons.chevronLeft }} />
                    </button>
-                   <h3 className="text-xl font-semibold text-gray-800">
+                   <h3 className="text-xl font-semibold text-[var(--text-primary)]">
                      {editingPeriodization ? 'Edit SOT Period' : 'Add SOT'}
                    </h3>
                  </div>
@@ -925,13 +925,13 @@ export default function PlayerSOT() {
                <div className="space-y-6">
                  {/* Goal Term Section */}
                  <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                      Goal Term <span className="text-red-500">*</span>
                    </label>
                    <div className="relative">
                      <input
                        type="text"
-                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                       className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-all bg-[var(--bg-card)] text-[var(--text-primary)]"
                        placeholder="Select goal term"
                        value={sotFormData.goalTerm}
                        onChange={(e) => setSotFormData(prev => ({ ...prev, goalTerm: e.target.value }))}
@@ -977,7 +977,7 @@ export default function PlayerSOT() {
                    <div className="relative">
                      <input
                        type="date"
-                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                       className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-all bg-[var(--bg-card)] text-[var(--text-primary)]"
                        value={sotFormData.endDate}
                        onChange={(e) => setSotFormData(prev => ({ ...prev, endDate: e.target.value, periodDuration: '' }))}
                      />
@@ -1028,14 +1028,14 @@ export default function PlayerSOT() {
                initial={{ scale: 0.9, opacity: 0 }}
                animate={{ scale: 1, opacity: 1 }}
                exit={{ scale: 0.9, opacity: 0 }}
-               className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+               className="bg-[var(--bg-card)] rounded-2xl p-6 w-full max-w-md shadow-[var(--shadow-primary)] border border-[var(--border-primary)] transition-colors duration-300"
              >
                <div className="text-center">
                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                    <i dangerouslySetInnerHTML={{ __html: icons.trash }} className="text-red-600 text-xl" />
                  </div>
-                 <h3 className="text-lg font-medium text-gray-900 mb-2">Delete SOT Period</h3>
-                 <p className="text-sm text-gray-500 mb-6">
+                 <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">Delete SOT Period</h3>
+                 <p className="text-sm text-[var(--text-secondary)] mb-6">
                    Are you sure you want to delete this SOT period? This action cannot be undone.
                  </p>
                  <div className="flex gap-3">
@@ -1044,7 +1044,7 @@ export default function PlayerSOT() {
                        setShowDeleteConfirm(false);
                        setDeletingPeriodizationId(null);
                      }}
-                     className="!flex-1 !bg-white !text-gray-700 !border !border-gray-300 hover:!bg-gray-50"
+                     className="!flex-1 !bg-[var(--bg-secondary)] !text-[var(--text-primary)] !border !border-[var(--border-primary)] hover:!bg-[var(--bg-tertiary)] transition-colors duration-300"
                    >
                      Cancel
                    </Button>
@@ -1074,23 +1074,23 @@ export default function PlayerSOT() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl md:rounded-3xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"
+              className="bg-[var(--bg-card)] rounded-2xl md:rounded-3xl p-6 w-full max-w-2xl shadow-[var(--shadow-primary)] max-h-[90vh] overflow-y-auto border border-[var(--border-primary)] transition-colors duration-300"
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleClosePreparationModal}
-                    className="text-gray-500 hover:text-gray-700 text-xl transition-colors"
+                    className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] text-xl transition-colors"
                   >
                     <i dangerouslySetInnerHTML={{ __html: icons.chevronLeft }} />
                   </button>
-                   <h3 className="text-xl font-semibold text-gray-800">
+                   <h3 className="text-xl font-semibold text-[var(--text-primary)]">
                      {editingPhase?.type === 'preparation' ? 'Edit' : 'Add'} Preparation Phase - {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                    </h3>
                 </div>
                 <button
                   onClick={handleClosePreparationModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl transition-colors"
+                  className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] text-2xl transition-colors"
                 >
                   ×
                 </button>
@@ -1099,13 +1099,13 @@ export default function PlayerSOT() {
               <div className="space-y-6">
                 {/* Time Allocated Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                     Time Allocated <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-3">
                      <select 
                        id="prep-time-type"
-                       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                       className="flex-1 px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-all bg-[var(--bg-card)] text-[var(--text-primary)]"
                        defaultValue={editingPhase?.type === 'preparation' ? editingPhase.data.timeType : "weeks"}
                      >
                        <option value="weeks">Weeks</option>
@@ -1115,7 +1115,7 @@ export default function PlayerSOT() {
                     <input
                        id="prep-allocated-time"
                       type="number"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="flex-1 px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-all bg-[var(--bg-card)] text-[var(--text-primary)]"
                       placeholder="Number of Weeks"
                        defaultValue={editingPhase?.type === 'preparation' ? editingPhase.data.allocatedTime : "8"}
                     />
@@ -1124,14 +1124,14 @@ export default function PlayerSOT() {
                 
                 {/* Add Objectives Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                     Add Objectives <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <input
                        id="prep-objective-input"
                       type="text"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="flex-1 px-3 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--border-primary)] transition-all bg-[var(--bg-card)] text-[var(--text-primary)]"
                       placeholder="Type and add actions"
                     />
                     <Button
@@ -1142,9 +1142,9 @@ export default function PlayerSOT() {
                            const list = document.getElementById('prep-objectives-list');
                            if (list) {
                              const item = document.createElement('div');
-                             item.className = 'flex items-center justify-between p-2 bg-gray-100 rounded';
+                             item.className = 'flex items-center justify-between p-2 bg-[var(--bg-secondary)] rounded border border-[var(--border-secondary)]';
                              item.innerHTML = `
-                               <span class="text-gray-700">• ${value}</span>
+                               <span class="text-[var(--text-primary)]">• ${value}</span>
                                <button class="p-1 text-red-500 hover:text-red-700" onclick="this.parentElement.remove()">×</button>
                              `;
                              list.appendChild(item);
@@ -1161,8 +1161,8 @@ export default function PlayerSOT() {
                    <div id="prep-objectives-list" className="mt-3 space-y-2">
                      {/* Populate with existing objectives if editing */}
                      {editingPhase?.type === 'preparation' && editingPhase.data.generals.map((objective: string, index: number) => (
-                       <div key={index} className="flex items-center justify-between p-2 bg-gray-100 rounded">
-                         <span className="text-gray-700">• {objective}</span>
+                       <div key={index} className="flex items-center justify-between p-2 bg-[var(--bg-secondary)] rounded border border-[var(--border-secondary)]">
+                         <span className="text-[var(--text-primary)]">• {objective}</span>
                          <button 
                            className="p-1 text-red-500 hover:text-red-700"
                            onClick={(e) => (e.target as HTMLElement).parentElement?.remove()}

@@ -57,7 +57,7 @@ export default function Checkbox({
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <span className={`text-base ${validation?.required && "required"}`}>
+        <span className={`text-base text-gray-700 ${validation?.required && "required"}`}>
           {label}
         </span>
       ) : null}
@@ -65,16 +65,16 @@ export default function Checkbox({
         <div
           onClick={toggle}
           className={`border size-6 rounded grid place-items-center ${
-            checked ? "bg-secondary border-transparent" : "border-gray-2"
+            checked ? "bg-blue-600 border-transparent" : "border-gray-300"
           }`}
           {...myForm.register(name, validation)}
         >
           {checked ? (
-            <i dangerouslySetInnerHTML={{ __html: icons.checkBoxCheck }} />
+            <i className="text-white" dangerouslySetInnerHTML={{ __html: icons.checkBoxCheck }} />
           ) : null}
         </div>
         {rest?.children && <span></span>}
-        <span className="text-sm text-green-9 font-semibold">
+        <span className="text-sm text-gray-700 font-semibold">
           {rest?.children}
         </span>
       </div>

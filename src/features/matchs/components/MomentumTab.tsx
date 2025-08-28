@@ -119,73 +119,42 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     }
   }, [selectedSet, matchData.sets]);
 
-  // Check if there's any momentum data to display
-  const hasMomentumData = matchData.sets && matchData.sets.length > 0 && 
-    matchData.sets.some(set => set.games && set.games.length > 0 && 
-      set.games.some(game => game.scores && game.scores.length > 0));
-
-  if (!hasMomentumData) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <div className="text-6xl mb-4">📈</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">No Momentum Data Available</h2>
-          <p className="text-gray-600 mb-2">This match doesn't have any momentum data recorded yet.</p>
-          <p className="text-sm text-gray-500">Momentum charts will appear here once the match begins and point-by-point scoring is tracked.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Generate SVG path for the momentum line
+  // Generate SVG path for momentum line
   const generateMomentumPath = (data: any[]) => {
     if (data.length === 0) return '';
-
-    const width = 1400;
-    const height = 500;
-    const padding = 100;
-    const chartWidth = width - 2 * padding;
-    const chartHeight = height - 2 * padding;
-
-    // Find min and max momentum values
-    const minMomentum = Math.min(...data.map(d => d.momentum));
+    
     const maxMomentum = Math.max(...data.map(d => d.momentum));
-    const momentumRange = maxMomentum - minMomentum || 1;
-
-    // Generate points
-    const points = data.map((d, index) => {
-      const x = padding + (index / (data.length - 1)) * chartWidth;
-      const y = padding + ((maxMomentum - d.momentum) / momentumRange) * chartHeight;
-      return `${x},${y}`;
-    });
-
-    return `M ${points.join(' L ')}`;
+    const minMomentum = Math.min(...data.map(d => d.momentum));
+    const range = maxMomentum - minMomentum || 1;
+    
+    return data.map((point, index) => {
+      const x = 100 + (index / (data.length - 1)) * 1200;
+      const y = 100 + ((maxMomentum - point.momentum) / range) * 300;
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
   };
 
-  // Generate area fill path
+  // Generate SVG path for area fill
   const generateAreaPath = (data: any[]) => {
     if (data.length === 0) return '';
-
-    const width = 1400;
-    const height = 500;
-    const padding = 100;
-    const chartWidth = width - 2 * padding;
-    const chartHeight = height - 2 * padding;
-
-    const minMomentum = Math.min(...data.map(d => d.momentum));
+    
     const maxMomentum = Math.max(...data.map(d => d.momentum));
-    const momentumRange = maxMomentum - minMomentum || 1;
-
-    const points = data.map((d, index) => {
-      const x = padding + (index / (data.length - 1)) * chartWidth;
-      const y = padding + ((maxMomentum - d.momentum) / momentumRange) * chartHeight;
-      return `${x},${y}`;
-    });
-
-    const bottomRight = `${width - padding},${height - padding}`;
-    const bottomLeft = `${padding},${height - padding}`;
-
-    return `M ${points.join(' L ')} L ${bottomRight} L ${bottomLeft} Z`;
+    const minMomentum = Math.min(...data.map(d => d.momentum));
+    const range = maxMomentum - minMomentum || 1;
+    
+    const topPath = data.map((point, index) => {
+      const x = 100 + (index / (data.length - 1)) * 1200;
+      const y = 100 + ((maxMomentum - point.momentum) / range) * 300;
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    
+    const bottomPath = data.map((point, index) => {
+      const x = 100 + ((data.length - 1 - index) / (data.length - 1)) * 1200;
+      const y = 400;
+      return `L ${x} ${y}`;
+    }).join(' ');
+    
+    return `${topPath} ${bottomPath} Z`;
   };
 
   const getPlayerName = (player: Player | string) => {
@@ -195,16 +164,36 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     return player as string;
   };
 
+  // Check if there's any data to display
+  if (!matchData.sets || matchData.sets.length === 0) {
+    return (
+      <div className="p-6 bg-[var(--bg-primary)] min-h-screen transition-colors duration-300">
+        <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-12 text-center border border-[var(--border-primary)] transition-colors duration-300">
+          <div className="text-6xl mb-4">📈</div>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4 transition-colors duration-300">No Momentum Data Available</h2>
+          <p className="text-[var(--text-secondary)] mb-2 transition-colors duration-300">This match doesn't have any momentum data recorded yet.</p>
+          <p className="text-sm text-[var(--text-tertiary)] transition-colors duration-300">Momentum data will appear here once the match begins and scoring is tracked.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-[var(--bg-primary)] min-h-screen transition-colors duration-300">
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2 transition-colors duration-300">Match Momentum Analysis</h2>
+        <p className="text-[var(--text-secondary)] transition-colors duration-300">Visual representation of player momentum throughout the match</p>
+      </div>
+
       {/* Tab Navigation */}
       <div className="flex space-x-2 mb-6">
         <button
           onClick={() => setSelectedSet('all')}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             selectedSet === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-600 hover:bg-gray-100'
+              ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
+              : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
           }`}
         >
           All Set
@@ -215,8 +204,8 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
             onClick={() => setSelectedSet(index + 1)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               selectedSet === index + 1
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-100'
+                ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
             }`}
           >
             Set {index + 1}
@@ -227,8 +216,8 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
       {/* Momentum Charts */}
       <div className="space-y-6">
         {/* Player 1 Momentum */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+        <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 text-center transition-colors duration-300">
             {getPlayerName(matchData.p1)} Momentum
           </h3>
           <div className="flex justify-center items-center w-full">
@@ -241,11 +230,11 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
                 preserveAspectRatio="xMidYMid meet"
               >
                 {/* Grid lines */}
-                <line x1="100" y1="100" x2="100" y2="400" stroke="#e5e7eb" strokeWidth="1" />
-                <line x1="100" y1="400" x2="1300" y2="400" stroke="#e5e7eb" strokeWidth="1" />
+                <line x1="100" y1="100" x2="100" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
+                <line x1="100" y1="400" x2="1300" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
                 
                 {/* Center line */}
-                <line x1="100" y1="250" x2="1300" y2="250" stroke="#d1d5db" strokeWidth="1" strokeDasharray="5,5" />
+                <line x1="100" y1="250" x2="1300" y2="250" stroke="var(--border-secondary)" strokeWidth="1" strokeDasharray="5,5" />
                 
                 {/* Area fill */}
                 <path
@@ -291,7 +280,7 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
               
               {/* Legend */}
               <div className="mt-6 text-center">
-                <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+                <div className="flex items-center justify-center space-x-6 text-sm text-[var(--text-secondary)] transition-colors duration-300">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-purple-500 rounded-full mr-2"></div>
                     <span>Momentum Line</span>
@@ -307,8 +296,8 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
         </div>
 
         {/* Player 2 Momentum */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+        <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 text-center transition-colors duration-300">
             {getPlayerName(matchData.p2)} Momentum
           </h3>
           <div className="flex justify-center items-center w-full">
@@ -321,11 +310,11 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
                 preserveAspectRatio="xMidYMid meet"
               >
                 {/* Grid lines */}
-                <line x1="100" y1="100" x2="100" y2="400" stroke="#e5e7eb" strokeWidth="1" />
-                <line x1="100" y1="400" x2="1300" y2="400" stroke="#e5e7eb" strokeWidth="1" />
+                <line x1="100" y1="100" x2="100" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
+                <line x1="100" y1="400" x2="1300" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
                 
                 {/* Center line */}
-                <line x1="100" y1="250" x2="1300" y2="250" stroke="#d1d5db" strokeWidth="1" strokeDasharray="5,5" />
+                <line x1="100" y1="250" x2="1300" y2="250" stroke="var(--border-secondary)" strokeWidth="1" strokeDasharray="5,5" />
                 
                 {/* Area fill */}
                 <path
@@ -371,7 +360,7 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
               
               {/* Legend */}
               <div className="mt-6 text-center">
-                <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+                <div className="flex items-center justify-center space-x-6 text-sm text-[var(--text-secondary)] transition-colors duration-300">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
                     <span>Momentum Line</span>
@@ -388,9 +377,9 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
       </div>
 
       {/* Momentum Explanation */}
-      <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3">How to Read Momentum</h3>
-        <div className="text-sm text-gray-600 space-y-2">
+      <div className="mt-6 bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3 transition-colors duration-300">How to Read Momentum</h3>
+        <div className="text-sm text-[var(--text-secondary)] space-y-2 transition-colors duration-300">
           <p>• <strong>Above center line:</strong> Player 1 has momentum advantage</p>
           <p>• <strong>Below center line:</strong> Player 2 has momentum advantage</p>
           <p>• <strong>Steep upward line:</strong> Player 1 winning consecutive points</p>

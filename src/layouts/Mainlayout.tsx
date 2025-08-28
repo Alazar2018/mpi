@@ -39,6 +39,8 @@ export default function MainLayout() {
                             toast.dismiss();
                             authStore.clearUser();
                             localStorage.clear();
+                            // Reset dark mode to light mode for login page
+                            document.documentElement.classList.remove('dark');
                             navigate("/login");
                         }}
                         className="px-3 py-1 bg-red-500 text-white rounded text-sm"
