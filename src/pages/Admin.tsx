@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useDashboard } from '@/hooks/useDashboard';
 import PlayerAnalytics from '../components/PlayerAnalytics';
 import GeneralDashboard from '../components/GeneralDashboard';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   Users, 
   Trophy, 
@@ -192,17 +193,17 @@ const PlayerDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-        <div className="flex justify-between items-start">
+      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 transition-colors duration-300">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Player Dashboard</h1>
-            <p className="text-[var(--text-secondary)]">Track your performance and progress</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">Player Dashboard</h1>
+            <p className="text-sm sm:text-base text-[var(--text-secondary)]">Track your performance and progress</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex bg-[var(--bg-tertiary)] rounded-lg p-1">
               <button 
                 onClick={() => setDashboardType('general')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   dashboardType === 'general' 
                     ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-primary)]' 
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -212,7 +213,7 @@ const PlayerDashboard: React.FC = () => {
               </button>
               <button 
                 onClick={() => setDashboardType('personal')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   dashboardType === 'personal' 
                     ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-primary)]' 
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -230,10 +231,7 @@ const PlayerDashboard: React.FC = () => {
               <>
                 {loadingPlayerData ? (
                   <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      <span className="ml-3 text-[var(--text-secondary)]">Loading your analytics...</span>
-                    </div>
+                    <LoadingSpinner size="md" text="Loading your analytics..." />
                   </div>
                 ) : (
                   <PlayerAnalytics userName={userName} playerData={playerData} />
@@ -250,10 +248,7 @@ const PlayerDashboard: React.FC = () => {
       {/* Loading State */}
       {loading && (
         <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-[var(--text-secondary)]">Loading dashboard data...</span>
-          </div>
+          <LoadingSpinner size="md" text="Loading dashboard data..." />
         </div>
       )}
 
@@ -579,13 +574,13 @@ const CoachDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-        <div className="flex justify-between items-start">
+      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 transition-colors duration-300">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Coach Dashboard</h1>
-            <p className="text-[var(--text-secondary)]">Manage your players and classes</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">Coach Dashboard</h1>
+            <p className="text-sm sm:text-base text-[var(--text-secondary)]">Manage your players and classes</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex bg-[var(--bg-tertiary)] rounded-lg p-1">
               <button 
                 onClick={() => {
@@ -593,7 +588,7 @@ const CoachDashboard: React.FC = () => {
                   setSelectedPlayer('All Players');
                   setSelectedPlayerData(null);
                 }}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   dashboardType === 'general' 
                     ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-primary)]' 
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -607,7 +602,7 @@ const CoachDashboard: React.FC = () => {
                     setDashboardType('player');
                   }
                 }}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   dashboardType === 'player' 
                     ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-primary)]' 
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -622,7 +617,7 @@ const CoachDashboard: React.FC = () => {
                 setSelectedPlayer(e.target.value);
                 fetchPlayerDetails(e.target.value);
               }}
-              className="bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-4 py-2 rounded-lg font-medium border-0 transition-colors duration-300"
+              className="bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium border-0 transition-colors duration-300"
             >
               <option value="All Players">All Players</option>
               {players.map(player => (
@@ -1107,13 +1102,13 @@ const ParentDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-        <div className="flex justify-between items-start">
+      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 transition-colors duration-300">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Parent Dashboard</h1>
-            <p className="text-[var(--text-secondary)]">Monitor your children's progress and activities</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">Parent Dashboard</h1>
+            <p className="text-sm sm:text-base text-[var(--text-secondary)]">Monitor your children's progress and activities</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex bg-[var(--bg-tertiary)] rounded-lg p-1">
               <button 
                 onClick={() => {
@@ -1121,7 +1116,7 @@ const ParentDashboard: React.FC = () => {
                   setSelectedChild('All Children');
                   setSelectedChildData(null);
                 }}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   dashboardType === 'general' 
                     ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-primary)]' 
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -1135,7 +1130,7 @@ const ParentDashboard: React.FC = () => {
                     setDashboardType('child');
                   }
                 }}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   dashboardType === 'child' 
                     ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-primary)]' 
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -1155,7 +1150,7 @@ const ParentDashboard: React.FC = () => {
                   setSelectedChildData(null);
                 }
               }}
-              className="bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-4 py-2 rounded-lg font-medium border-0 transition-colors duration-300"
+              className="bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium border-0 transition-colors duration-300"
             >
               <option value="All Children">All Children</option>
               {children.map(child => (
@@ -1180,10 +1175,7 @@ const ParentDashboard: React.FC = () => {
         <>
           {loading ? (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">Loading children data...</span>
-              </div>
+              <LoadingSpinner size="md" text="Loading children data..." />
             </div>
           ) : error ? (
             <div className="bg-red-50 border border-red-200 rounded-xl p-6">
@@ -1582,22 +1574,22 @@ const Admin: React.FC = () => {
   return (
     <div className="min-h-screen bg-[var(--bg-secondary)] transition-colors duration-300">
       {/* Personal Welcome Greeting - Above Dashboard */}
-      <div className="px-6 pt-6">
-        <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 mb-6 transition-colors duration-300">
+      <div className="px-4 sm:px-6 pt-4 sm:pt-6">
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 mb-4 sm:mb-6 transition-colors duration-300">
           <div className="flex items-center gap-3">
-            <span className="text-yellow-500 text-2xl">⭐</span>
+            <span className="text-yellow-500 text-xl sm:text-2xl">⭐</span>
             <div>
-              <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+              <h2 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
                 Hello {authStore.user ? `${authStore.user.firstName} ${authStore.user.lastName}` : 'User'}! We hope you are having a fantastic day.
               </h2>
-              <p className="text-[var(--text-secondary)] mt-1">{roleInfo.description}</p>
+              <p className="text-sm sm:text-base text-[var(--text-secondary)] mt-1">{roleInfo.description}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Role-specific Dashboard */}
-      <div className="px-6 pb-6">
+      <div className="px-4 sm:px-6 pb-4 sm:pb-6">
         {renderDashboard()}
       </div>
     </div>

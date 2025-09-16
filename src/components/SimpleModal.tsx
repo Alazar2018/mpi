@@ -18,7 +18,7 @@ export default function SimpleModal({ isOpen, onClose, title, children, size = '
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
       <div 
         className={`bg-[var(--bg-card)] rounded-2xl shadow-[var(--shadow-secondary)] w-full border border-[var(--border-primary)] ${sizeClasses[size]} transform transition-all duration-300 animate-scale-in`}
         style={{

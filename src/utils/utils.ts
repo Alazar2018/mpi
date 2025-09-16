@@ -1,5 +1,5 @@
 import ApiService from "@/service/ApiService";
-import { toast as T, type ToastOptions } from 'react-hot-toast'
+import { toast as T, type ToastOptions } from 'react-toastify'
 import type { Match } from "@/interface";
 import { sort } from "fast-sort";
 
@@ -353,6 +353,9 @@ export function toast(
       break;
     case "e":
       T.error(errorMsg ?? '', options);
+      break;
+    case "w":
+      T.warning(errorMsg ?? '', options);
       break;
   }
 }

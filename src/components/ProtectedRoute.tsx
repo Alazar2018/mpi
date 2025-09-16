@@ -2,6 +2,7 @@
 import { useAuthStore } from "@/store/auth.store";
 import { Navigate, Outlet } from "react-router-dom";
 import React from "react";
+import AuthLoadingScreen from "./AuthLoadingScreen";
 
 type Role = "player" | "coach" | "parent" | "admin";
 
@@ -13,25 +14,27 @@ export const ProtectedRoute = ({
     children?: React.ReactNode;
 }) => {
     const authStore = useAuthStore();
-    const role = authStore.getRole();
     
-   
-    
-    // Load from localStorage if not hydrated
+    // Load from localStorage if not hydrated - do this immediately
     React.useEffect(() => {
         if (!authStore.isHydrated) {
-            authStore.loadFromStorage();
+            const hasData = authStore.loadFromStorage();
+            // Always mark as hydrated after attempting to load, regardless of whether data exists
+            if (!hasData) {
+                authStore.setHydrated(true);
+            }
         }
     }, [authStore]);
     
-    // Wait for hydration to complete
+    // Show loading screen only during initial hydration
     if (!authStore.isHydrated) {
-        return <div>Loading...</div>;
+        return <AuthLoadingScreen />;
     }
 
-    // If no role, redirect to login
+    const role = authStore.getRole();
+
+    // If no role, redirect to login immediately
     if (!role) {
-        
         return <Navigate to="/login" replace />;
     }
 

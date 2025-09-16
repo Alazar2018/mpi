@@ -54,18 +54,18 @@ export default function NewEventModal({ isOpen, onClose, onSubmit, initialDate }
 
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-30 flex justify-end z-[9999]"
+            className="fixed inset-0 bg-transparent backdrop-blur-sm flex justify-end z-[9999]"
             onClick={handleBackdropClick}
         >
             <div
-                className="bg-white shadow-xl w-96 h-full overflow-y-auto"
+                className="bg-[var(--bg-card)] shadow-xl w-96 h-full overflow-y-auto border border-[var(--border-primary)]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white">
-                    <h3 className="text-lg font-semibold text-gray-800">New Event</h3>
+                <div className="flex justify-between items-center p-4 border-b border-[var(--border-primary)] sticky top-0 bg-[var(--bg-card)]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)]">New Event</h3>
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">All Day</span>
+                        <span className="text-sm text-[var(--text-secondary)]">All Day</span>
                         <div className="relative">
                             <input
                                 type="checkbox"

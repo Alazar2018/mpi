@@ -8,10 +8,11 @@ import Textarea from "@/components/form/Textarea";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import icons from "@/utils/icons";
 import { required } from "@/utils/utils";
-import { createMatch } from "./api/matchs.api";
+import { createMatch, getMatchFormats, getScoringVariations } from "./api/matchs.api";
 import { friendsService } from "@/service/friends.server";
 import { useAuthStore } from "@/store/auth.store";
 import { toast } from "react-hot-toast";
+import type { MatchFormat, ScoringVariation, TrackingLevel, CreateMatchRequest } from "@/service/matchs.server";
 
 // Tournament levels constant
 const TOURNAMENT_LEVELS = {
@@ -28,6 +29,32 @@ const TOURNAMENT_LEVELS = {
   ]
 }
 
+// Enhanced Match Format Options
+const MATCH_FORMAT_OPTIONS = [
+  { value: 'oneSet', label: 'One Set (Quick Practice)', description: 'Single set with 7-point tiebreak at 6-6' },
+  { value: 'bestOfThree', label: 'Best of 3 Sets (Standard)', description: 'Traditional 2 out of 3 sets format' },
+  { value: 'bestOfFive', label: 'Best of 5 Sets (Professional)', description: 'Professional tournament format' },
+  { value: 'shortSets', label: 'Short Sets (4/7)', description: '4 out of 7 sets with no-ad scoring' },
+  { value: 'proSet8', label: '8-Game Pro Set', description: '8-game pro set with tiebreak at 8-8' },
+  { value: 'tiebreak7', label: '7-Point Tiebreak Only', description: 'Single 7-point tiebreaker' },
+  { value: 'tiebreak10', label: '10-Point Tiebreak Only', description: 'Single 10-point tiebreaker' },
+  { value: 'tiebreak21', label: '21-Point Tiebreak Only', description: 'Single 21-point tiebreaker' }
+];
+
+// Scoring Variation Options
+const SCORING_VARIATION_OPTIONS = [
+  { value: 'standard', label: 'Standard Scoring', description: 'Traditional tennis scoring rules' },
+  { value: 'finalSetTiebreak10', label: 'Final Set 10-Point Tiebreak', description: 'Final set uses 10-point tiebreak' },
+  { value: 'oneSetTiebreak10', label: 'Single Set 10-Point Tiebreak', description: 'One set with 10-point tiebreak at 6-6' }
+];
+
+// Tracking Level Options
+const TRACKING_LEVEL_OPTIONS = [
+  { value: 'level1', label: 'Basic Tracking', description: 'Serving player and point winners only' },
+  { value: 'level2', label: 'Intermediate Tracking', description: 'Basic + shot types, placements, reactions' },
+  { value: 'level3', label: 'Advanced Tracking', description: 'Full statistical analysis and reports' }
+];
+
 // Types for the form
 interface MatchFormData {
     p1: string;
@@ -40,12 +67,18 @@ interface MatchFormData {
     indoor: boolean;
     note: string;
     date: string;
-    matchType: "one" | "three" | "five";
+    // Legacy field - deprecated but still supported
+    matchType?: "one" | "three" | "five";
+    // New enhanced fields
+    matchFormat: MatchFormat;
+    scoringVariation: ScoringVariation;
+    customTiebreakRules?: Record<string, number>;
+    noAdScoring: boolean;
+    trackingLevel: TrackingLevel;
     matchCategory: "practice" | "tournament";
     tournamentType?: string;
     tournamentLevel?: string;
     tieBreakRule: number;
-    // trackingLevel: "basic" | "detailed" | "comprehensive"; // TODO: Uncomment when API supports this
 }
 
 interface PlayerOption {
@@ -65,11 +98,15 @@ export default function ScheduleMatch() {
     const [matchCategory, setMatchCategory] = useState<"practice" | "tournament">("practice");
     const [selectedP1, setSelectedP1] = useState<string>("");
     const [selectedP2, setSelectedP2] = useState<string>("");
+    const [availableFormats, setAvailableFormats] = useState(MATCH_FORMAT_OPTIONS);
+    const [availableVariations, setAvailableVariations] = useState(SCORING_VARIATION_OPTIONS);
+    const [availableTrackingLevels, setAvailableTrackingLevels] = useState(TRACKING_LEVEL_OPTIONS);
 
-    // Load available players from friends
+    // Load available players from friends and match formats
     useEffect(() => {
-        const loadPlayers = async () => {
+        const loadData = async () => {
             try {
+                // Load players
                 const friendsResponse = await friendsService.getFriendsList();
                 const playersList: PlayerOption[] = [];
                 
@@ -99,13 +136,35 @@ export default function ScheduleMatch() {
                 }
 
                 setPlayers(playersList);
+
+                // Load match formats from API
+                const formatsResponse = await getMatchFormats();
+                if (formatsResponse.success && formatsResponse.data?.formats) {
+                    const formatOptions = formatsResponse.data.formats.map(format => ({
+                        value: format.format,
+                        label: `${format.description} (${format.setsToWin}/${format.maxSets} sets)`,
+                        description: format.description
+                    }));
+                    setAvailableFormats(formatOptions);
+                }
+
+                // Load scoring variations from API
+                const variationsResponse = await getScoringVariations();
+                if (variationsResponse.success && variationsResponse.data?.variations) {
+                    const variationOptions = variationsResponse.data.variations.map(variation => ({
+                        value: variation.variation,
+                        label: variation.description,
+                        description: variation.description
+                    }));
+                    setAvailableVariations(variationOptions);
+                }
             } catch (error) {
-                console.error('Error loading players:', error);
-                toast.error('Failed to load available players');
+                console.error('Error loading data:', error);
+                toast.error('Failed to load match configuration data');
             }
         };
 
-        loadPlayers();
+        loadData();
     }, [user]);
 
     // Filter players for each position to prevent duplicate selection
@@ -158,8 +217,16 @@ export default function ScheduleMatch() {
                 toast.error('Please select a court surface');
                 return;
             }
-            if (!formData.matchType) {
-                toast.error('Please select match type');
+            if (!formData.matchFormat) {
+                toast.error('Please select match format');
+                return;
+            }
+            if (!formData.scoringVariation) {
+                toast.error('Please select scoring variation');
+                return;
+            }
+            if (!formData.trackingLevel) {
+                toast.error('Please select tracking level');
                 return;
             }
             if (!formData.matchCategory) {
@@ -193,8 +260,8 @@ export default function ScheduleMatch() {
             console.log(`Tournament validation passed: ${selectedType} - ${selectedLevel}`);
             }
 
-            // Prepare the match data
-            const matchData = {
+            // Prepare the match data with enhanced API format
+            const matchData: CreateMatchRequest = {
                 p1: p1IsObject ? formData.p1 : undefined,
                 p2: p2IsObject ? formData.p2 : undefined,
                 p1IsObject: p1IsObject,
@@ -205,22 +272,37 @@ export default function ScheduleMatch() {
                 indoor: formData.indoor,
                 note: formData.note,
                 date: formData.date,
+                // Legacy field - deprecated but still supported
                 matchType: formData.matchType,
+                // New enhanced fields
+                matchFormat: formData.matchFormat,
+                scoringVariation: formData.scoringVariation,
+                customTiebreakRules: formData.customTiebreakRules,
+                noAdScoring: formData.noAdScoring,
+                trackingLevel: formData.trackingLevel,
                 matchCategory: formData.matchCategory,
                 tournamentType: formData.matchCategory === 'tournament' ? formData.tournamentType : undefined,
                 tournamentLevel: formData.matchCategory === 'tournament' ? formData.tournamentLevel : undefined,
                 tieBreakRule: formData.tieBreakRule,
-                // trackingLevel: formData.trackingLevel, // TODO: Uncomment when API supports this
             };
 
             console.log('Match data prepared:', matchData);
 
-            await createMatch(matchData);
-            toast.success('Match scheduled successfully!');
-            // Reset selected players
-            setSelectedP1("");
-            setSelectedP2("");
-            navigate('/admin/matchs');
+            const response = await createMatch(matchData);
+            
+            if (response.success) {
+                toast.success('Match scheduled successfully!');
+                // Reset selected players
+                setSelectedP1("");
+                setSelectedP2("");
+                
+                // Add a small delay to ensure toast is visible before navigation
+                setTimeout(() => {
+                    navigate('/admin/matchs');
+                }, 1000);
+            } else {
+                toast.error(response.error || 'Failed to schedule match. Please try again.');
+            }
         } catch (error) {
             console.error('Error creating match:', error);
             toast.error('Failed to schedule match. Please try again.');
@@ -237,11 +319,30 @@ export default function ScheduleMatch() {
         { value: 'other', label: 'Other' }
     ];
 
+    // Legacy match type options (deprecated)
     const matchTypeOptions = [
         { value: 'one', label: 'Best of 1' },
         { value: 'three', label: 'Best of 3' },
         { value: 'five', label: 'Best of 5' }
     ];
+
+    // Enhanced match format options
+    const matchFormatOptions = availableFormats.map(format => ({
+        value: format.value,
+        label: format.label
+    }));
+
+    // Scoring variation options
+    const scoringVariationOptions = availableVariations.map(variation => ({
+        value: variation.value,
+        label: variation.label
+    }));
+
+    // Tracking level options
+    const trackingLevelOptions = availableTrackingLevels.map(level => ({
+        value: level.value,
+        label: level.label
+    }));
 
     const matchCategoryOptions = [
         { value: 'practice', label: 'Practice Match' },
@@ -455,11 +556,28 @@ export default function ScheduleMatch() {
                                         
                                         <div className="space-y-3">
                                 <Select
-                                                options={matchTypeOptions}
-                                                label="Total Sets to Win"
-                                                
+                                                options={matchFormatOptions}
+                                                label="Match Format"
                                                 validation={{ required: required }}
-                                                name="matchType"
+                                                name="matchFormat"
+                                            />
+                                        </div>
+                                        
+                                        <div className="space-y-3">
+                                <Select
+                                                options={scoringVariationOptions}
+                                                label="Scoring Variation"
+                                                validation={{ required: required }}
+                                                name="scoringVariation"
+                                            />
+                                        </div>
+                                        
+                                        <div className="space-y-3">
+                                <Select
+                                                options={trackingLevelOptions}
+                                                label="Tracking Level"
+                                                validation={{ required: required }}
+                                                name="trackingLevel"
                                             />
                                         </div>
                                         
@@ -498,6 +616,17 @@ export default function ScheduleMatch() {
                                                     className="w-6 h-6 text-blue-600 bg-[var(--bg-card)] border-2 border-[var(--border-primary)] rounded focus:ring-blue-500 focus:ring-2"
                                                 />
                                                 <span className="text-base font-medium text-[var(--text-primary)]">Indoor Court</span>
+                                            </label>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-center">
+                                            <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-5 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors w-full justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    name="noAdScoring"
+                                                    className="w-6 h-6 text-green-600 bg-[var(--bg-card)] border-2 border-[var(--border-primary)] rounded focus:ring-green-500 focus:ring-2"
+                                                />
+                                                <span className="text-base font-medium text-[var(--text-primary)]">No-Ad Scoring</span>
                                             </label>
                                         </div>
                                     </div>
@@ -588,16 +717,7 @@ export default function ScheduleMatch() {
                                         </div>
                                     )}
 
-                                    {/* TODO: Uncomment when API supports tracking level */}
-                                    {/* <div className="mt-10 p-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl border border-blue-200 max-w-5xl mx-auto">
-                                        <h3 className="text-2xl font-semibold text-blue-800 mb-6">📊 Tracking Level</h3>
-                                        <Select
-                                            options={trackingLevelOptions}
-                                            label="Choose how detailed you want to track this match"
-                                            validation={{ required: required }}
-                                            name="trackingLevel"
-                                        />
-                                    </div> */}
+                                    
 
                                     {/* Notes Section */}
                                     <div className="mt-12 pt-8 border-t border-[var(--border-secondary)]">

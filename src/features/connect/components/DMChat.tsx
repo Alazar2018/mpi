@@ -261,12 +261,12 @@ export default function DMChat({
 
   return (
     <div className="flex-1 rounded-2xl overflow-hidden grid grid-cols-1 grid-rows-[76px_1fr_auto] bg-[var(--bg-card)] dark:bg-gray-800">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 flex items-center justify-between shadow-lg">
-        <div className="flex gap-4 items-center">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-3 sm:p-6 flex items-center justify-between shadow-lg">
+        <div className="flex gap-2 sm:gap-4 items-center">
           {chat?.isGroupChat ? (
             // Group chat header
             <>
-              <div className="size-12 bg-white rounded-2xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-white">
+              <div className="w-10 h-10 sm:size-12 bg-white rounded-2xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-white">
                 {chat.photo ? (
                   <img 
                     src={chat.photo} 
@@ -280,9 +280,9 @@ export default function DMChat({
                 )}
               </div>
               <div className="text-white">
-                <h2 className="font-bold text-lg leading-none mb-1">{chat.chatName || 'Group Chat'}</h2>
-                <div className="flex gap-3 items-center leading-5">
-                  <span className="text-sm text-black opacity-90 bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                <h2 className="font-bold text-base sm:text-lg leading-none mb-1">{chat.chatName || 'Group Chat'}</h2>
+                <div className="flex flex-col sm:flex-row gap-1 sm:gap-3 items-start sm:items-center leading-5">
+                  <span className="text-xs sm:text-sm text-black opacity-90 bg-white bg-opacity-20 px-2 sm:px-3 py-1 rounded-full">
                     👥 {chat.users?.length || 0} members
                   </span>
                   {chat.groupAdmin && (
@@ -293,10 +293,10 @@ export default function DMChat({
                 </div>
               </div>
             </>
-          ) : (
+                      ) : (
             // Direct message header
             <>
-              <div className="size-12 bg-white rounded-2xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-white">
+              <div className="w-10 h-10 sm:size-12 bg-white rounded-2xl overflow-hidden flex items-center justify-center shadow-lg border-2 border-white">
                 {getChatWith()?.avatar ? (
                   <img 
                     src={getChatWith()?.avatar} 
@@ -310,10 +310,10 @@ export default function DMChat({
                 )}
               </div>
               <div className="text-white">
-                <h2 className="font-bold text-lg leading-none mb-1">
+                <h2 className="font-bold text-base sm:text-lg leading-none mb-1">
                   {getChatWith()?.firstName} {getChatWith()?.lastName}
                 </h2>
-                <div className="text-sm text-black opacity-90 bg-white bg-opacity-20 px-3 py-1 rounded-full inline-block">
+                <div className="text-xs sm:text-sm text-black opacity-90 bg-white bg-opacity-20 px-2 sm:px-3 py-1 rounded-full inline-block">
                   👤 {getChatWith()?.role || 'User'}
                 </div>
               </div>
@@ -322,24 +322,24 @@ export default function DMChat({
         </div>
 
         {/* Chat Status Indicators */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           {chat.isPinned && (
-            <div className="bg-yellow-500 text-white p-2 rounded-xl shadow-lg" title="Pinned">
+            <div className="bg-yellow-500 text-white p-1 sm:p-2 rounded-xl shadow-lg" title="Pinned">
               📌
             </div>
           )}
           {chat.isArchived && (
-            <div className="bg-gray-500 text-white p-2 rounded-xl shadow-lg" title="Archived">
+            <div className="bg-gray-500 text-white p-1 sm:p-2 rounded-xl shadow-lg" title="Archived">
               📁
             </div>
           )}
           {chat.isMuted && (
-            <div className="bg-red-500 text-white p-2 rounded-xl shadow-lg" title="Muted">
+            <div className="bg-red-500 text-white p-1 sm:p-2 rounded-xl shadow-lg" title="Muted">
               🔇
             </div>
           )}
           {chat.unreadCount > 0 && (
-            <div className="bg-red-500 text-white text-sm px-3 py-2 rounded-full shadow-lg font-bold min-w-[24px] text-center">
+            <div className="bg-red-500 text-white text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 rounded-full shadow-lg font-bold min-w-[20px] sm:min-w-[24px] text-center">
               {chat.unreadCount}
             </div>
           )}
@@ -351,7 +351,7 @@ export default function DMChat({
                   onGroupManagement(chat);
                 }
               }}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-3 rounded-xl transition-all duration-200 hover:shadow-lg hover:scale-105"
+              className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 sm:p-3 rounded-xl transition-all duration-200 hover:shadow-lg hover:scale-105"
               title="Group Settings"
             >
               ⚙️
@@ -378,7 +378,7 @@ export default function DMChat({
         )}
 
         {/* Messages Container with better padding and spacing */}
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
           {/* Scroll target for auto-scroll (at top for reverse order) */}
           <div ref={messagesEndRef} />
           
@@ -439,7 +439,7 @@ export default function DMChat({
                     </div>
                   )}
                   
-                  <div className="relative max-w-xs lg:max-w-md xl:max-w-lg 2xl:max-w-xl">
+                  <div className="relative max-w-[280px] sm:max-w-xs lg:max-w-md xl:max-w-lg 2xl:max-w-xl">
                     {/* Message Bubble with improved styling */}
                     <div
                       className={`${
@@ -448,7 +448,7 @@ export default function DMChat({
                           : 'bg-gradient-to-br from-[var(--bg-secondary)] via-[var(--bg-card)] to-[var(--bg-tertiary)] dark:from-gray-700 dark:via-gray-600 dark:to-gray-500 text-[var(--text-primary)] dark:text-white shadow-md hover:shadow-lg border border-[var(--border-primary)]'
                       } ${showActionsMenu === msg._id ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''} 
                       ${editingMessageId === msg._id ? 'ring-2 ring-yellow-400 ring-opacity-75 bg-gradient-to-br from-yellow-400 to-yellow-500' : ''}
-                      rounded-2xl px-4 py-3 transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg`}
+                      rounded-2xl px-3 sm:px-4 py-2 sm:py-3 transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg`}
                     >
                       {/* Edit Indicator */}
                       {editingMessageId === msg._id && (
@@ -461,7 +461,7 @@ export default function DMChat({
                       
                       {/* Message Content with better typography */}
                       <div className="mb-2">
-                        <p className="text-sm leading-relaxed font-medium">{msg.content}</p>
+                        <p className="text-xs sm:text-sm leading-relaxed font-medium">{msg.content}</p>
                         {msg.image && (
                           <div className="mt-3">
                             <img
@@ -514,7 +514,7 @@ export default function DMChat({
 
                     {/* Message Actions Menu with improved styling */}
                     {isCurrentUser && showActionsMenu === msg._id && (
-                      <div className="absolute top-full right-0 mt-2 bg-[var(--bg-card)] dark:bg-gray-800 border border-[var(--border-primary)] rounded-xl shadow-2xl p-2 z-[9999] min-w-[180px] backdrop-blur-sm transform -translate-x-1/2">
+                      <div className="absolute top-full right-0 mt-2 bg-[var(--bg-card)] dark:bg-gray-800 border border-[var(--border-primary)] rounded-xl shadow-2xl p-2 z-[9999] min-w-[160px] sm:min-w-[180px] backdrop-blur-sm transform -translate-x-1/2">
                         {/* Arrow indicator */}
                         <div className="absolute -top-2 right-4 w-4 h-4 bg-[var(--bg-card)] dark:bg-gray-800 border-l border-t border-[var(--border-primary)] transform rotate-45"></div>
                         <div className="flex flex-col gap-1">
@@ -599,7 +599,7 @@ export default function DMChat({
       </div>
 
       {/* Message Input Area */}
-      <div className="bg-gradient-to-r from-[var(--bg-card)] to-[var(--bg-secondary)] dark:from-gray-700 dark:to-gray-600 p-6 border-t border-[var(--border-primary)] shadow-lg">
+      <div className="bg-gradient-to-r from-[var(--bg-card)] to-[var(--bg-secondary)] dark:from-gray-700 dark:to-gray-600 p-3 sm:p-6 border-t border-[var(--border-primary)] shadow-lg">
         {/* Image Preview with improved styling */}
         {imagePreview && (
           <div className="mb-4 relative">
@@ -622,7 +622,7 @@ export default function DMChat({
         )}
 
         {/* Input Container with improved layout */}
-        <div className="flex items-end gap-4">
+        <div className="flex items-end gap-2 sm:gap-4">
           {/* Image Upload Button with better styling */}
           <label className="cursor-pointer group flex-shrink-0">
             <input
@@ -631,7 +631,7 @@ export default function DMChat({
               onChange={handleImageSelect}
               className="hidden"
             />
-            <div className="p-3 text-[var(--text-secondary)] dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-300 border-2 border-[var(--border-primary)] hover:border-blue-400 group-hover:shadow-md hover:scale-105 bg-[var(--bg-card)] dark:bg-gray-600">
+            <div className="p-2 sm:p-3 text-[var(--text-secondary)] dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-300 border-2 border-[var(--border-primary)] hover:border-blue-400 group-hover:shadow-md hover:scale-105 bg-[var(--bg-card)] dark:bg-gray-600">
               <div className="text-xl">📷</div>
             </div>
           </label>
@@ -655,12 +655,12 @@ export default function DMChat({
                   cancelEditing();
                 }
               }}
-              className="w-full p-4 pr-20 border-2 border-[var(--border-primary)] rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 resize-none transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg bg-[var(--bg-primary)] dark:bg-gray-700 text-[var(--text-primary)] dark:text-white"
+              className="w-full p-3 sm:p-4 pr-16 sm:pr-20 border-2 border-[var(--border-primary)] rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 resize-none transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg bg-[var(--bg-primary)] dark:bg-gray-700 text-[var(--text-primary)] dark:text-white"
               placeholder={editingMessageId ? "Edit your message..." : "Type your message here..."}
               rows={1}
               style={{ height: '56px', minHeight: '56px' }}
             />
-            <div className="absolute right-3 bottom-3 text-xs text-[var(--text-tertiary)] dark:text-gray-500 bg-[var(--bg-card)] dark:bg-gray-600 px-2 py-1 rounded-full">
+            <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 text-xs text-[var(--text-tertiary)] dark:text-gray-500 bg-[var(--bg-card)] dark:bg-gray-600 px-1 sm:px-2 py-1 rounded-full">
               {(editingMessageId ? editingMessageContent : message).length}/1000
             </div>
           </div>
@@ -669,7 +669,7 @@ export default function DMChat({
           <button
             onClick={editingMessageId ? saveEdit : send}
             disabled={editingMessageId ? !editingMessageContent.trim() : (!message.trim() && !selectedImage)}
-            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg disabled:cursor-not-allowed flex items-center gap-3 font-semibold text-base hover:scale-105 disabled:hover:scale-100"
+            className="px-4 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg disabled:cursor-not-allowed flex items-center gap-2 sm:gap-3 font-semibold text-sm sm:text-base hover:scale-105 disabled:hover:scale-100"
           >
             <span>{editingMessageId ? 'Update' : 'Send'}</span>
             <span className="text-lg">{editingMessageId ? '💾' : '🚀'}</span>
@@ -679,7 +679,7 @@ export default function DMChat({
           {editingMessageId && (
             <button
               onClick={cancelEditing}
-              className="px-6 py-4 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2 font-semibold text-base hover:scale-105"
+              className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2 font-semibold text-sm sm:text-base hover:scale-105"
             >
               <span>Cancel</span>
               <span className="text-lg">❌</span>

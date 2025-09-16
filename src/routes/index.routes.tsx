@@ -49,6 +49,7 @@ import EditClassPage from "@/features/class-detail/EditClassPage";
 import FindCoach from "@/features/find-coach";
 
 import NotificationsPage from "@/features/notifications/notifications";
+import NotFound from "@/components/NotFound";
 // routes.tsx
 export const routes = createBrowserRouter([
     { path: "/", element: <Home /> },
@@ -226,4 +227,9 @@ export const routes = createBrowserRouter([
             }
         ],
     },
+    // Catch-all route for 404 pages
+    {
+        path: "*",
+        element: <NotFound />
+    }
 ]);

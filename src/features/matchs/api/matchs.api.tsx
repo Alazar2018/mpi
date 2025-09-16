@@ -3,7 +3,16 @@ import type {
   MatchesListResponse, 
   SaveMatchProgressRequest,
   SubmitMatchResultRequest,
-  MatchQueryParams
+  MatchQueryParams,
+  MatchFormat,
+  ScoringVariation,
+  TrackingLevel,
+  MatchFormatResponse,
+  MatchFormatCategoriesResponse,
+  ScoringVariationsResponse,
+  MatchFormatStatsResponse,
+  MatchFormatMatchesResponse,
+  CreateMatchRequest
 } from "@/service/matchs.server";
 import type { AsyncResponse } from "@/interface";
 
@@ -32,7 +41,7 @@ export function getMatchById(matchId: string): Promise<AsyncResponse<any>> {
 	}));
 }
 
-export function createMatch(matchData: any): Promise<AsyncResponse<MatchesListResponse>> {
+export function createMatch(matchData: CreateMatchRequest): Promise<AsyncResponse<{ match: any }>> {
 	return matchesService.createMatch(matchData).then(data => ({
 		success: true,
 		data,
@@ -44,8 +53,8 @@ export function createMatch(matchData: any): Promise<AsyncResponse<MatchesListRe
 	}));
 }
 
-export function updateMatchStatus(matchId: string, status: "accepted" | "rejected"): Promise<AsyncResponse<any>> {
-	return matchesService.updateMatchStatus(matchId, { playerStatus: status }).then(data => ({
+export function updateMatchStatus(matchId: string, status: "confirmed" | "rejected"): Promise<AsyncResponse<any>> {
+	return matchesService.updateMatchStatus(matchId, { playerStatus: status as "accepted" | "rejected" }).then(data => ({
 		success: true,
 		data,
 		status: 200
@@ -140,6 +149,208 @@ export const submitMatchResult = async (matchId: string, data: SubmitMatchResult
       success: false,
       error: error instanceof Error ? error.message : 'Failed to submit match result',
       message: 'Failed to submit match result'
+    };
+  }
+};
+
+// NEW: Enhanced Match Format API Methods
+
+/**
+ * Get all available match formats
+ */
+export const getMatchFormats = async (): Promise<AsyncResponse<MatchFormatResponse>> => {
+  try {
+    const response = await matchesService.getMatchFormats();
+    return {
+      success: true,
+      data: response,
+      message: 'Match formats retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get match formats',
+      message: 'Failed to get match formats'
+    };
+  }
+};
+
+/**
+ * Get match formats organized by categories
+ */
+export const getMatchFormatCategories = async (): Promise<AsyncResponse<MatchFormatCategoriesResponse>> => {
+  try {
+    const response = await matchesService.getMatchFormatCategories();
+    return {
+      success: true,
+      data: response,
+      message: 'Match format categories retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get match format categories',
+      message: 'Failed to get match format categories'
+    };
+  }
+};
+
+/**
+ * Get available scoring variations
+ */
+export const getScoringVariations = async (): Promise<AsyncResponse<ScoringVariationsResponse>> => {
+  try {
+    const response = await matchesService.getScoringVariations();
+    return {
+      success: true,
+      data: response,
+      message: 'Scoring variations retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get scoring variations',
+      message: 'Failed to get scoring variations'
+    };
+  }
+};
+
+/**
+ * Get match format usage statistics
+ */
+export const getMatchFormatStats = async (): Promise<AsyncResponse<MatchFormatStatsResponse>> => {
+  try {
+    const response = await matchesService.getMatchFormatStats();
+    return {
+      success: true,
+      data: response,
+      message: 'Match format stats retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get match format stats',
+      message: 'Failed to get match format stats'
+    };
+  }
+};
+
+/**
+ * Get matches by specific format
+ */
+export const getMatchesByFormat = async (format: MatchFormat, params?: MatchQueryParams): Promise<AsyncResponse<MatchFormatMatchesResponse>> => {
+  try {
+    const response = await matchesService.getMatchesByFormatEndpoint(format, params);
+    return {
+      success: true,
+      data: response,
+      message: 'Matches by format retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get matches by format',
+      message: 'Failed to get matches by format'
+    };
+  }
+};
+
+/**
+ * Resume a saved match
+ */
+export const resumeMatch = async (matchId: string): Promise<AsyncResponse<any>> => {
+  try {
+    const response = await matchesService.resumeMatch(matchId);
+    return {
+      success: true,
+      data: response,
+      message: 'Match resumed successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to resume match',
+      message: 'Failed to resume match'
+    };
+  }
+};
+
+/**
+ * Clear/reset match data
+ */
+export const clearMatch = async (matchId: string): Promise<AsyncResponse<any>> => {
+  try {
+    const response = await matchesService.clearMatch(matchId);
+    return {
+      success: true,
+      data: response,
+      message: 'Match cleared successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to clear match',
+      message: 'Failed to clear match'
+    };
+  }
+};
+
+/**
+ * Get completed matches for a specific player
+ */
+export const getPlayerCompletedMatches = async (playerId: string, params?: MatchQueryParams): Promise<AsyncResponse<MatchesListResponse>> => {
+  try {
+    const response = await matchesService.getPlayerCompletedMatches(playerId, params);
+    return {
+      success: true,
+      data: response,
+      message: 'Player completed matches retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get player completed matches',
+      message: 'Failed to get player completed matches'
+    };
+  }
+};
+
+/**
+ * Get matches by tracking level
+ */
+export const getMatchesByTrackingLevel = async (trackingLevel: TrackingLevel, params?: MatchQueryParams): Promise<AsyncResponse<MatchesListResponse>> => {
+  try {
+    const response = await matchesService.getMatchesByTrackingLevel(trackingLevel, params);
+    return {
+      success: true,
+      data: response,
+      message: 'Matches by tracking level retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get matches by tracking level',
+      message: 'Failed to get matches by tracking level'
+    };
+  }
+};
+
+/**
+ * Get matches by scoring variation
+ */
+export const getMatchesByScoringVariation = async (scoringVariation: ScoringVariation, params?: MatchQueryParams): Promise<AsyncResponse<MatchesListResponse>> => {
+  try {
+    const response = await matchesService.getMatchesByScoringVariation(scoringVariation, params);
+    return {
+      success: true,
+      data: response,
+      message: 'Matches by scoring variation retrieved successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get matches by scoring variation',
+      message: 'Failed to get matches by scoring variation'
     };
   }
 };

@@ -6,7 +6,8 @@ import Input from "@/components/form/Input";
 import InputPassword from "@/components/form/InputPassword";
 import { resetPasswordWithOTP } from "./auth.api";
 import { useApiRequest } from "@/hooks/useApiRequest";
-import { required, toast } from "@/utils/utils";
+import { required } from "@/utils/utils";
+import { toast, ToastContainer } from 'react-toastify';
 import icons from "@/utils/icons";
 
 interface ResetPasswordWithOTPPayload {
@@ -37,19 +38,19 @@ export default function VerifyPasswordResetOTP() {
 
     // Validate email is present
     if (!completePayload.email || completePayload.email.trim() === '') {
-      toast('e', 'Error', 'Email is required');
+      toast.error('Email is required');
       return;
     }
 
     // Validate password confirmation
     if (completePayload.newPassword !== completePayload.confirmPassword) {
-      toast('e', 'Error', 'Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
 
     // Validate password strength (optional)
     if (completePayload.newPassword.length < 8) {
-      toast('e', 'Error', 'Password must be at least 8 characters long');
+      toast.error('Password must be at least 8 characters long');
       return;
     }
 
@@ -57,13 +58,13 @@ export default function VerifyPasswordResetOTP() {
       () => resetPasswordWithOTP(completePayload),
       (res) => {
         if (res.success && res.data) {
-          toast('s', 'Success', 'Password reset successfully! Please log in with your new password.');
+          toast.success('Password reset successfully! Please log in with your new password.');
           // Redirect to login page after successful password reset
           setTimeout(() => {
             navigate('/login');
           }, 2000); // 2 second delay to show success message
         } else {
-          toast('e', 'Error', res.error || 'Failed to reset password');
+          toast.error(res.error || 'Failed to reset password');
         }
       }
     );
@@ -193,10 +194,11 @@ export default function VerifyPasswordResetOTP() {
                   pending={verifyReq.pending}
                   size="lg"
                   onClick={onSubmit(handleSubmit)}
-                  className="mt-2.5"
+                  className="mt-2.5 transform transition-all duration-300 hover:scale-[1.02]"
                   type="action"
+                  disabled={verifyReq.pending}
                 >
-                  Reset Password
+                  {verifyReq.pending ? 'Resetting...' : 'Reset Password'}
                 </Button>
               </div>
             );
@@ -208,12 +210,26 @@ export default function VerifyPasswordResetOTP() {
           </p>
           <Link
             to="/forgot-password"
-            className="text-sm text-blue-600 hover:underline font-medium"
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium transition-all duration-200 hover:scale-105"
           >
             ← Back to Forgot Password
           </Link>
         </div>
       </div>
+      
+      {/* ToastContainer for this page */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

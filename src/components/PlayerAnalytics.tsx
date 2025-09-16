@@ -325,15 +325,15 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
   }, [loadingActivities, weeklyActivities.length]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Navigation Tabs */}
-      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-        <div className="flex gap-1">
+      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 transition-colors duration-300">
+        <div className="flex flex-wrap gap-1">
           {['Overview', 'Serves', 'Points', 'Returns', 'Rally'].map((tab) => (
             <button
               key={tab}
               onClick={() => setSelectedTab(tab as 'Overview' | 'Serves' | 'Points' | 'Returns' | 'Rally')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 selectedTab === tab 
                   ? 'bg-blue-600 text-white' 
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -346,26 +346,26 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
       </div>
 
       {/* Filters */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-[var(--shadow-primary)] p-6 border border-blue-100 dark:border-blue-800 transition-colors duration-300">
-        <div className="space-y-6">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 border border-blue-100 dark:border-blue-800 transition-colors duration-300">
+        <div className="space-y-4 sm:space-y-6">
           {/* Header */}
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Analytics Filters</h3>
-            <p className="text-sm text-[var(--text-secondary)]">Customize your analytics view</p>
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] mb-2">Analytics Filters</h3>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">Customize your analytics view</p>
           </div>
           
           {/* Filter Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Match Type Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+              <label className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 Match Type
               </label>
               <select 
                 value={selectedMatchType}
                 onChange={(e) => setSelectedMatchType(e.target.value)}
-                className="w-full bg-[var(--bg-card)] text-[var(--text-primary)] px-4 py-3 rounded-lg text-sm font-medium border border-[var(--border-primary)] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 shadow-sm"
+                className="w-full bg-[var(--bg-card)] text-[var(--text-primary)] px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium border border-[var(--border-primary)] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 shadow-sm"
               >
                 {getUniqueMatchTypes().map((type) => (
                   <option key={type} value={type}>
@@ -377,16 +377,16 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
           
             {/* Time Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+              <label className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 Time Period
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2">
             {timeframes.map((timeframe) => (
               <button
                 key={timeframe}
                 onClick={() => setSelectedTimeframe(timeframe)}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                   selectedTimeframe === timeframe
                         ? 'bg-green-600 text-white shadow-md transform scale-105' 
                         : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 border border-[var(--border-primary)]'
@@ -400,14 +400,14 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             
             {/* Specific Match Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+              <label className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                 Specific Match
               </label>
               <select 
                 value={selectedMatch}
                 onChange={(e) => setSelectedMatch(e.target.value)}
-                className="w-full bg-[var(--bg-card)] text-[var(--text-primary)] px-4 py-3 rounded-lg text-sm font-medium border border-[var(--border-primary)] focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 shadow-sm"
+                className="w-full bg-[var(--bg-card)] text-[var(--text-primary)] px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium border border-[var(--border-primary)] focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 shadow-sm"
               >
                                  <option value="all">All Matches ({getAllMatchesForDropdown().length})</option>
                  {getAllMatchesForDropdown().map((match) => {
@@ -423,14 +423,14 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
           </div>
           
           {/* Filter Summary */}
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-lg p-3 sm:p-4 border border-gray-200 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
                 </div>
                 <div>
-                                     <p className="text-sm font-medium text-gray-800">
+                                     <p className="text-xs sm:text-sm font-medium text-gray-800">
                      Showing <span className="text-blue-600 font-bold">{filteredMatches.length}</span> completed matches
                      <span className="text-gray-500 ml-2">({getAllMatchesForDropdown().length} total matches)</span>
                    </p>
@@ -447,7 +447,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   setSelectedTimeframe('All');
                   setSelectedMatch('all');
                 }}
-                className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1 rounded-md hover:bg-gray-100 transition-colors"
+                className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1 rounded-md hover:bg-gray-100 transition-colors self-start sm:self-auto"
               >
                 Clear Filters
               </button>
@@ -460,15 +460,15 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
       {selectedTab === 'Overview' && (
         <>
           {/* Dynamic Title */}
-          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 sm:p-6 border border-gray-200">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
                 {selectedMatch === 'all' 
                   ? `${userName}'s Analytics Overview`
                   : `Match Analysis: vs ${getOpponentName(filteredMatches[0])}`
                 }
               </h2>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600">
                 {selectedMatch === 'all' 
                   ? `Analyzing ${filteredMatches.length} completed matches`
                   : 'Detailed analysis of the selected match'
@@ -480,33 +480,33 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
           </div>
           
           {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-gray-900">{filteredMatches.length}</p>
-                  <p className="text-gray-600">
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{filteredMatches.length}</p>
+                  <p className="text-sm sm:text-base text-gray-600">
                     {selectedMatch === 'all' ? 'Filtered Matches' : 'Selected Match'}
                   </p>
                   {selectedMatch !== 'all' && (
-                    <p className="text-xs text-blue-600 mt-1">vs {getOpponentName(filteredMatches[0])}</p>
+                    <p className="text-xs sm:text-sm text-blue-600 mt-1">vs {getOpponentName(filteredMatches[0])}</p>
                   )}
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+                <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                 </div>
                 <div>
-                   <p className="text-3xl font-bold text-gray-900">{filteredStats?.totalRallies || 0}</p>
-                   <p className="text-gray-600">Total Rallies</p>
+                   <p className="text-2xl sm:text-3xl font-bold text-gray-900">{filteredStats?.totalRallies || 0}</p>
+                   <p className="text-sm sm:text-base text-gray-600">Total Rallies</p>
                    {selectedMatch !== 'all' && (
-                     <p className="text-xs text-green-600 mt-1">From selected match</p>
+                     <p className="text-xs sm:text-sm text-green-600 mt-1">From selected match</p>
                    )}
                 </div>
               </div>
@@ -514,31 +514,31 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
           </div>
 
           {/* Charts Grid - 2 Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Points Distribution Chart */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Points Distribution</h3>
-              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Points Distribution</h3>
+              <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
             </div>
             <div className="text-center">
               <div className="relative inline-block">
-                <svg className="w-32 h-32 transform -rotate-90">
+                <svg className="w-24 h-24 sm:w-32 sm:h-32 transform -rotate-90">
                   <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
+                    cx="48"
+                    cy="48"
+                    r="44"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="transparent"
                     className="text-gray-200"
                   />
                   <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
+                    cx="48"
+                    cy="48"
+                    r="44"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="transparent"
                     strokeDasharray={`${filteredStats?.totalPoints || 0} ${filteredStats?.totalErrors || 0}`}
                     className="text-green-500"
@@ -546,24 +546,24 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-gray-900">
+                    <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                       {filteredStats?.totalPoints || 0}
                     </p>
-                    <p className="text-sm text-gray-600">Points</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Points</p>
                   </div>
                 </div>
               </div>
               <div className="mt-4 space-y-2">
-                <div className="flex justify-center items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 sm:gap-4">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-green-600 font-medium">
+                    <span className="text-xs sm:text-sm text-green-600 font-medium">
                       Won {filteredStats?.totalPoints || 0} Points
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    <span className="text-orange-600 font-medium">
+                    <span className="text-xs sm:text-sm text-orange-600 font-medium">
                       Lost {filteredStats?.totalErrors || 0} Points
                     </span>
                   </div>
@@ -573,12 +573,12 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
           </div>
 
           {/* Performance Trends Chart */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Performance Trends</h3>
-              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Performance Trends</h3>
+              <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
             </div>
-            <div className="h-64 flex items-end justify-center gap-2">
+            <div className="h-48 sm:h-64 flex items-end justify-center gap-1 sm:gap-2">
               {recentMatches.slice(0, 8).map((match, index) => {
                 const isWin = match.status === 'completed' && 
                   ((match.winner === 'playerOne' && match.p1?._id === match.p1?._id) || 
@@ -587,7 +587,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 return (
                   <div key={index} className="flex flex-col items-center">
                     <div 
-                      className={`w-8 rounded-t-sm transition-all duration-300 ${
+                      className={`w-6 sm:w-8 rounded-t-sm transition-all duration-300 ${
                         isWin ? 'bg-green-500' : 'bg-red-500'
                       }`}
                       style={{ height: `${height}px` }}
@@ -599,7 +599,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 );
               })}
             </div>
-            <div className="mt-4 text-center text-sm text-gray-600">
+            <div className="mt-4 text-center text-xs sm:text-sm text-gray-600">
               <span className="inline-flex items-center gap-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 Wins
@@ -612,62 +612,62 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
           </div>
 
                      {/* Winners Chart with Shot Type Breakdown */}
-           <div className="bg-white rounded-xl shadow-sm p-6">
+           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
              <div className="flex justify-between items-center mb-4">
-               <h3 className="text-lg font-semibold text-gray-900">Winners</h3>
-               <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
+               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Winners</h3>
+               <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
              </div>
-             <div className="grid grid-cols-2 gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                <div className="text-center">
                  <div className="relative inline-block mb-4">
-                   <svg className="w-24 h-24 transform -rotate-90">
+                   <svg className="w-20 h-20 sm:w-24 sm:h-24 transform -rotate-90">
                      <circle
-                       cx="48"
-                       cy="48"
-                       r="40"
+                       cx="40"
+                       cy="40"
+                       r="32"
                        stroke="currentColor"
-                       strokeWidth="6"
+                       strokeWidth="5"
                        fill="transparent"
                        className="text-gray-200"
                      />
                      <circle
-                       cx="48"
-                       cy="48"
-                       r="40"
+                       cx="40"
+                       cy="40"
+                       r="32"
                        stroke="currentColor"
-                       strokeWidth="6"
+                       strokeWidth="5"
                        fill="transparent"
                        strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.25)} 100`}
                        className="text-blue-500"
                      />
                      <circle
-                       cx="48"
-                       cy="48"
-                       r="40"
+                       cx="40"
+                       cy="40"
+                       r="32"
                        stroke="currentColor"
-                       strokeWidth="6"
+                       strokeWidth="5"
                        fill="transparent"
                        strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.35)} 100`}
                        className="text-cyan-500"
                        strokeDashoffset={`-${Math.floor((filteredStats?.totalWinners || 0) * 0.25)}`}
                      />
                      <circle
-                       cx="48"
-                       cy="48"
-                       r="40"
+                       cx="40"
+                       cy="40"
+                       r="32"
                        stroke="currentColor"
-                       strokeWidth="6"
+                       strokeWidth="5"
                        fill="transparent"
                        strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.24)} 100`}
                        className="text-yellow-500"
                        strokeDashoffset={`-${Math.floor((filteredStats?.totalWinners || 0) * 0.6)}`}
                      />
                      <circle
-                       cx="48"
-                       cy="48"
-                       r="40"
+                       cx="40"
+                       cy="40"
+                       r="32"
                        stroke="currentColor"
-                       strokeWidth="6"
+                       strokeWidth="5"
                        fill="transparent"
                        strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.24)} 100`}
                        className="text-green-500"
@@ -676,7 +676,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                    </svg>
                    <div className="absolute inset-0 flex items-center justify-center">
                      <div className="text-center">
-                       <p className="text-xl font-bold text-gray-900">
+                       <p className="text-lg sm:text-xl font-bold text-gray-900">
                          {filteredStats?.totalWinners || 0}
                        </p>
                        <p className="text-xs text-gray-600">Total</p>
@@ -685,33 +685,33 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                  </div>
                </div>
                <div className="text-center">
-                 <h4 className="text-lg font-semibold text-gray-900 mb-4">Shot Type</h4>
-                 <div className="space-y-3">
+                 <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Shot Type</h4>
+                 <div className="space-y-2 sm:space-y-3">
                    <div className="flex items-center gap-2">
                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                     <span className="text-sm text-gray-700">Forehand</span>
-                     <span className="text-sm font-medium text-gray-900 ml-auto">
+                     <span className="text-xs sm:text-sm text-gray-700">Forehand</span>
+                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
                        {Math.floor((filteredStats?.totalWinners || 0) * 0.25)}
                      </span>
                    </div>
                    <div className="flex items-center gap-2">
                      <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
-                     <span className="text-sm text-gray-700">Backhand</span>
-                     <span className="text-sm font-medium text-gray-900 ml-auto">
+                     <span className="text-xs sm:text-sm text-gray-700">Backhand</span>
+                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
                        {Math.floor((filteredStats?.totalWinners || 0) * 0.35)}
                      </span>
                    </div>
                    <div className="flex items-center gap-2">
                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                     <span className="text-sm text-gray-700">Return Forehand</span>
-                     <span className="text-sm font-medium text-gray-900 ml-auto">
+                     <span className="text-xs sm:text-sm text-gray-700">Return Forehand</span>
+                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
                        {Math.floor((stats?.totalWinners || 0) * 0.24)}
                      </span>
                    </div>
                    <div className="flex items-center gap-2">
                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                     <span className="text-sm text-gray-700">Return Backhand</span>
-                     <span className="text-sm font-medium text-gray-900 ml-auto">
+                     <span className="text-xs sm:text-sm text-gray-700">Return Backhand</span>
+                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
                        {Math.floor((stats?.totalWinners || 0) * 0.24)}
                      </span>
                    </div>
@@ -721,9 +721,9 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
            </div>
 
                      {/* Weekly Activity Chart */}
-           <div className="bg-white rounded-xl shadow-sm p-6">
+           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
              <div className="flex justify-between items-center mb-4">
-               <h3 className="text-lg font-semibold text-gray-900">Weekly Activity</h3>
+               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Weekly Activity</h3>
                <div className="flex gap-2">
                                    <button 
                     onClick={() => {
@@ -736,19 +736,19 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                         setLoadingActivities(false);
                       }, 100);
                     }}
-                    className="text-gray-600 hover:text-gray-700 text-sm font-medium px-2 py-1 rounded hover:bg-gray-100"
+                    className="text-gray-600 hover:text-gray-700 text-xs sm:text-sm font-medium px-2 py-1 rounded hover:bg-gray-100"
                   >
                     Refresh
                   </button>
-                 <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
+                 <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
                </div>
              </div>
                            {loadingActivities ? (
-                <div className="h-48 flex items-center justify-center">
-                  <div className="text-gray-500">Loading activities...</div>
+                <div className="h-36 sm:h-48 flex items-center justify-center">
+                  <div className="text-gray-500 text-sm">Loading activities...</div>
                 </div>
               ) : weeklyActivities.length > 0 ? (
-                <div className="h-48 flex items-end justify-center gap-3">
+                <div className="h-36 sm:h-48 flex items-end justify-center gap-2 sm:gap-3">
                   {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
                     // Count events for this day of the week
                     const dayEvents = weeklyActivities.filter(event => {
@@ -761,7 +761,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                     return (
                       <div key={day} className="flex flex-col items-center group relative">
                         <div 
-                          className={`w-8 rounded-t-sm transition-all duration-300 cursor-pointer ${
+                          className={`w-6 sm:w-8 rounded-t-sm transition-all duration-300 cursor-pointer ${
                             activityCount > 0 ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-200'
                           }`}
                           style={{ height: `${height}px` }}
@@ -793,11 +793,11 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   })}
                 </div>
               ) : (
-                <div className="h-48 flex items-center justify-center">
-                  <div className="text-gray-500">No activities this week</div>
+                <div className="h-36 sm:h-48 flex items-center justify-center">
+                  <div className="text-gray-500 text-sm">No activities this week</div>
                 </div>
               )}
-                           <div className="mt-4 text-center text-sm text-gray-600">
+                           <div className="mt-4 text-center text-xs sm:text-sm text-gray-600">
                 {weeklyActivities.length > 0 
                   ? `${weeklyActivities.length} total activities this week`
                   : 'No activities scheduled this week'
@@ -808,15 +808,15 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
 
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-               <div className="flex items-center justify-between mb-6">
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+               <div className="flex items-center justify-between mb-4 sm:mb-6">
                  <div className="flex items-center gap-3">
                    <div className="p-2 bg-blue-100 rounded-lg">
-                     <Trophy className="w-5 h-5 text-blue-600" />
+                     <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                    </div>
-                   <h3 className="text-lg font-semibold text-gray-900">Recent Matches</h3>
+                   <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Matches</h3>
                  </div>
-                 <span className="text-sm text-gray-500">{recentMatches.length} matches</span>
+                 <span className="text-xs sm:text-sm text-gray-500">{recentMatches.length} matches</span>
                </div>
               <div className="space-y-3">
                 {recentMatches.map((match, index) => {
@@ -841,20 +841,20 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                      <div 
                        key={index} 
                        onClick={() => navigate(`/admin/matchs/detail/${match._id}`)}
-                       className="group cursor-pointer p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
+                       className="group cursor-pointer p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
                      >
                        <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-4">
-                           <div className={`p-3 ${resultBg} rounded-full text-lg`}>
+                         <div className="flex items-center gap-3 sm:gap-4">
+                           <div className={`p-2 sm:p-3 ${resultBg} rounded-full text-base sm:text-lg`}>
                              {resultIcon}
                            </div>
-                           <div>
+                           <div className="min-w-0 flex-1">
                              <div className="flex items-center gap-2 mb-1">
-                               <span className="text-sm text-gray-500">vs</span>
-                               <span className="font-semibold text-gray-900">{opponentName}</span>
+                               <span className="text-xs sm:text-sm text-gray-500">vs</span>
+                               <span className="font-semibold text-gray-900 text-sm sm:text-base truncate">{opponentName}</span>
                              </div>
-                             <div className="flex items-center gap-2 text-sm text-gray-500">
-                               <Calendar className="w-4 h-4" />
+                             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+                               <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                                <span>{new Date(match.date).toLocaleDateString('en-US', { 
                                  month: 'short', 
                                  day: 'numeric',
@@ -863,11 +863,11 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                              </div>
                            </div>
                          </div>
-                      <div className="flex items-center gap-3">
-                           <div className={`px-3 py-1 rounded-full text-xs font-medium ${resultColor} ${resultBg}`}>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                           <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${resultColor} ${resultBg}`}>
                              {result.charAt(0).toUpperCase() + result.slice(1)}
                            </div>
-                           <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-200" />
+                           <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-200" />
               </div>
                     </div>
                   </div>
@@ -878,7 +878,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                  <div className="mt-4 text-center">
                    <button 
                      onClick={() => navigate('/admin/matchs')}
-                     className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
+                     className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium hover:underline"
                    >
                      View All Matches
                    </button>
@@ -888,34 +888,34 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
           )}
 
           {/* Additional Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Serving</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Serving</h3>
               <div className="text-center">
-                <p className="text-3xl font-bold text-blue-600">{filteredStats?.totalServes || 0}</p>
-                <p className="text-gray-600">Total Serves</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredStats?.totalServes || 0}</p>
+                <p className="text-sm sm:text-base text-gray-600">Total Serves</p>
                 {selectedMatch !== 'all' && (
-                  <p className="text-xs text-blue-600 mt-1">From selected match</p>
+                  <p className="text-xs sm:text-sm text-blue-600 mt-1">From selected match</p>
                 )}
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Winners</h3>
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Winners</h3>
               <div className="text-center">
-                <p className="text-3xl font-bold text-green-600">{filteredStats?.totalWinners || 0}</p>
-                <p className="text-gray-600">Total Winners</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-600">{filteredStats?.totalWinners || 0}</p>
+                <p className="text-sm sm:text-base text-gray-600">Total Winners</p>
                 {selectedMatch !== 'all' && (
-                  <p className="text-xs text-green-600 mt-1">From selected match</p>
+                  <p className="text-xs sm:text-sm text-green-600 mt-1">From selected match</p>
                 )}
                     </div>
                   </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Rallies</h3>
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Rallies</h3>
               <div className="text-center">
-                <p className="text-3xl font-bold text-purple-600">{filteredStats?.totalRallies || 0}</p>
-                <p className="text-gray-600">Total Rallies</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-600">{filteredStats?.totalRallies || 0}</p>
+                <p className="text-sm sm:text-base text-gray-600">Total Rallies</p>
                 {selectedMatch !== 'all' && (
-                  <p className="text-xs text-purple-600 mt-1">From selected match</p>
+                  <p className="text-xs sm:text-sm text-purple-600 mt-1">From selected match</p>
                 )}
               </div>
             </div>
@@ -925,46 +925,46 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
 
       {/* Serves Tab Content */}
       {selectedTab === 'Serves' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
            {/* Serve Performance Overview */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
-               <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Serves</h3>
-               <p className="text-3xl font-bold text-blue-600">{filteredStats?.totalServes || 0}</p>
-               <p className="text-gray-600">Serves</p>
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 text-center hover:shadow-md transition-shadow duration-200">
+               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Total Serves</h3>
+               <p className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredStats?.totalServes || 0}</p>
+               <p className="text-sm sm:text-base text-gray-600">Serves</p>
                {selectedMatch !== 'all' && (
-                 <p className="text-xs text-blue-600 mt-1">From selected match</p>
+                 <p className="text-xs sm:text-sm text-blue-600 mt-1">From selected match</p>
                )}
              </div>
-             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
-               <h3 className="text-lg font-semibold text-gray-900 mb-4">First Serve %</h3>
-               <p className="text-3xl font-bold text-green-600">
+             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 text-center hover:shadow-md transition-shadow duration-200">
+               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">First Serve %</h3>
+               <p className="text-2xl sm:text-3xl font-bold text-green-600">
                  {filteredStats?.totalServes ? Math.round((filteredStats.totalServes / (filteredStats.totalServes + (filteredStats.totalErrors || 0))) * 100) : 0}%
                </p>
-               <p className="text-gray-600">Success Rate</p>
+               <p className="text-sm sm:text-base text-gray-600">Success Rate</p>
                {selectedMatch !== 'all' && (
-                 <p className="text-xs text-green-600 mt-1">From selected match</p>
+                 <p className="text-xs sm:text-sm text-green-600 mt-1">From selected match</p>
                )}
              </div>
-             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
-               <h3 className="text-lg font-semibold text-purple-600 mb-4">Aces</h3>
-               <p className="text-3xl font-bold text-purple-600">{Math.floor((filteredStats?.totalServes || 0) * 0.15)}</p>
-               <p className="text-gray-600">Aces</p>
+             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 text-center hover:shadow-md transition-shadow duration-200">
+               <h3 className="text-base sm:text-lg font-semibold text-purple-600 mb-4">Aces</h3>
+               <p className="text-2xl sm:text-3xl font-bold text-purple-600">{Math.floor((filteredStats?.totalServes || 0) * 0.15)}</p>
+               <p className="text-sm sm:text-base text-gray-600">Aces</p>
                {selectedMatch !== 'all' && (
-                 <p className="text-xs text-purple-600 mt-1">From selected match</p>
+                 <p className="text-xs sm:text-sm text-purple-600 mt-1">From selected match</p>
                )}
              </div>
            </div>
 
                        {/* Serve Charts Grid - 2 Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Serve Distribution Chart */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Serve Distribution</h3>
-                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">Serve Distribution</h3>
+                  <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
                 </div>
-                <div className="h-64 flex items-end justify-center gap-4">
+                <div className="h-48 sm:h-64 flex items-end justify-center gap-2 sm:gap-4">
                   {['1st Serve', '2nd Serve', 'Ace', 'Double Fault'].map((type, index) => {
                     const values = [
                       Math.floor((filteredStats?.totalServes || 0) * 0.6),
@@ -978,7 +978,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                     return (
                       <div key={type} className="flex flex-col items-center">
                         <div 
-                          className={`w-12 ${colors[index]} rounded-t-sm transition-all duration-300`}
+                          className={`w-8 sm:w-12 ${colors[index]} rounded-t-sm transition-all duration-300`}
                           style={{ height: `${height}px` }}
                         ></div>
                         <span className="text-xs text-gray-500 mt-2 text-center max-w-[60px] break-words">{type}</span>
@@ -1035,9 +1035,9 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
 
       {/* Points Tab Content */}
       {selectedTab === 'Points' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Points Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Points Won</h3>
                  <p className="text-3xl font-bold text-green-600">{filteredStats?.totalPoints || 0}</p>
@@ -1155,9 +1155,9 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
 
       {/* Returns Tab Content */}
       {selectedTab === 'Returns' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Returns Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Returns</h3>
                  <p className="text-3xl font-bold text-blue-600">{filteredStats?.totalRallies || 0}</p>
@@ -1218,9 +1218,9 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
 
       {/* Rally Tab Content */}
       {selectedTab === 'Rally' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Rally Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Rallies</h3>
                  <p className="text-3xl font-bold text-blue-600">{filteredStats?.totalRallies || 0}</p>

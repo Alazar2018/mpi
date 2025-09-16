@@ -218,7 +218,36 @@ export function useApiRequest<T = any>(cacheOptions?: CacheOptions) {
           console.error(err);
           setPending(false);
           setIsFetching(false);
-          setError(err.message || "An error occurred");
+          
+          // Handle Axios errors properly to extract response data
+          if (err.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            const errorData = err.response.data;
+            const errorMessage = errorData?.message || errorData?.error || err.message || "An error occurred";
+            
+            setError(errorMessage);
+            
+            // Create a proper error response object that includes the full error data
+            const errorResponse = {
+              success: false,
+              data: errorData,
+              error: errorMessage,
+              status: err.response.status
+            };
+            
+            // Call the callback with the error response so the component can handle it
+            if (typeof cb === "function") {
+              cb(errorResponse);
+            }
+          } else if (err.request) {
+            // The request was made but no response was received
+            setError("No response received from server. Please check your connection.");
+          } else {
+            // Something happened in setting up the request that triggered an Error
+            setError(err.message || "An error occurred");
+          }
+          
           setSuccess(false);
           setIsFromCache(false);
           setIsStale(false);

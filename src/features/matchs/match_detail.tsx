@@ -12,6 +12,7 @@ import { matchesService } from "@/service/matchs.server";
 import type { Match, MatchPlayer } from "@/service/matchs.server";
 import { toast } from "react-hot-toast";
 import { SetsTab, MomentumTab, ReportTab } from "./components";
+import { getMatchFormatDisplayName, getScoringVariationDisplayName, getTrackingLevelDisplayName } from "@/utils/matchFormatUtils";
 
 export default function MatchDetail() {
 	const params = useParams();
@@ -43,6 +44,15 @@ export default function MatchDetail() {
 	}, [params]);
 
 	const matchData = matchesReq.response as Match;
+	
+	// Set default selected level from match data
+	useEffect(() => {
+		if (matchData?.trackingLevel && !selectedLevel) {
+			// Convert tracking level to number (level1 -> 1, level2 -> 2, level3 -> 3)
+			const levelNumber = parseInt(matchData.trackingLevel.replace('level', ''));
+			setSelectedLevel(levelNumber);
+		}
+	}, [matchData, selectedLevel]);
 	
 	// Transform Match data to the format expected by SetsTab
 	const transformMatchDataForSetsTab = (match: Match) => {
@@ -126,7 +136,17 @@ export default function MatchDetail() {
 			return {
 				date: new Date(matchData.date).toLocaleDateString(),
 				time: new Date(matchData.date).toLocaleTimeString(),
+				// Legacy field
 				matchType: matchData.matchType,
+				// Enhanced format fields
+				matchFormat: matchData.matchFormat,
+				matchFormatDisplay: matchData.matchFormat ? getMatchFormatDisplayName(matchData.matchFormat) : (matchData.matchType ? `Best of ${matchData.matchType === 'one' ? '1' : matchData.matchType === 'three' ? '3' : '5'} sets` : 'Unknown'),
+				scoringVariation: matchData.scoringVariation,
+				scoringVariationDisplay: matchData.scoringVariation ? getScoringVariationDisplayName(matchData.scoringVariation) : 'Standard Scoring',
+				trackingLevel: matchData.trackingLevel,
+				trackingLevelDisplay: matchData.trackingLevel ? getTrackingLevelDisplayName(matchData.trackingLevel) : 'Basic Tracking',
+				customTiebreakRules: matchData.customTiebreakRules,
+				noAdScoring: matchData.noAdScoring,
 				tieBreakRule: matchData.tieBreakRule,
 				indoor: matchData.indoor ? 'Indoor' : 'Outdoor',
 				courtSurface: matchData.courtSurface,
@@ -138,7 +158,7 @@ export default function MatchDetail() {
 		}
 	};
 
-	const matchDetails = getMatchDetails();
+	const matchDetails = matchData ? getMatchDetails() : null;
 
 	// Helper function to safely format status strings
 	const formatStatus = (status?: string) => {
@@ -198,10 +218,11 @@ export default function MatchDetail() {
 	};
 
 	const handleStartTracking = () => {
-		if (selectedLevel) {
-			// Navigate directly to tracking with the selected level
-			navigate(`/admin/matchs/tracking/${params.matchId}?level=${selectedLevel}`);
-		}
+		// Use selected level or fall back to match's tracking level
+		const levelToUse = selectedLevel || (matchData?.trackingLevel ? parseInt(matchData.trackingLevel.replace('level', '')) : 1);
+		
+		// Navigate directly to tracking with the determined level
+		navigate(`/admin/matchs/tracking/${params.matchId}?level=${levelToUse}`);
 	};
 
 	const handleCloseLevelSelection = () => {
@@ -213,8 +234,8 @@ export default function MatchDetail() {
 	const isCurrentUserPlayer = () => {
 		if (!user || !matchData) return false;
 		
-		const isPlayer1 = matchData.p1?._id === user._id;
-		const isPlayer2 = matchData.p2?._id === user._id;
+		const isPlayer1 = typeof matchData.p1 === 'object' && matchData.p1?._id === user._id;
+		const isPlayer2 = typeof matchData.p2 === 'object' && matchData.p2?._id === user._id;
 		
 		return isPlayer1 || isPlayer2;
 	};
@@ -252,8 +273,8 @@ export default function MatchDetail() {
 	const canRespondToMatch = () => {
 		if (!isCurrentUserPlayer()) return false;
 		
-		const isPlayer1 = matchData?.p1?._id === user?._id;
-		const isPlayer2 = matchData?.p2?._id === user?._id;
+		const isPlayer1 = typeof matchData?.p1 === 'object' && matchData?.p1?._id === user?._id;
+		const isPlayer2 = typeof matchData?.p2 === 'object' && matchData?.p2?._id === user?._id;
 		
 		if (isPlayer1 && matchData?.p1Status === 'pending') return true;
 		if (isPlayer2 && matchData?.p2Status === 'pending') return true;
@@ -278,14 +299,27 @@ export default function MatchDetail() {
 		}
 		
 		if (matchStatus === 'pending') {
+			const defaultLevel = matchData?.trackingLevel ? parseInt(matchData.trackingLevel.replace('level', '')) : 1;
+			const defaultLevelDisplay = matchData?.trackingLevel ? `Level ${defaultLevel}` : 'Level 1';
+			
 			return (
-				<Button 
-					onClick={() => setShowLevelSelection(true)}
-					type="action" 
-					className="text-sm"
-				>
-					Start Match
-				</Button>
+				<div className="flex gap-2">
+					<Button 
+						onClick={handleStartTracking}
+						type="action" 
+						className="text-sm flex-1"
+					>
+						Start ({defaultLevelDisplay})
+					</Button>
+					<Button 
+						onClick={() => setShowLevelSelection(true)}
+						type="secondary" 
+						className="text-sm px-2"
+						title="Select different tracking level"
+					>
+						⚙️
+					</Button>
+				</div>
 			);
 		}
 		
@@ -344,6 +378,7 @@ export default function MatchDetail() {
 							{/* </div> */}
 
 						{/* Match Details Grid */}
+						{matchDetails ? (
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							{/* Match Date & Time */}
 							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
@@ -374,30 +409,99 @@ export default function MatchDetail() {
 							</div>
 
 							{/* Game Best Out of */}
-							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+							{/* <div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 								<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 									<i className="text-[var(--text-tertiary)]">🎾</i>
 								</div>
 								<div className="flex flex-col flex-1">
 									<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Game Best Out of</span>
 									<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-										{matchDetails?.matchType || 'Loading...'}
+										{matchDetails?.matchFormatDisplay || matchDetails?.matchType || 'Loading...'}
 									</span>
 								</div>
-							</div>
+							</div> */}
 
-							{/* Tie-Breaker Rule */}
-							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
-								<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
-									<i className="text-[var(--text-tertiary)]">🎯</i>
+								{/* Match Format */}
+								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
+										<i className="text-[var(--text-tertiary)]">🎾</i>
+									</div>
+									<div className="flex flex-col flex-1">
+										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Match Format</span>
+										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
+											{matchDetails?.matchFormatDisplay || 'Loading...'}
+										</span>
+									</div>
 								</div>
-								<div className="flex flex-col flex-1">
-									<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Tie-Breaker Rule</span>
-									<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-										{matchDetails?.tieBreakRule || 'Loading...'}
-									</span>
+
+								{/* Scoring Variation */}
+								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
+										<i className="text-[var(--text-tertiary)]">📊</i>
+									</div>
+									<div className="flex flex-col flex-1">
+										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Scoring Variation</span>
+										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
+											{matchDetails?.scoringVariationDisplay || 'Loading...'}
+										</span>
+									</div>
 								</div>
-							</div>
+
+								{/* Tracking Level */}
+								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
+										<i className="text-[var(--text-tertiary)]">📈</i>
+									</div>
+									<div className="flex flex-col flex-1">
+										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Tracking Level</span>
+										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
+											{matchDetails?.trackingLevelDisplay || 'Loading...'}
+										</span>
+									</div>
+								</div>
+
+								{/* No-Ad Scoring */}
+								{matchDetails?.noAdScoring && (
+									<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+										<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
+											<i className="text-[var(--text-tertiary)]">⚡</i>
+										</div>
+										<div className="flex flex-col flex-1">
+											<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Scoring Type</span>
+											<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
+												No-Ad Scoring
+											</span>
+										</div>
+									</div>
+								)}
+
+								{/* Custom Tiebreak Rules */}
+								{matchDetails?.customTiebreakRules && Object.keys(matchDetails.customTiebreakRules).length > 0 && (
+									<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+										<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
+											<i className="text-[var(--text-tertiary)]">🎯</i>
+										</div>
+										<div className="flex flex-col flex-1">
+											<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Custom Tiebreak Rules</span>
+											<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
+												{Object.entries(matchDetails.customTiebreakRules).map(([set, points]) => `Set ${set}: ${points} points`).join(', ')}
+											</span>
+										</div>
+									</div>
+								)}
+
+								{/* Tie-Breaker Rule */}
+								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
+										<i className="text-[var(--text-tertiary)]">🎯</i>
+									</div>
+									<div className="flex flex-col flex-1">
+										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Default Tie-Breaker Rule</span>
+										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
+											{matchDetails?.tieBreakRule || 'Loading...'} points
+										</span>
+									</div>
+								</div>
 
 							{/* Court Type */}
 							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
@@ -438,6 +542,16 @@ export default function MatchDetail() {
 								</div>
 							</div>
 						</div>
+						) : (
+							<div className="flex items-center justify-center p-8">
+								<div className="text-center">
+									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg mx-auto mb-4">
+										<i className="text-[var(--text-tertiary)]">🎾</i>
+									</div>
+									<p className="text-[var(--text-secondary)]">Loading match details...</p>
+								</div>
+							</div>
+						)}
 					</div>
 				);
 		}
@@ -457,14 +571,14 @@ export default function MatchDetail() {
 							<div className="flex items-center gap-4">
 								<div className="w-16 h-16 rounded-full bg-[var(--bg-card)] shadow-[var(--shadow-secondary)] overflow-hidden transition-all duration-300">
 									<img
-											src={playerData?.player1?.avatar || matchData.p1?.avatar || "https://randomuser.me/api/portraits/men/32.jpg"}
-											alt={`${playerData?.player1?.firstName || matchData.p1?.firstName || matchData.p1Name || 'Player'} ${playerData?.player1?.lastName || matchData.p1?.lastName || ''}`}
+										src={playerData?.player1?.avatar || (typeof matchData.p1 === 'object' ? matchData.p1?.avatar : undefined) || "https://randomuser.me/api/portraits/men/32.jpg"}
+										alt={`${playerData?.player1?.firstName || (typeof matchData.p1 === 'object' ? matchData.p1?.firstName : undefined) || matchData.p1Name || 'Player'} ${playerData?.player1?.lastName || (typeof matchData.p1 === 'object' ? matchData.p1?.lastName : undefined) || ''}`}
 										className="w-full h-full object-cover"
 									/>
 								</div>
 								<div className="text-[var(--text-primary)] transition-colors duration-300">
 									<h2 className="text-xl font-bold">
-											{playerData?.player1?.firstName || matchData.p1?.firstName || matchData.p1Name || 'Player'} {playerData?.player1?.lastName || matchData.p1?.lastName || ''}
+										{playerData?.player1?.firstName || (typeof matchData.p1 === 'object' ? matchData.p1?.firstName : undefined) || matchData.p1Name || 'Player'} {playerData?.player1?.lastName || (typeof matchData.p1 === 'object' ? matchData.p1?.lastName : undefined) || ''}
 									</h2>
 										<p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
 											{matchData.p1IsObject ? 'Registered Player' : 'Custom Player'}
@@ -484,14 +598,14 @@ export default function MatchDetail() {
 							<div className="flex items-center gap-4">
 								<div className="w-16 h-16 rounded-full bg-[var(--bg-card)] shadow-[var(--shadow-secondary)] overflow-hidden transition-all duration-300">
 									<img
-											src={playerData?.player2?.avatar || matchData.p2?.avatar || "https://randomuser.me/api/portraits/women/44.jpg"}
-											alt={`${playerData?.player2?.firstName || matchData.p2?.firstName || matchData.p2Name || 'Player'} ${(matchData.p2 as MatchPlayer)?.lastName || ''}`}
+										src={playerData?.player2?.avatar || (typeof matchData.p2 === 'object' ? matchData.p2?.avatar : undefined) || "https://randomuser.me/api/portraits/women/44.jpg"}
+										alt={`${playerData?.player2?.firstName || (typeof matchData.p2 === 'object' ? matchData.p2?.firstName : undefined) || matchData.p2Name || 'Player'} ${(typeof matchData.p2 === 'object' ? matchData.p2?.lastName : undefined) || ''}`}
 										className="w-full h-full object-cover"
 									/>
 								</div>
 								<div className="text-[var(--text-primary)] transition-colors duration-300">
 									<h2 className="text-xl font-bold">
-											{playerData?.player2?.firstName || matchData.p2?.firstName || matchData.p2Name || 'Player'} {(matchData.p2 as MatchPlayer)?.lastName || 'Two'}
+										{playerData?.player2?.firstName || (typeof matchData.p2 === 'object' ? matchData.p2?.firstName : undefined) || matchData.p2Name || 'Player'} {(typeof matchData.p2 === 'object' ? matchData.p2?.lastName : undefined) || 'Two'}
 									</h2>
 										<p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
 											{matchData.p2IsObject ? 'Registered Player' : 'Custom Player'}
@@ -631,8 +745,13 @@ export default function MatchDetail() {
 						{/* Header */}
 						<div className="bg-[var(--bg-primary)] text-[var(--text-primary)] py-4 px-6 rounded-t-2xl border-b border-[var(--border-primary)] transition-all duration-300">
 							<h2 className="text-xl font-bold text-center">
-								Please select score tractor type
+								Select Tracking Level
 							</h2>
+							{matchData?.trackingLevel && (
+								<p className="text-sm text-center mt-2 opacity-90">
+									Default: Level {parseInt(matchData.trackingLevel.replace('level', ''))} (from match settings)
+								</p>
+							)}
 						</div>
 
 						<div className="p-8 bg-[var(--bg-card)] transition-all duration-300">
@@ -647,6 +766,12 @@ export default function MatchDetail() {
 											: 'bg-[var(--bg-secondary)] border-[var(--border-primary)] hover:border-[var(--border-secondary)] hover:shadow-[var(--shadow-secondary)]'
 									}`}
 								>
+									{/* Default Badge */}
+									{matchData?.trackingLevel === 'level1' && (
+										<div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
+											Default
+										</div>
+									)}
 								<div className={`p-5 ${selectedLevel===1?'bg-[var(--bg-secondary)]':'bg-[var(--bg-tertiary)]'} transition-all duration-300`}>
 								{/* Icon */}
 									<div className="flex justify-center mb-4">
@@ -682,6 +807,12 @@ export default function MatchDetail() {
 											: 'bg-[var(--bg-secondary)] border-[var(--border-primary)] hover:border-[var(--border-secondary)] hover:shadow-[var(--shadow-secondary)]'
 									}`}
 								>
+									{/* Default Badge */}
+									{matchData?.trackingLevel === 'level2' && (
+										<div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
+											Default
+										</div>
+									)}
 								<div className={`p-5 ${selectedLevel===2?'bg-[var(--bg-secondary)]':'bg-[var(--bg-tertiary)]'} transition-all duration-300`}>
 
 									{/* Icon */}
@@ -719,6 +850,12 @@ export default function MatchDetail() {
 											: 'bg-[var(--bg-secondary)] border-[var(--border-primary)] hover:border-[var(--border-secondary)] hover:shadow-[var(--shadow-secondary)]'
 									}`}
 								>
+									{/* Default Badge */}
+									{matchData?.trackingLevel === 'level3' && (
+										<div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
+											Default
+										</div>
+									)}
 								<div className={`p-5 ${selectedLevel===3?'bg-[var(--bg-secondary)]':'bg-[var(--bg-tertiary)]'} transition-all duration-300`}>
 
 									{/* Icon */}

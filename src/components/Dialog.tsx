@@ -34,9 +34,9 @@ export const useDialog = () => {
 
         return (
             <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
-                <div className="bg-white p-6 rounded-lg max-w-sm w-full">
-                    <h3 className="text-lg font-bold">{dialog.config.title}</h3>
-                    <p className="my-4">{dialog.config.message}</p>
+                <div className="bg-[var(--bg-card)] p-6 rounded-lg max-w-sm w-full border border-[var(--border-primary)] shadow-[var(--shadow-secondary)]">
+                    <h3 className="text-lg font-bold text-[var(--text-primary)]">{dialog.config.title}</h3>
+                    <p className="my-4 text-[var(--text-secondary)]">{dialog.config.message}</p>
                     <div className="flex justify-end gap-2">
                         {dialog.config.buttons.map((button, index) => (
                             <button
@@ -45,10 +45,10 @@ export const useDialog = () => {
                                     button.onClick();
                                     setDialog({ isOpen: false, config: null });
                                 }}
-                                className={`px-4 py-2 rounded ${
+                                className={`px-4 py-2 rounded transition-colors duration-300 ${
                                     button.variant === 'contained'
-                                        ? 'bg-red-500 text-white'
-                                        : 'border border-gray-300'
+                                        ? 'bg-red-500 text-white hover:bg-red-600'
+                                        : 'border border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                                 }`}
                             >
                                 {button.text}

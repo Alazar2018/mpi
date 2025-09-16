@@ -1,6 +1,6 @@
 import axiosInstance from "@/config/axios.config";
 
-// Types for Matches module based on API response
+// Types for Matches module based on Enhanced API response
 export interface MatchPlayer {
   _id: string;
   firstName: string;
@@ -17,6 +17,61 @@ export interface MatchPlayer {
     number: string;
   };
   lastOnline?: string;
+}
+
+// New Enhanced Match Format Types
+export type MatchFormat = 
+  | 'oneSet'
+  | 'bestOfThree'
+  | 'bestOfFive'
+  | 'shortSets'
+  | 'proSet8'
+  | 'tiebreak7'
+  | 'tiebreak10'
+  | 'tiebreak21';
+
+export type ScoringVariation = 
+  | 'standard'
+  | 'finalSetTiebreak10'
+  | 'oneSetTiebreak10';
+
+export type TrackingLevel = 'level1' | 'level2' | 'level3';
+
+export type MatchStatus = 
+  | 'pending'
+  | 'confirmed'
+  | 'inProgress'
+  | 'saved'
+  | 'completed'
+  | 'cancelled';
+
+export interface MatchFormatConfig {
+  format: MatchFormat;
+  description: string;
+  maxSets: number;
+  setsToWin: number;
+  gamesPerSet: number;
+  tiebreakAt: number;
+  defaultTiebreakRule: number;
+  noAdScoring: boolean;
+  trackingLevels: TrackingLevel[];
+}
+
+export interface ScoringVariationConfig {
+  variation: ScoringVariation;
+  description: string;
+}
+
+export interface MatchFormatStats {
+  totalMatches: number;
+  formatDistribution: Record<MatchFormat, number>;
+  averageMatchDuration: Record<MatchFormat, number>;
+}
+
+export interface MatchFormatCategories {
+  traditional: MatchFormat[];
+  short: MatchFormat[];
+  tiebreakOnly: MatchFormat[];
 }
 
 export interface MatchCreator {
@@ -65,7 +120,8 @@ export interface MatchSet {
   };
 }
 
-export interface MatchScore {
+// Legacy MatchScore interface - keeping for backward compatibility
+export interface LegacyMatchScore {
   p1Score: string;
   p2Score: string;
   isSecondService?: boolean;
@@ -82,7 +138,7 @@ export interface MatchScore {
 
 export interface MatchGameData {
   gameNumber: number;
-  scores: MatchScore[];
+  scores: LegacyMatchScore[];
   changeoverDuration?: number;
   server: string;
 }
@@ -117,14 +173,22 @@ export interface Match {
   p1Name?: string;
   p2Name?: string;
   matchCreator: MatchCreator;
-  matchType: "one" | "three" | "five";
+  // Legacy field - deprecated but still supported
+  matchType?: "one" | "three" | "five";
+  // New enhanced fields
+  matchFormat: MatchFormat;
+  scoringVariation: ScoringVariation;
+  customTiebreakRules?: Record<string, number>;
+  noAdScoring: boolean;
+  trackingLevel: TrackingLevel;
   matchCategory: "practice" | "tournament";
   tournamentType?: string;
   tournamentLevel?: string;
-  status: "pending" | "accepted" | "rejected" | "in_progress" | "completed" | "cancelled";
-  trackingLevel?: "basic" | "detailed" | "comprehensive";
+  status: MatchStatus;
   sets: MatchSet[];
   report?: MatchReport;
+  p1MatchReport?: PlayerMatchReport;
+  p2MatchReport?: PlayerMatchReport;
   createdAt: string;
   updatedAt: string;
   winner?: string;
@@ -152,7 +216,14 @@ export interface CreateMatchRequest {
   indoor?: boolean;
   note?: string;
   date: string;
-  matchType: "one" | "three" | "five";
+  // Legacy field - deprecated but still supported
+  matchType?: "one" | "three" | "five";
+  // New enhanced fields
+  matchFormat: MatchFormat;
+  scoringVariation: ScoringVariation;
+  customTiebreakRules?: Record<string, number>;
+  noAdScoring?: boolean;
+  trackingLevel: TrackingLevel;
   matchCategory: "practice" | "tournament";
   tournamentType?: string;
   tournamentLevel?: string;
@@ -164,18 +235,73 @@ export interface UpdateMatchStatusRequest {
 }
 
 export interface SaveMatchProgressRequest {
-  trackingLevel: "level1" | "level2" | "level3";
+  trackingLevel: TrackingLevel;
   sets: MatchSetData[];
 }
 
 export interface SubmitMatchResultRequest {
-  trackingLevel: "level1" | "level2" | "level3";
+  trackingLevel: TrackingLevel;
   totalGameTime: number; // Total game time in seconds
   sets: MatchSetData[];
 }
 
-export interface MatchesListResponse {
-  matches: Match[];
+// Enhanced Score Objects based on tracking level
+export interface Level1Score {
+  p1Score: string;
+  p2Score: string;
+  pointWinner: "playerOne" | "playerTwo";
+}
+
+export interface Level2Score extends Level1Score {
+  isSecondService?: boolean;
+  type?: string;
+  servePlacement?: string;
+  p1Reaction?: string;
+  p2Reaction?: string;
+}
+
+export interface Level3Score extends Level2Score {
+  missedShot?: string;
+  placement?: string;
+  missedShotWay?: string;
+  betweenPointDuration?: number;
+  rallies?: string;
+  courtPosition?: string;
+}
+
+export type EnhancedMatchScore = Level1Score | Level2Score | Level3Score;
+
+// Enhanced Player Match Report
+export interface PlayerMatchReport {
+  service: {
+    totalServices: number;
+    firstServicePercentage: number;
+    secondServicePercentage: number;
+    aces: number;
+    doubleFaults: number;
+    firstServices: number;
+    secondServices: number;
+  };
+  points: {
+    totalPointsWon: number;
+    winners: number;
+    unforcedErrors: number;
+    forcedErrors: number;
+  };
+  rallies: {
+    oneToFour: number;
+    fiveToEight: number;
+    nineToTwelve: number;
+    thirteenToTwenty: number;
+    twentyOnePlus: number;
+  };
+  conversion: {
+    firstServicePointsWon: number;
+    secondServicePointsWon: number;
+    receivingPointsWon: number;
+    breakPoints: number;
+    gamePoints: number;
+  };
 }
 
 export interface MatchDetailResponse {
@@ -186,10 +312,48 @@ export interface MatchQueryParams {
   page?: number;
   limit?: number;
   sort?: string;
+  // Legacy field - deprecated but still supported
   matchType?: string;
-  status?: string;
+  // New enhanced fields
+  format?: MatchFormat;
+  status?: MatchStatus;
   startDate?: string;
   endDate?: string;
+  trackingLevel?: TrackingLevel;
+  scoringVariation?: ScoringVariation;
+}
+
+// New API Response Types
+export interface MatchesListResponse {
+  matches: Match[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface MatchFormatResponse {
+  formats: MatchFormatConfig[];
+}
+
+export interface MatchFormatCategoriesResponse {
+  categories: MatchFormatCategories;
+}
+
+export interface ScoringVariationsResponse {
+  variations: ScoringVariationConfig[];
+}
+
+export interface MatchFormatStatsResponse {
+  stats: MatchFormatStats;
+}
+
+export interface MatchFormatMatchesResponse {
+  format: MatchFormat;
+  matches: Match[];
+  count: number;
 }
 
 // Matches API Service
@@ -199,12 +363,12 @@ class MatchesService {
   }
 
   /**
-   * Create a new tennis match
+   * Create a new tennis match with enhanced format support
    * POST /api/v1/matches
    */
-  async createMatch(matchData: CreateMatchRequest): Promise<MatchesListResponse> {
+  async createMatch(matchData: CreateMatchRequest): Promise<{ match: Match }> {
     try {
-      const response = await axiosInstance.post<MatchesListResponse>('/api/v1/matches', matchData);
+      const response = await axiosInstance.post<{ match: Match }>('/api/v1/matches', matchData);
       
       if (!response.data) {
         throw new Error('No data in response');
@@ -218,7 +382,7 @@ class MatchesService {
   }
 
   /**
-   * Get all matches with optional filtering and pagination
+   * Get all matches with enhanced filtering and pagination
    * GET /api/v1/matches
    */
   async getMatches(params?: MatchQueryParams): Promise<MatchesListResponse> {
@@ -317,6 +481,27 @@ class MatchesService {
   }
 
   /**
+   * Get completed matches for a specific player
+   * GET /api/v1/matches/:playerId/completed
+   */
+  async getPlayerCompletedMatches(playerId: string, params?: MatchQueryParams): Promise<MatchesListResponse> {
+    try {
+      const response = await axiosInstance.get<MatchesListResponse>(`/api/v1/matches/${playerId}/completed`, {
+        params
+      });
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in getPlayerCompletedMatches:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get saved matches (drafts that can be resumed)
    * GET /api/v1/matches/saved
    */
@@ -340,15 +525,23 @@ class MatchesService {
   /**
    * Get matches by status
    */
-  async getMatchesByStatus(status: Match['status'], params?: MatchQueryParams): Promise<MatchesListResponse> {
+  async getMatchesByStatus(status: MatchStatus, params?: MatchQueryParams): Promise<MatchesListResponse> {
     const queryParams = { ...params, status };
     return this.getMatches(queryParams);
   }
 
   /**
-   * Get matches by type
+   * Get matches by format (new enhanced method)
    */
-  async getMatchesByType(matchType: Match['matchType'], params?: MatchQueryParams): Promise<MatchesListResponse> {
+  async getMatchesByFormat(format: MatchFormat, params?: MatchQueryParams): Promise<MatchesListResponse> {
+    const queryParams = { ...params, format };
+    return this.getMatches(queryParams);
+  }
+
+  /**
+   * Get matches by type (legacy method - deprecated)
+   */
+  async getMatchesByType(matchType: "one" | "three" | "five", params?: MatchQueryParams): Promise<MatchesListResponse> {
     const queryParams = { ...params, matchType };
     return this.getMatches(queryParams);
   }
@@ -356,8 +549,24 @@ class MatchesService {
   /**
    * Get matches by category
    */
-  async getMatchesByCategory(matchCategory: Match['matchCategory'], params?: MatchQueryParams): Promise<MatchesListResponse> {
+  async getMatchesByCategory(matchCategory: "practice" | "tournament", params?: MatchQueryParams): Promise<MatchesListResponse> {
     const queryParams = { ...params, matchCategory };
+    return this.getMatches(queryParams);
+  }
+
+  /**
+   * Get matches by tracking level
+   */
+  async getMatchesByTrackingLevel(trackingLevel: TrackingLevel, params?: MatchQueryParams): Promise<MatchesListResponse> {
+    const queryParams = { ...params, trackingLevel };
+    return this.getMatches(queryParams);
+  }
+
+  /**
+   * Get matches by scoring variation
+   */
+  async getMatchesByScoringVariation(scoringVariation: ScoringVariation, params?: MatchQueryParams): Promise<MatchesListResponse> {
+    const queryParams = { ...params, scoringVariation };
     return this.getMatches(queryParams);
   }
 
@@ -372,7 +581,7 @@ class MatchesService {
   /**
    * Get matches by court surface
    */
-  async getMatchesByCourtSurface(courtSurface: Match['courtSurface'], params?: MatchQueryParams): Promise<MatchesListResponse> {
+  async getMatchesByCourtSurface(courtSurface: "clay" | "hard" | "grass" | "carpet" | "other", params?: MatchQueryParams): Promise<MatchesListResponse> {
     const queryParams = { ...params, courtSurface };
     return this.getMatches(queryParams);
   }
@@ -404,17 +613,17 @@ class MatchesService {
   }
 
   /**
-   * Get upcoming matches (pending and accepted)
+   * Get upcoming matches (pending and confirmed)
    */
   async getUpcomingMatches(params?: MatchQueryParams): Promise<MatchesListResponse> {
     try {
-      const [pendingMatches, acceptedMatches] = await Promise.all([
+      const [pendingMatches, confirmedMatches] = await Promise.all([
         this.getMatchesByStatus('pending', params),
-        this.getMatchesByStatus('accepted', params)
+        this.getMatchesByStatus('confirmed', params)
       ]);
 
       return {
-        matches: [...pendingMatches.matches, ...acceptedMatches.matches]
+        matches: [...pendingMatches.matches, ...confirmedMatches.matches]
       };
     } catch (error) {
       console.error('Error getting upcoming matches:', error);
@@ -552,9 +761,26 @@ class MatchesService {
   }
 
   /**
-   * Get match type display name
+   * Get match format display name (new enhanced method)
    */
-  getMatchTypeDisplayName(matchType: Match['matchType']): string {
+  getMatchFormatDisplayName(matchFormat: MatchFormat): string {
+    const formatNames = {
+      oneSet: 'One Set',
+      bestOfThree: 'Best of 3 Sets',
+      bestOfFive: 'Best of 5 Sets',
+      shortSets: 'Short Sets (4/7)',
+      proSet8: '8-Game Pro Set',
+      tiebreak7: '7-Point Tiebreak',
+      tiebreak10: '10-Point Tiebreak',
+      tiebreak21: '21-Point Tiebreak'
+    };
+    return formatNames[matchFormat] || matchFormat;
+  }
+
+  /**
+   * Get match type display name (legacy method - deprecated)
+   */
+  getMatchTypeDisplayName(matchType: 'one' | 'three' | 'five'): string {
     const typeNames = {
       one: 'Best of 1',
       three: 'Best of 3',
@@ -566,12 +792,36 @@ class MatchesService {
   /**
    * Get match category display name
    */
-  getMatchCategoryDisplayName(matchCategory: Match['matchCategory']): string {
+  getMatchCategoryDisplayName(matchCategory: 'practice' | 'tournament'): string {
     const categoryNames = {
       practice: 'Practice Match',
       tournament: 'Tournament Match'
     };
     return categoryNames[matchCategory] || matchCategory;
+  }
+
+  /**
+   * Get scoring variation display name
+   */
+  getScoringVariationDisplayName(scoringVariation: ScoringVariation): string {
+    const variationNames = {
+      standard: 'Standard Scoring',
+      finalSetTiebreak10: 'Final Set 10-Point Tiebreak',
+      oneSetTiebreak10: 'Single Set 10-Point Tiebreak'
+    };
+    return variationNames[scoringVariation] || scoringVariation;
+  }
+
+  /**
+   * Get tracking level display name
+   */
+  getTrackingLevelDisplayName(trackingLevel: TrackingLevel): string {
+    const levelNames = {
+      level1: 'Basic Tracking',
+      level2: 'Intermediate Tracking',
+      level3: 'Advanced Tracking'
+    };
+    return levelNames[trackingLevel] || trackingLevel;
   }
 
   /**
@@ -608,12 +858,12 @@ class MatchesService {
   /**
    * Get match status display name
    */
-  getMatchStatusDisplayName(status: Match['status']): string {
+  getMatchStatusDisplayName(status: MatchStatus): string {
     const statusNames = {
       pending: 'Pending',
-      accepted: 'Accepted',
-      rejected: 'Rejected',
-      in_progress: 'In Progress',
+      confirmed: 'Confirmed',
+      inProgress: 'In Progress',
+      saved: 'Saved',
       completed: 'Completed',
       cancelled: 'Cancelled'
     };
@@ -623,12 +873,12 @@ class MatchesService {
   /**
    * Get match status color for UI
    */
-  getMatchStatusColor(status: Match['status']): string {
+  getMatchStatusColor(status: MatchStatus): string {
     const statusColors = {
       pending: 'text-yellow-600 bg-yellow-100',
-      accepted: 'text-green-600 bg-green-100',
-      rejected: 'text-red-600 bg-red-100',
-      in_progress: 'text-blue-600 bg-blue-100',
+      confirmed: 'text-green-600 bg-green-100',
+      inProgress: 'text-blue-600 bg-blue-100',
+      saved: 'text-purple-600 bg-purple-100',
       completed: 'text-gray-600 bg-gray-100',
       cancelled: 'text-red-600 bg-red-100'
     };
@@ -654,6 +904,42 @@ class MatchesService {
   }
 
   /**
+   * Resume a saved match
+   */
+  async resumeMatch(matchId: string): Promise<Match> {
+    try {
+      const response = await axiosInstance.post<Match>(`/api/v1/matches/${matchId}/resume`);
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in resumeMatch:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear/reset match data
+   */
+  async clearMatch(matchId: string): Promise<Match> {
+    try {
+      const response = await axiosInstance.post<Match>(`/api/v1/matches/${matchId}/clear`);
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in clearMatch:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Submit final match result with tracking data
    */
   async submitMatchResult(matchId: string, data: SubmitMatchResultRequest): Promise<MatchesListResponse> {
@@ -670,7 +956,195 @@ class MatchesService {
       throw error;
     }
   }
+
+  // NEW: Match Format Discovery Methods
+
+  /**
+   * Get all available match formats
+   * GET /api/v1/matches/formats
+   */
+  async getMatchFormats(): Promise<MatchFormatResponse> {
+    try {
+      const response = await axiosInstance.get<MatchFormatResponse>('/api/v1/matches/formats');
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in getMatchFormats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get match formats organized by categories
+   * GET /api/v1/matches/formats/categories
+   */
+  async getMatchFormatCategories(): Promise<MatchFormatCategoriesResponse> {
+    try {
+      const response = await axiosInstance.get<MatchFormatCategoriesResponse>('/api/v1/matches/formats/categories');
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in getMatchFormatCategories:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available scoring variations
+   * GET /api/v1/matches/formats/variations
+   */
+  async getScoringVariations(): Promise<ScoringVariationsResponse> {
+    try {
+      const response = await axiosInstance.get<ScoringVariationsResponse>('/api/v1/matches/formats/variations');
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in getScoringVariations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get match format usage statistics
+   * GET /api/v1/matches/formats/stats
+   */
+  async getMatchFormatStats(): Promise<MatchFormatStatsResponse> {
+    try {
+      const response = await axiosInstance.get<MatchFormatStatsResponse>('/api/v1/matches/formats/stats');
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in getMatchFormatStats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get matches by specific format
+   * GET /api/v1/matches/formats/:format
+   */
+  async getMatchesByFormatEndpoint(format: MatchFormat, params?: MatchQueryParams): Promise<MatchFormatMatchesResponse> {
+    try {
+      const response = await axiosInstance.get<MatchFormatMatchesResponse>(`/api/v1/matches/formats/${format}`, {
+        params
+      });
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in getMatchesByFormatEndpoint:', error);
+      throw error;
+    }
+  }
+
+  // Utility Methods for New Features
+
+  /**
+   * Check if match format is compatible with scoring variation
+   */
+  isFormatCompatibleWithVariation(format: MatchFormat, variation: ScoringVariation): boolean {
+    const compatibility = {
+      oneSet: ['standard', 'oneSetTiebreak10'],
+      bestOfThree: ['standard', 'finalSetTiebreak10'],
+      bestOfFive: ['standard', 'finalSetTiebreak10'],
+      shortSets: ['standard'],
+      proSet8: ['standard'],
+      tiebreak7: ['standard'],
+      tiebreak10: ['standard'],
+      tiebreak21: ['standard']
+    };
+    
+    return compatibility[format]?.includes(variation) || false;
+  }
+
+  /**
+   * Get recommended tracking level for match format
+   */
+  getRecommendedTrackingLevel(format: MatchFormat): TrackingLevel {
+    const recommendations = {
+      oneSet: 'level1' as TrackingLevel,
+      bestOfThree: 'level2' as TrackingLevel,
+      bestOfFive: 'level3' as TrackingLevel,
+      shortSets: 'level1' as TrackingLevel,
+      proSet8: 'level1' as TrackingLevel,
+      tiebreak7: 'level1' as TrackingLevel,
+      tiebreak10: 'level2' as TrackingLevel,
+      tiebreak21: 'level2' as TrackingLevel
+    };
+    
+    return recommendations[format] || 'level2';
+  }
+
+  /**
+   * Get estimated match duration for format
+   */
+  getEstimatedMatchDuration(format: MatchFormat): number {
+    const durations = {
+      oneSet: 45, // minutes
+      bestOfThree: 90,
+      bestOfFive: 180,
+      shortSets: 60,
+      proSet8: 75,
+      tiebreak7: 10,
+      tiebreak10: 15,
+      tiebreak21: 30
+    };
+    
+    return durations[format] || 90;
+  }
+
+  /**
+   * Validate match format configuration
+   */
+  validateMatchFormatConfig(config: CreateMatchRequest): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    // Check format and variation compatibility
+    if (!this.isFormatCompatibleWithVariation(config.matchFormat, config.scoringVariation)) {
+      errors.push(`${config.scoringVariation} scoring variation is not compatible with ${config.matchFormat} format`);
+    }
+    
+    // Check custom tiebreak rules
+    if (config.customTiebreakRules) {
+      Object.entries(config.customTiebreakRules).forEach(([set, points]) => {
+        if (points < 7 || points > 21) {
+          errors.push(`Custom tiebreak rule for set ${set} must be between 7 and 21 points`);
+        }
+      });
+    }
+    
+    // Check date is in future
+    if (new Date(config.date) <= new Date()) {
+      errors.push('Match date must be in the future');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
 }
 
 // Create and export instance
 export const matchesService = new MatchesService();
+
+// Types are already exported individually above - no need for re-export

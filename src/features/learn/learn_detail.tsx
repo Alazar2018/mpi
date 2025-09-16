@@ -26,9 +26,9 @@ export default function LearnDetail() {
 
     // Header component with breadcrumb
     const LearnHeader = () => (
-        <div className="bg-[var(--bg-card)] border-b border-[var(--border-primary)] mb-6 transition-colors duration-300">
+        <div className="bg-[var(--bg-card)] border-b border-[var(--border-primary)] mb-4 sm:mb-6 transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6 gap-3">
                     <div className="mb-4 sm:mb-0">
                         <div className="flex items-center gap-3">
                             <button
@@ -38,23 +38,23 @@ export default function LearnDetail() {
                                 ← Back to Learn
                             </button>
                         </div>
-                        <h1 className="text-3xl font-bold text-[var(--text-primary)] mt-2">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mt-2">
                             {currentModule?.title || 'Learning Module'}
                         </h1>
                         <p className="text-[var(--text-secondary)] mt-1">Master tennis skills with structured learning</p>
                     </div>
                     
                     {/* Tab Navigation */}
-                    <div className="flex bg-[var(--bg-tertiary)] rounded-lg p-1">
+                    <div className="flex flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible no-scrollbar bg-[var(--bg-tertiary)] rounded-lg p-1 gap-1">
                         <button
                             onClick={() => navigate('/admin/learn?showList=true')}
-                            className="px-4 py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                            className="px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors whitespace-nowrap flex-shrink-0"
                         >
                             My Courses
                         </button>
                         <button
                             onClick={() => navigate('/admin/learn?tab=marketplace')}
-                            className="px-4 py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                            className="px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors whitespace-nowrap flex-shrink-0"
                         >
                             Find Coach
                         </button>

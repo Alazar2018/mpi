@@ -1,6 +1,6 @@
 import Button from "@/components/Button";
 import icons from "@/utils/icons";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useApiRequest } from "@/hooks/useApiRequest";
 import { getUpcomingMatches, getCompletedMatches, getSavedMatches, deleteMatch } from "./api/matchs.api";
 import { matchesService, type Match } from "@/service/matchs.server";
@@ -52,6 +52,7 @@ const getPlayerUSDTA = (match: Match, playerKey: 'p1' | 'p2'): string => {
 
 export default function Matches() {
     const { user } = useAuthStore();
+    const location = useLocation();
     const [activeFilter, setActiveFilter] = useState<'completed' | 'saved' | 'all'>('completed');
 
     const [isDeleting, setIsDeleting] = useState(false);
@@ -78,19 +79,88 @@ export default function Matches() {
     });
 
     useEffect(() => {
-        // Load upcoming matches
-            upcomingMatchesReq.send(
+        // Refresh all data when component mounts (e.g., after creating a new match)
+        const refreshAllData = () => {
+            // Invalidate cache and refresh upcoming matches
+            upcomingMatchesReq.refresh(
                 () => getUpcomingMatches(),
                 (res) => {
                     if (res.success && res.data) {
-                        
-                       
+                        // Data loaded successfully
                     } else {
-                       
+                        // Handle error
                     }
-            }
-        );
+                }
+            );
+            
+            // Invalidate cache and refresh completed matches
+            completedMatchesReq.refresh(
+                () => getCompletedMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                        // Data loaded successfully
+                    }
+                }
+            );
+            
+            // Invalidate cache and refresh saved matches
+            savedMatchesReq.refresh(
+                () => getSavedMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                        // Data loaded successfully
+                    }
+                }
+            );
+        };
+        
+        refreshAllData();
+        
+        // Refresh data when user navigates back to this page
+        const handleFocus = () => {
+            refreshAllData();
+        };
+        
+        window.addEventListener('focus', handleFocus);
+        
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
     }, []);
+    
+    // Refresh data when navigating back to this page
+    useEffect(() => {
+        const refreshAllData = () => {
+            upcomingMatchesReq.refresh(
+                () => getUpcomingMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                        // Data loaded successfully
+                    }
+                }
+            );
+            
+            completedMatchesReq.refresh(
+                () => getCompletedMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                        // Data loaded successfully
+                    }
+                }
+            );
+            
+            savedMatchesReq.refresh(
+                () => getSavedMatches(),
+                (res) => {
+                    if (res.success && res.data) {
+                        // Data loaded successfully
+                    }
+                }
+            );
+        };
+        
+        refreshAllData();
+    }, [location.pathname]);
 
     useEffect(() => {
         // Load data based on active filter
@@ -264,15 +334,15 @@ export default function Matches() {
     }
 
     return (
-        <div className="flex flex-col gap-8 bg-[var(--bg-primary)] min-h-screen p-6">
-            <div className="bg-[var(--bg-card)] rounded-3xl p-4 sm:p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:gap-8 bg-[var(--bg-primary)] min-h-screen p-3 sm:p-6">
+            <div className="bg-[var(--bg-card)] rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-sm">
             {/* Pending Match Section */}
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-white">Pending Match</h2>
+            <div className="flex flex-col gap-3 sm:gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h2 className="text-lg sm:text-xl font-bold text-[var(--text-primary)] dark:text-white">Pending Match</h2>
                     {canScheduleMatch && (
                         <Link to="/admin/matchs/new">
-                            <Button type="action" className="rounded-full gap-2">
+                            <Button type="action" className="rounded-full gap-2 text-sm sm:text-base px-3 sm:px-4 py-2">
                                 <span dangerouslySetInnerHTML={{ __html: icons.plus }} />
                                 Schedule Match
                             </Button>
@@ -287,42 +357,40 @@ export default function Matches() {
                             ))}
                         </div>
                 ) : upcomingMatches.length > 0 ? (
-                    <div className="w-full">
-                        <Carousel items={upcomingMatches} className="w-full">
-                            {(match: Match) => (
-                                <div className="w-full px-2">
-                                    <Link to={`detail/${match._id}`} key={match._id}>
-                                        <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-xl p-6 shadow-sm cursor-pointer hover:shadow-md transition-all w-full">
-                                            <div className="flex items-center justify-between">
+                    <Carousel items={upcomingMatches} className="w-full">
+                        {(match: Match) => (
+                            <Link to={`detail/${match._id}`} key={match._id}>
+                                        <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-xl p-3 sm:p-6 shadow-sm cursor-pointer hover:shadow-md transition-all w-full">
+                                            <div className="flex items-center justify-between gap-1 sm:gap-2 lg:gap-4">
                                                 {/* Player 1 */}
                                                 <div className="flex flex-col items-center">
                                                     <div className="relative">
                                                         <img
                                                             src={getPlayerAvatar(match, 'p1')}
                                                             alt={getPlayerDisplayName(match, 'p1')}
-                                                            className="w-20 h-20 rounded-full object-cover border-2 border-[var(--border-primary)]"
+                                                            className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-[var(--border-primary)]"
                                                         />
-                                                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                                                        <div className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white">
                                                             B
                                                         </div>
                                                     </div>
-                                                    <span className="font-semibold text-base text-center mt-3 text-[var(--text-primary)] dark:text-white">
+                                                    <span className="font-semibold text-xs sm:text-sm lg:text-base text-center mt-2 sm:mt-3 text-[var(--text-primary)] dark:text-white max-w-[60px] sm:max-w-none truncate">
                                                         {getPlayerDisplayName(match, 'p1')}
                                                     </span>
-                                                    <span className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mt-1">
+                                                    <span className="text-xs text-[var(--text-secondary)] dark:text-gray-400 mt-1">
                                                         {getPlayerUSDTA(match, 'p1')}
                                                     </span>
                                                 </div>
 
                                                 {/* VS Card */}
-                                                <div className="bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-xl p-4 text-center min-w-[120px]">
-                                                    <p className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mb-3 font-medium">
+                                                <div className="bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-lg sm:rounded-xl p-1 sm:p-2 lg:p-4 text-center min-w-[60px] sm:min-w-[80px] lg:min-w-[120px]">
+                                                    <p className="text-xs text-[var(--text-secondary)] dark:text-gray-400 mb-1 sm:mb-2 lg:mb-3 font-medium">
                                                         {matchesService.formatMatchDate(match.date)}
                                                     </p>
-                                                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                        <span className="text-white text-lg font-bold">VS</span>
+                                                    <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-12 lg:h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-1 sm:mb-2 lg:mb-3">
+                                                        <span className="text-white text-xs sm:text-sm lg:text-lg font-bold">VS</span>
                                                     </div>
-                                                    <div className="bg-green-500 text-white text-sm px-3 py-2 rounded-lg font-medium">
+                                                    <div className="bg-green-500 text-white text-xs px-1 sm:px-2 lg:px-3 py-1 sm:py-2 rounded-lg font-medium">
                                                         {matchesService.formatMatchTime(match.date)}
                                                     </div>
                                                 </div>
@@ -333,36 +401,34 @@ export default function Matches() {
                                                         <img
                                                             src={getPlayerAvatar(match, 'p2')}
                                                             alt={getPlayerDisplayName(match, 'p2')}
-                                                            className="w-20 h-20 rounded-full object-cover border-2 border-[var(--border-primary)]"
+                                                            className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-[var(--border-primary)]"
                                                         />
-                                                        <div className="absolute -top-1 -left-1 w-6 h-6 bg-gray-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                                                        <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-gray-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
                                                             A
                                                         </div>
                                                     </div>
-                                                    <span className="font-semibold text-base text-center mt-3 text-[var(--text-primary)] dark:text-white">
+                                                    <span className="font-semibold text-xs sm:text-sm lg:text-base text-center mt-2 sm:mt-3 text-[var(--text-primary)] dark:text-white max-w-[60px] sm:max-w-none truncate">
                                                         {getPlayerDisplayName(match, 'p2')}
                                                     </span>
-                                                    <span className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mt-1">
+                                                    <span className="text-xs text-[var(--text-secondary)] dark:text-gray-400 mt-1">
                                                         {getPlayerUSDTA(match, 'p2')}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                     </Link>
-                                </div>
                             )}
                         </Carousel>
-                    </div>
                 ) : (
-                    <div className="text-center py-8 bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-xl">
-                        <div className="w-16 h-16 mx-auto mb-3 bg-[var(--bg-tertiary)] dark:bg-gray-600 rounded-full flex items-center justify-center">
-                            <span className="text-2xl">🎾</span>
+                    <div className="text-center py-6 sm:py-8 bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-xl">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 bg-[var(--bg-tertiary)] dark:bg-gray-600 rounded-full flex items-center justify-center">
+                            <span className="text-xl sm:text-2xl">🎾</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-[var(--text-primary)] dark:text-white mb-2">No pending matches</h3>
-                        <p className="text-[var(--text-secondary)] dark:text-gray-300 mb-4">Schedule your first match to get started!</p>
+                        <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] dark:text-white mb-2">No pending matches</h3>
+                        <p className="text-sm sm:text-base text-[var(--text-secondary)] dark:text-gray-300 mb-4">Schedule your first match to get started!</p>
                         {canScheduleMatch && (
                             <Link to="/admin/matchs/new">
-                                <Button type="action" className="rounded-full gap-2">
+                                <Button type="action" className="rounded-full gap-2 text-sm sm:text-base px-3 sm:px-4 py-2">
                                     <span dangerouslySetInnerHTML={{ __html: icons.plus }} />
                                     Schedule Match
                                 </Button>
@@ -601,7 +667,7 @@ export default function Matches() {
                                                 disabled={isDeleting}
                                                 aria-label={`Delete match between ${getPlayerDisplayName(match, 'p1')} and ${getPlayerDisplayName(match, 'p2')}`}
                                             >
-                                                {isDeleting ? 'Deleting...' : '🗑️ Delete'}
+                                                {isDeleting ? 'Deleting...' : 'Delete'}
                                             </Button>
                                         </div>
                                     </div>

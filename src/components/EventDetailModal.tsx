@@ -1382,7 +1382,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={onClose}></div>
             
-            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                     <div className="flex items-center space-x-3">
@@ -1678,7 +1678,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showSurveyModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowSurveyModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-md mx-4">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Pre-Game Survey</h3>
                             <button
@@ -1815,7 +1815,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showMindfulnessModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowMindfulnessModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-2xl mx-4">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Meditation Exercise</h3>
                             <button
@@ -1861,7 +1861,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showImageryModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowImageryModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-2xl mx-4">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Imagery Work</h3>
                             <button
@@ -1907,7 +1907,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showStretchingModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowStretchingModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-2xl mx-4">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Dynamic Stretching</h3>
                             <button
@@ -1979,7 +1979,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showEditModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowEditModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-md mx-4">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Edit Class</h3>
                             <button
@@ -2076,7 +2076,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showPlayerManagementModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowPlayerManagementModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Player Management</h3>
                             <button
@@ -2219,7 +2219,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showPlayerSelectionModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowPlayerSelectionModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Select Player for Evaluation</h3>
                             <button
@@ -2281,7 +2281,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showCoachEvaluationModal && selectedPlayerForEvaluation && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowCoachEvaluationModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">
                                 Coach Evaluation - {selectedPlayerForEvaluation.firstName} {selectedPlayerForEvaluation.lastName}
@@ -2557,7 +2557,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showReflectionModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowReflectionModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-md mx-4">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Add Reflection</h3>
                             <button
@@ -2747,7 +2747,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
             {showSelfEvaluationModal && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center">
                     <div className="fixed inset-0 bg-transparent backdrop-blur-sm" onClick={() => setShowSelfEvaluationModal(false)}></div>
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                    <div className="relative bg-[var(--bg-card)] rounded-lg shadow-xl border border-[var(--border-primary)] w-full max-w-md mx-4">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">Self-Evaluation</h3>
                             <button

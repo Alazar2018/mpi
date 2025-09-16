@@ -267,10 +267,10 @@ const Marketplace: React.FC = () => {
             
             {/* API Selection Tabs */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
-              <div className="flex flex-wrap justify-center sm:justify-start bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-lg p-1 w-full sm:w-auto">
+              <div className="flex flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible no-scrollbar justify-start sm:justify-start bg-[var(--bg-secondary)] dark:bg-gray-700 rounded-lg p-1 w-full sm:w-auto gap-1">
                 <button
                   onClick={() => handleTabChange('ai')}
-                  className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeTab === 'ai'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:text-gray-300 dark:hover:text-white'
@@ -282,7 +282,7 @@ const Marketplace: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleTabChange('profile')}
-                  className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeTab === 'profile'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:text-gray-300 dark:hover:text-white'
@@ -294,7 +294,7 @@ const Marketplace: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleTabChange('user')}
-                  className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeTab === 'user'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:text-gray-300 dark:hover:text-white'
@@ -309,7 +309,7 @@ const Marketplace: React.FC = () => {
              
               
               {/* Search and Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 items-center w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full sm:w-auto">
                 {/* Search Bar */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <input
@@ -335,7 +335,7 @@ const Marketplace: React.FC = () => {
                   <Button
                     onClick={() => setShowFilters(!showFilters)}
                     type="neutral"
-                    className="px-4 sm:px-6 py-2 text-sm"
+                    className="px-3 sm:px-6 py-2 text-sm flex-1 sm:flex-none"
                   >
                     Filter
                   </Button>
@@ -346,7 +346,7 @@ const Marketplace: React.FC = () => {
                       fetchMarketplaceData();
                     }}
                     type="neutral"
-                    className="px-4 sm:px-6 py-2 text-sm"
+                    className="px-3 sm:px-6 py-2 text-sm flex-1 sm:flex-none"
                     disabled={loading}
                   >
                     Reset
@@ -516,7 +516,7 @@ const Marketplace: React.FC = () => {
 
       {/* Connect Modal */}
       {showConnectModal && selectedCoach && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-[var(--bg-card)] rounded-xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 mx-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-[var(--text-primary)] dark:text-white">Connect with {selectedCoach.name}</h2>

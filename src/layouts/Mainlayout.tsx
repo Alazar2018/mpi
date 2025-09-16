@@ -142,20 +142,9 @@ export default function MainLayout() {
                 return;
             }
             
-            // If we have a user but no tokens, redirect to login
-            // Let the axios interceptor handle token refresh automatically
-            if (authStore.user && !authStore.tokens) {
-                setIsLoading(false);
-                location.href = "/login?redirect=" + path?.pathname;
-                return;
-            }
-            
-            // If no user, redirect to login
-            if (!authStore.user) {
-                setIsLoading(false);
-                location.href = "/login?redirect=" + path?.pathname;
-                return;
-            }
+            // Authentication is now handled by ProtectedRoute wrapper
+            // No need to redirect here as ProtectedRoute will handle it
+            setIsLoading(false);
         })();
     }, []);
 

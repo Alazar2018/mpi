@@ -9,7 +9,11 @@ export default function OrLoginWithGoogle(props: {children?: React.ReactNode }) 
         <span>or</span>
       </span>
       {props?.children ?? null}
-      <Button icon={icons.google} className="!bg-[#EEF0FF] text-[#4E5969] !justify-center border-0">
+      <Button 
+        icon={icons.google} 
+        type="secondary"
+        className="!bg-[#EEF0FF] text-[#4E5969] !justify-center border border-gray-200 hover:!bg-[#E0E4F0] hover:!border-gray-300 transition-all duration-300"
+      >
         Register with Google
       </Button>
     </div>

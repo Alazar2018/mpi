@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { generateAvatar } from "@/utils/avatar";
 import icons from "@/utils/icons";
@@ -18,7 +18,16 @@ import {
     type UpdateUploadRequest
 } from "@/service/uploads.server";
 import { friendsService, type SearchUser } from "@/service/friends.server";
+import { 
+    getAllAchievements, 
+    createAchievement, 
+    updateAchievement, 
+    deleteAchievement, 
+    archiveAchievement, 
+    unarchiveAchievement
+} from "@/service/achievements.server";  
 
+import type { PersonalAchievement, CreateAchievementRequest, UpdateAchievementRequest } from "@/interface";
 export default function Profile() {
     const authStore = useAuthStore();
     const [activeTab, setActiveTab] = useState("Basic");
@@ -356,6 +365,13 @@ export default function Profile() {
         }
     }, [authStore.getRole()]);
 
+    // Fetch achievements when component mounts (for players)
+    useEffect(() => {
+        if (authStore.getRole() !== 'coach') {
+            fetchAchievements();
+        }
+    }, [authStore.getRole()]);
+
     // Add a refresh function for goals
     const refreshGoals = async () => {
         try {
@@ -565,6 +581,7 @@ export default function Profile() {
         { name: "Purchases", icon: "🛒" },
         ...(authStore.getRole() === 'coach' ? [{ name: "Uploads", icon: "📤" }] : []),
         ...(authStore.getRole() !== 'coach' ? [{ name: "My Goals", icon: "🎯" }] : []),
+        ...(authStore.getRole() !== 'coach' ? [{ name: "Personal Achievements", icon: "🏆" }] : []),
     ];
 
     // Profile form state for marketplace profile - now populated from API
@@ -596,13 +613,29 @@ export default function Profile() {
         activeTab: "Photos",
         searchQuery: "",
         isFilterOpen: false,
-        selectedMedia: null as Upload | null,
+        selectedMedia: null as (Upload & { category: string }) | null,
         isViewerOpen: false,
         isShareModalOpen: false,
         isEditModalOpen: false,
         isDeleteModalOpen: false,
         mediaItems: [] as Upload[],
         loading: false
+    });
+
+    // Personal Achievements state for players
+    const [achievementsData, setAchievementsData] = useState({
+        achievements: [] as PersonalAchievement[],
+        loading: false,
+        searchQuery: "",
+        selectedAchievement: null as PersonalAchievement | null,
+        isAddModalOpen: false,
+        isEditModalOpen: false,
+        isDeleteModalOpen: false,
+        editingAchievement: {
+            title: "",
+            description: "",
+            achievedOn: ""
+        }
     });
 
     // Profile sub-tabs state
@@ -830,6 +863,168 @@ export default function Profile() {
         }
     };
 
+    // Achievements functions
+    const fetchAchievements = async () => {
+        try {
+            setAchievementsData(prev => ({ ...prev, loading: true }));
+            const achievements = await getAllAchievements();
+            setAchievementsData(prev => ({ 
+                ...prev, 
+                achievements,
+                loading: false 
+            }));
+            console.log("Fetched achievements:", achievements);
+        } catch (error) {
+            console.error("Error fetching achievements:", error);
+            toast.error("Failed to load achievements");
+            setAchievementsData(prev => ({ ...prev, loading: false }));
+        }
+    };
+
+    const refreshAchievements = async () => {
+        try {
+            await fetchAchievements();
+        } catch (error) {
+            console.error("Error refreshing achievements:", error);
+        }
+    };
+
+    const handleAchievementsSearch = (query: string) => {
+        setAchievementsData(prev => ({ ...prev, searchQuery: query }));
+    };
+
+    const openAddAchievementModal = () => {
+        setAchievementsData(prev => ({ 
+            ...prev, 
+            isAddModalOpen: true,
+            editingAchievement: { title: "", description: "", achievedOn: "" }
+        }));
+    };
+
+    const closeAddAchievementModal = () => {
+        setAchievementsData(prev => ({ 
+            ...prev, 
+            isAddModalOpen: false,
+            editingAchievement: { title: "", description: "", achievedOn: "" }
+        }));
+    };
+
+    const openEditAchievementModal = (achievement: PersonalAchievement) => {
+        setAchievementsData(prev => ({ 
+            ...prev, 
+            selectedAchievement: achievement,
+            isEditModalOpen: true,
+            editingAchievement: {
+                title: achievement.title,
+                description: achievement.description,
+                achievedOn: achievement.achievedOn.split('T')[0] // Convert to YYYY-MM-DD format
+            }
+        }));
+    };
+
+    const closeEditAchievementModal = () => {
+        setAchievementsData(prev => ({ 
+            ...prev, 
+            isEditModalOpen: false,
+            selectedAchievement: null,
+            editingAchievement: { title: "", description: "", achievedOn: "" }
+        }));
+    };
+
+    const openDeleteAchievementModal = (achievement: PersonalAchievement) => {
+        setAchievementsData(prev => ({ 
+            ...prev, 
+            selectedAchievement: achievement,
+            isDeleteModalOpen: true 
+        }));
+    };
+
+    const closeDeleteAchievementModal = () => {
+        setAchievementsData(prev => ({ 
+            ...prev, 
+            isDeleteModalOpen: false,
+            selectedAchievement: null 
+        }));
+    };
+
+
+    const handleAchievementInputChange = (field: string, value: string) => {
+        setAchievementsData(prev => ({
+            ...prev,
+            editingAchievement: {
+                ...prev.editingAchievement,
+                [field]: value
+            }
+        }));
+    };
+
+    const handleAddAchievement = async () => {
+        try {
+            const { title, description, achievedOn } = achievementsData.editingAchievement;
+            
+            if (!title.trim() || !description.trim() || !achievedOn) {
+                toast.error("Please fill in all required fields");
+                return;
+            }
+
+            const achievementData: CreateAchievementRequest = {
+                title: title.trim(),
+                description: description.trim(),
+                achievedOn: new Date(achievedOn).toISOString()
+            };
+
+            await createAchievement(achievementData);
+            await refreshAchievements();
+            toast.success("Achievement added successfully!");
+            closeAddAchievementModal();
+        } catch (error) {
+            console.error("Error adding achievement:", error);
+            toast.error("Failed to add achievement. Please try again.");
+        }
+    };
+
+    const handleEditAchievement = async () => {
+        try {
+            const { title, description, achievedOn } = achievementsData.editingAchievement;
+            const achievement = achievementsData.selectedAchievement;
+            
+            if (!achievement || !title.trim() || !description.trim() || !achievedOn) {
+                toast.error("Please fill in all required fields");
+                return;
+            }
+
+            const updateData: UpdateAchievementRequest = {
+                title: title.trim(),
+                description: description.trim(),
+                achievedOn: new Date(achievedOn).toISOString()
+            };
+
+            await updateAchievement(achievement._id, updateData);
+            await refreshAchievements();
+            toast.success("Achievement updated successfully!");
+            closeEditAchievementModal();
+        } catch (error) {
+            console.error("Error updating achievement:", error);
+            toast.error("Failed to update achievement. Please try again.");
+        }
+    };
+
+    const handleDeleteAchievement = async () => {
+        try {
+            const achievement = achievementsData.selectedAchievement;
+            if (!achievement) return;
+
+            await deleteAchievement(achievement._id);
+            await refreshAchievements();
+            toast.success("Achievement deleted successfully!");
+            closeDeleteAchievementModal();
+        } catch (error) {
+            console.error("Error deleting achievement:", error);
+            toast.error("Failed to delete achievement. Please try again.");
+        }
+    };
+
+
     // Handle sending upload to players
     const handleSendUpload = async (id: string, players: string[], message: string) => {
         try {
@@ -904,14 +1099,21 @@ export default function Profile() {
         // Update the media item
         const updatedItems = uploadsData.mediaItems.map(item => 
             item._id === uploadsData.selectedMedia?._id 
-                ? { ...item, title: editFormData.title, category: editFormData.category }
+                ? { ...item, title: editFormData.title, category: editFormData.category as 'forehand' | 'backhand' | 'volley' | 'serve' }
                 : item
-        );
+        ) as Upload[];
+        
+        const updatedSelectedMedia = uploadsData.selectedMedia ? { 
+            ...uploadsData.selectedMedia, 
+            title: editFormData.title, 
+            category: editFormData.category as 'forehand' | 'backhand' | 'volley' | 'serve'
+        } as Upload & { category: string } : null;
+        
         setUploadsData(prev => ({ 
             ...prev, 
             mediaItems: updatedItems,
-            selectedMedia: { ...prev.selectedMedia, title: editFormData.title, category: editFormData.category }
-        }));
+            selectedMedia: updatedSelectedMedia
+        } as any));
         closeEditModal();
         toast.success("Media updated successfully!");
     };
@@ -1022,6 +1224,21 @@ export default function Profile() {
         
         return filtered;
     };
+
+    // Filter and search logic for achievements
+    const filteredAchievements = useMemo(() => {
+        let filtered = achievementsData.achievements;
+        
+        // Filter by search query
+        if (achievementsData.searchQuery) {
+            filtered = filtered.filter(achievement => 
+                achievement.title.toLowerCase().includes(achievementsData.searchQuery.toLowerCase()) ||
+                achievement.description.toLowerCase().includes(achievementsData.searchQuery.toLowerCase())
+            );
+        }
+        
+        return filtered;
+    }, [achievementsData.achievements, achievementsData.searchQuery]);
 
     const serviceOptions = [
         "Private Lessons", "Group Sessions", "Match Play", 
@@ -3221,6 +3438,105 @@ export default function Profile() {
                     </div>
                 );
 
+            case "Personal Achievements":
+                return (
+                    <div className="space-y-4 sm:space-y-6">
+                        {/* Header */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Personal Achievements</h3>
+                            <button 
+                                onClick={openAddAchievementModal}
+                                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm w-full sm:w-auto flex items-center gap-2"
+                            >
+                                <i className="*:size-4" dangerouslySetInnerHTML={{ __html: icons.plus }} />
+                                Add New Achievement
+                            </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            {/* Search Bar */}
+                            <div className="relative flex-1 max-w-md">
+                                <input
+                                    type="text"
+                                    placeholder="Search achievements..."
+                                    value={achievementsData.searchQuery}
+                                    onChange={(e) => handleAchievementsSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
+                                />
+                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                                    <i className="*:size-4 text-[var(--text-tertiary)]" dangerouslySetInnerHTML={{ __html: icons.search }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Achievements List */}
+                        <div className="space-y-4">
+                            {achievementsData.loading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                                </div>
+                            ) : filteredAchievements.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                                        <i className="*:size-8 text-gray-400" dangerouslySetInnerHTML={{ __html: icons.trophy }} />
+                                    </div>
+                                    <h3 className="text-lg font-medium text-gray-600 mb-2">No achievements yet</h3>
+                                    <p className="text-gray-500 mb-4">Start adding your personal achievements to track your progress!</p>
+                                    <button 
+                                        onClick={openAddAchievementModal}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300"
+                                    >
+                                        Add Your First Achievement
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {filteredAchievements.map((achievement) => (
+                                        <div key={achievement._id} className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-4 hover:shadow-[var(--shadow-secondary)] transition-all duration-300">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <h4 className="text-lg font-semibold text-[var(--text-primary)] line-clamp-1">
+                                                    {achievement.title}
+                                                </h4>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => openEditAchievementModal(achievement)}
+                                                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors duration-300"
+                                                        title="Edit achievement"
+                                                    >
+                                                        <i className="*:size-4" dangerouslySetInnerHTML={{ __html: icons.edit }} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openDeleteAchievementModal(achievement)}
+                                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors duration-300"
+                                                        title="Delete achievement"
+                                                    >
+                                                        <i className="*:size-4" dangerouslySetInnerHTML={{ __html: icons.trash }} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <p className="text-[var(--text-secondary)] text-sm mb-3 line-clamp-3">
+                                                {achievement.description}
+                                            </p>
+                                            
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-[var(--text-tertiary)]">
+                                                    Achieved on {new Date(achievement.achievedOn).toLocaleDateString('en-US', { 
+                                                        month: 'short', 
+                                                        day: 'numeric', 
+                                                        year: 'numeric' 
+                                                    })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+
             default:
                 return null;
         }
@@ -3966,6 +4282,198 @@ export default function Profile() {
                     </div>
                 </div>
             )}
+
+            {/* Add Achievement Modal */}
+            {achievementsData.isAddModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+                    <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] w-full max-w-md mx-4 border border-[var(--border-primary)] transition-colors duration-300">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Add Personal Achievement</h3>
+                            <button
+                                onClick={closeAddAchievementModal}
+                                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-300"
+                            >
+                                <i className="*:size-5" dangerouslySetInnerHTML={{ __html: icons.close }} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                    Achievement Title <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={achievementsData.editingAchievement.title}
+                                    onChange={(e) => handleAchievementInputChange("title", e.target.value)}
+                                    placeholder="Enter your achievement title"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                    Achievement Description <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={achievementsData.editingAchievement.description}
+                                    onChange={(e) => handleAchievementInputChange("description", e.target.value)}
+                                    placeholder="Enter your achievement description"
+                                    rows={4}
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300 resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                    Achieved On <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={achievementsData.editingAchievement.achievedOn}
+                                    onChange={(e) => handleAchievementInputChange("achievedOn", e.target.value)}
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex gap-3 p-4 border-t border-[var(--border-primary)]">
+                            <button
+                                onClick={closeAddAchievementModal}
+                                className="flex-1 px-4 py-2 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors duration-300 font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAddAchievement}
+                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300 font-medium"
+                            >
+                                Save and Exit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Achievement Modal */}
+            {achievementsData.isEditModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+                    <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] w-full max-w-md mx-4 border border-[var(--border-primary)] transition-colors duration-300">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Edit Achievement</h3>
+                            <button
+                                onClick={closeEditAchievementModal}
+                                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-300"
+                            >
+                                <i className="*:size-5" dangerouslySetInnerHTML={{ __html: icons.close }} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                    Achievement Title <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={achievementsData.editingAchievement.title}
+                                    onChange={(e) => handleAchievementInputChange("title", e.target.value)}
+                                    placeholder="Enter your achievement title"
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                    Achievement Description <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={achievementsData.editingAchievement.description}
+                                    onChange={(e) => handleAchievementInputChange("description", e.target.value)}
+                                    placeholder="Enter your achievement description"
+                                    rows={4}
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-colors duration-300 resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                    Achieved On <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={achievementsData.editingAchievement.achievedOn}
+                                    onChange={(e) => handleAchievementInputChange("achievedOn", e.target.value)}
+                                    className="w-full p-3 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex gap-3 p-4 border-t border-[var(--border-primary)]">
+                            <button
+                                onClick={closeEditAchievementModal}
+                                className="flex-1 px-4 py-2 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors duration-300 font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleEditAchievement}
+                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300 font-medium"
+                            >
+                                Update Achievement
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Achievement Modal */}
+            {achievementsData.isDeleteModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+                    <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] w-full max-w-md mx-4 border border-[var(--border-primary)] transition-colors duration-300">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Delete Achievement</h3>
+                            <button
+                                onClick={closeDeleteAchievementModal}
+                                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-300"
+                            >
+                                <i className="*:size-5" dangerouslySetInnerHTML={{ __html: icons.close }} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-4">
+                            <p className="text-[var(--text-secondary)] mb-4">
+                                Are you sure you want to delete "{achievementsData.selectedAchievement?.title}"? This action cannot be undone.
+                            </p>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex gap-3 p-4 border-t border-[var(--border-primary)]">
+                            <button
+                                onClick={closeDeleteAchievementModal}
+                                className="flex-1 px-4 py-2 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors duration-300 font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteAchievement}
+                                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-300 font-medium"
+                            >
+                                Delete Achievement
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

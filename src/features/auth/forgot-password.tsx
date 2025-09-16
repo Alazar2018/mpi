@@ -5,7 +5,8 @@ import Form from "@/components/form/Form";
 import Input from "@/components/form/Input";
 import { requestPasswordReset } from "./auth.api";
 import { useApiRequest } from "@/hooks/useApiRequest";
-import { required, toast } from "@/utils/utils";
+import { required } from "@/utils/utils";
+import { toast, ToastContainer } from 'react-toastify';
 import icons from "@/utils/icons";
 
 interface ForgotPasswordPayload {
@@ -30,7 +31,7 @@ export default function ForgotPassword() {
       (res) => {
         if (!res.success) {
           // If the API call fails, show error and navigate back
-          toast('e', 'Error', res.error || 'Failed to send password reset email');
+          toast.error(res.error || 'Failed to send password reset email');
           navigate('/forgot-password');
         }
       }
@@ -140,10 +141,11 @@ export default function ForgotPassword() {
                   pending={resetReq.pending}
                   size="lg"
                   onClick={onSubmit(handleSubmit)}
-                  className="mt-2.5"
+                  className="mt-2.5 transform transition-all duration-300 hover:scale-[1.02]"
                   type="action"
+                  disabled={resetReq.pending}
                 >
-                  Send Reset Instructions
+                  {resetReq.pending ? 'Sending...' : 'Send Reset Instructions'}
                 </Button>
               </div>
             );
@@ -152,12 +154,26 @@ export default function ForgotPassword() {
         <div className="text-center">
           <Link
             to="/login"
-            className="text-sm text-blue-600 hover:underline font-medium"
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium transition-all duration-200 hover:scale-105"
           >
             ← Back to Login
           </Link>
         </div>
       </div>
+      
+      {/* ToastContainer for this page */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

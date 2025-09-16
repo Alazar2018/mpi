@@ -4,6 +4,20 @@ import { toast } from "react-hot-toast";
 import { useApiRequest } from "@/hooks/useApiRequest";
 import { getMatchById, saveMatchProgress, submitMatchResult } from "./api/matchs.api";
 import type { Match, SaveMatchProgressRequest, SubmitMatchResultRequest } from "@/service/matchs.server";
+import { 
+  getMatchRules, 
+  isMatchComplete as isMatchCompleteUtil, 
+  isSetComplete,
+  shouldStartTiebreak,
+  getMatchWinner,
+  getMatchFormatDisplayName,
+  getMatchProgressDescription,
+  getSetProgressDescription,
+  convertLegacyMatchType,
+  type MatchFormat,
+  type ScoringVariation,
+  type MatchRules
+} from "@/utils/matchFormatUtils";
 
 interface Player {
   name: string;
@@ -16,7 +30,7 @@ interface Player {
 }
 
 interface MatchState {
-  bestOf: 1 | 3 | 5;
+  bestOf: 1 | 3 | 5; // Legacy field - kept for backward compatibility
   currentSet: number;
   sets: { player1: number; player2: number }[];
   games: { 
@@ -29,6 +43,12 @@ interface MatchState {
   hasAdvantage: 1 | 2 | null;
   level: 1 | 2 | 3;
   server: 1 | 2 | null; // Track who is serving (null until selected)
+  // Enhanced format fields
+  matchFormat?: MatchFormat;
+  scoringVariation?: ScoringVariation;
+  customTiebreakRules?: Record<string, number>;
+  noAdScoring?: boolean;
+  tieBreakRule?: number;
 }
 
 
@@ -208,18 +228,22 @@ const WinnersModal = ({
   const winnerPlayer = winner === 1 ? matchData.player1 : matchData.player2;
   const loserPlayer = winner === 1 ? matchData.player2 : matchData.player1;
 
-  // Calculate match completion status internally
+  // Calculate match completion status using enhanced format rules
   const isMatchComplete = () => {
-    const requiredSets = Math.ceil(matchData.match.bestOf / 2);
-    const p1Sets = matchData.match.sets.filter(set => set.player1 > set.player2).length;
-    const p2Sets = matchData.match.sets.filter(set => set.player2 > set.player1).length;
+    const matchFormat = matchData.match.matchFormat || convertLegacyMatchType(matchData.match.bestOf === 1 ? 'one' : matchData.match.bestOf === 3 ? 'three' : 'five');
+    const rules = getMatchRules(
+      matchFormat,
+      matchData.match.scoringVariation,
+      matchData.match.customTiebreakRules,
+      matchData.match.noAdScoring
+    );
     
-    return p1Sets >= requiredSets || p2Sets >= requiredSets;
+    return isMatchCompleteUtil(matchData.match.sets, rules);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+      <div className="relative bg-[var(--bg-card)] rounded-3xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-[var(--border-primary)]">
         {/* Confetti overlay */}
         <div className="absolute inset-0 pointer-events-none">
           <Confetti />
@@ -263,7 +287,7 @@ const WinnersModal = ({
         </div>
 
         {/* Scoreboard Section */}
-        <div className="bg-white p-8">
+        <div className="bg-[var(--bg-card)] p-8">
           {/* Match Progress Indicator */}
           <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between mb-2">
@@ -278,22 +302,29 @@ const WinnersModal = ({
             </div>
             <div className="text-sm text-blue-700">
               {(() => {
-                const requiredSets = Math.ceil(matchData.match.bestOf / 2);
+                const matchFormat = matchData.match.matchFormat || convertLegacyMatchType(matchData.match.bestOf === 1 ? 'one' : matchData.match.bestOf === 3 ? 'three' : 'five');
+                const rules = getMatchRules(
+                  matchFormat,
+                  matchData.match.scoringVariation,
+                  matchData.match.customTiebreakRules,
+                  matchData.match.noAdScoring
+                );
+                
                 const p1Sets = matchData.match.sets.filter(set => set.player1 > set.player2).length;
                 const p2Sets = matchData.match.sets.filter(set => set.player2 > set.player1).length;
                 const totalSets = matchData.match.sets.length;
                 
                 return (
                   <div className="space-y-1">
-                    <div>Best of {matchData.match.bestOf} - Need {requiredSets} sets to win</div>
+                    <div>{getMatchProgressDescription(matchData.match.sets, rules)}</div>
                     <div className="flex items-center space-x-4">
-                      <span>P1 Sets: {p1Sets}/{requiredSets}</span>
-                      <span>P2 Sets: {p2Sets}/{requiredSets}</span>
+                      <span>P1 Sets: {p1Sets}/{rules.setsToWin}</span>
+                      <span>P2 Sets: {p2Sets}/{rules.setsToWin}</span>
                       <span>Total Sets: {totalSets}</span>
                     </div>
                     {!isMatchComplete() && (
                       <div className="text-yellow-600 font-medium">
-                        ⚠️ Match cannot be submitted until a player wins {requiredSets} sets
+                        ⚠️ Match cannot be submitted until a player wins {rules.setsToWin} sets
                       </div>
                     )}
                   </div>
@@ -349,7 +380,7 @@ const WinnersModal = ({
         <div className="bg-[#4C6BFF] p-6 text-center">
           <button
             onClick={onDone}
-            className="bg-white text-[#4C6BFF] px-8 py-3 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+            className="bg-[var(--bg-primary)] text-[#4C6BFF] px-8 py-3 rounded-xl font-bold text-lg hover:bg-[var(--bg-secondary)] transition-colors shadow-lg border border-[var(--border-primary)]"
           >
             Done
           </button>
@@ -458,12 +489,25 @@ const MatchTracker: React.FC = () => {
         isServing: (matchData as any).status === 'saved' ? prev.isServing : (tempServer === 2 ? true : false)
       }));
 
-      // Update match settings
+      // Update match settings with enhanced format support
+      const matchFormat = matchData.matchFormat || (matchData.matchType ? convertLegacyMatchType(matchData.matchType) : 'bestOfThree');
+      const rules = getMatchRules(
+        matchFormat,
+        matchData.scoringVariation,
+        matchData.customTiebreakRules,
+        matchData.noAdScoring
+      );
+      
       setMatch(prev => ({
         ...prev,
         bestOf: matchData.matchType === 'one' ? 1 : matchData.matchType === 'three' ? 3 : matchData.matchType === 'five' ? 5 : 3,
+        matchFormat: matchFormat,
+        scoringVariation: matchData.scoringVariation,
+        customTiebreakRules: matchData.customTiebreakRules,
+        noAdScoring: matchData.noAdScoring,
+        tieBreakRule: matchData.tieBreakRule || rules.tiebreakRule,
         // Don't reset sets for saved matches - they will be restored by resumeMatchWithExistingData
-        sets: (matchData as any).status === 'saved' ? prev.sets : Array.from({ length: matchData.matchType === 'one' ? 1 : matchData.matchType === 'three' ? 3 : matchData.matchType === 'five' ? 5 : 3 }, () => ({ player1: 0, player2: 0 }))
+        sets: (matchData as any).status === 'saved' ? prev.sets : Array.from({ length: rules.maxSets }, () => ({ player1: 0, player2: 0 }))
       }));
 
       // Check if this is a saved match and set appropriate state
@@ -485,10 +529,18 @@ const MatchTracker: React.FC = () => {
         localStorage.removeItem(`tennisMatchState_${matchId}`);
         
         // Reset all match state to initial values
+        const matchFormat = matchData.matchFormat || (matchData.matchType ? convertLegacyMatchType(matchData.matchType) : 'bestOfThree');
+        const rules = getMatchRules(
+          matchFormat,
+          matchData.scoringVariation,
+          matchData.customTiebreakRules,
+          matchData.noAdScoring
+        );
+        
         setMatch(prev => ({
           ...prev,
           currentSet: 0,
-          sets: Array.from({ length: matchData.matchType === 'one' ? 1 : matchData.matchType === 'three' ? 3 : matchData.matchType === 'five' ? 5 : 3 }, () => ({ player1: 0, player2: 0 })),
+          sets: Array.from({ length: rules.maxSets }, () => ({ player1: 0, player2: 0 })),
           games: [{ player1: 0, player2: 0, scores: [] }],
           isTieBreak: false,
           isDeuce: false,
@@ -549,7 +601,13 @@ const MatchTracker: React.FC = () => {
     isDeuce: false,
     hasAdvantage: null,
     level: (selectedLevel ? parseInt(selectedLevel) : 1) as 1 | 2 | 3,
-    server: null as 1 | 2 | null // Will be set when user selects server
+    server: null as 1 | 2 | null, // Will be set when user selects server
+    // Enhanced format fields with defaults
+    matchFormat: 'bestOfThree',
+    scoringVariation: 'standard',
+    customTiebreakRules: undefined,
+    noAdScoring: false,
+    tieBreakRule: 7
   });
 
   const [gameHistory, setGameHistory] = useState<any[]>([]);
@@ -958,21 +1016,16 @@ const MatchTracker: React.FC = () => {
     getContextualPointOutcomes(1) // Default to Player 1 winning
   );
 
-  // Check if match is complete (a player has won enough sets)
+  // Check if match is complete using enhanced format rules
   const isMatchComplete = () => {
-    const requiredSets = Math.ceil(match.bestOf / 2);
-    const p1Sets = match.sets.filter(set => set.player1 > set.player2).length;
-    const p2Sets = match.sets.filter(set => set.player2 > set.player1).length;
+    const rules = getMatchRules(
+      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
     
-    // console.log('🎯 [isMatchComplete] Checking match completion:', {
-    //   bestOf: match.bestOf,
-    //   requiredSets,
-    //   p1Sets,
-    //   p2Sets,
-    //   isComplete: p1Sets >= requiredSets || p2Sets >= requiredSets
-    // });
-    
-    return p1Sets >= requiredSets || p2Sets >= requiredSets;
+    return isMatchCompleteUtil(match.sets, rules);
   };
   
   const playerReactions = [
@@ -1067,8 +1120,14 @@ const MatchTracker: React.FC = () => {
   };
 
   const checkMatchWinner = (p1Sets: number, p2Sets: number) => {
-    const setsNeeded = Math.ceil(match.bestOf / 2);
-    return p1Sets >= setsNeeded ? 1 : p2Sets >= setsNeeded ? 2 : null;
+    const rules = getMatchRules(
+      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
+    
+    return p1Sets >= rules.setsToWin ? 1 : p2Sets >= rules.setsToWin ? 2 : null;
   };
 
   const switchServer = () => {
@@ -1320,18 +1379,24 @@ const MatchTracker: React.FC = () => {
     
     // Check if match is complete before allowing submission
     if (!isMatchComplete()) {
-      const requiredSets = Math.ceil(match.bestOf / 2);
+      const rules = getMatchRules(
+        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+        match.scoringVariation,
+        match.customTiebreakRules,
+        match.noAdScoring
+      );
+      
       const p1Sets = match.sets.filter(set => set.player1 > set.player2).length;
       const p2Sets = match.sets.filter(set => set.player2 > set.player1).length;
       
-      toast.error(`Cannot submit incomplete match! Need ${requiredSets} sets to win. P1: ${p1Sets}, P2: ${p2Sets}`, {
+      toast.error(`Cannot submit incomplete match! Need ${rules.setsToWin} sets to win. P1: ${p1Sets}, P2: ${p2Sets}`, {
         duration: 5000,
         icon: '⚠️',
       });
       
       console.warn('⚠️ [submitMatchResultToAPI] Attempted to submit incomplete match:', {
-        bestOf: match.bestOf,
-        requiredSets,
+        matchFormat: match.matchFormat,
+        rules,
         p1Sets,
         p2Sets
       });
@@ -2211,11 +2276,12 @@ const MatchTracker: React.FC = () => {
         return { ...prev, points: newPoints };
       });
       // For Level 1, use endPoint directly; for Level 2, use trackPointWithLevel
-      if (match.level === 1) {
+      const level = match.level;
+      if (level === 1) {
         endPoint(1, selectedPointOutcome || "p1Winner");
-      } else if (match.level === 2) {
+      } else if (level === (2 as 1 | 2 | 3)) {
         trackPointWithLevel(1, selectedPointOutcome || "p1Winner", 2);
-      } else {
+      } else if (level === 3) {
         trackPointWithLevel(1, selectedPointOutcome || "p1Winner", 3);
       }
     } else {
@@ -2225,11 +2291,12 @@ const MatchTracker: React.FC = () => {
         return { ...prev, points: newPoints };
       });
       // For Level 1, use endPoint directly; for Level 2, use trackPointWithLevel
-      if (match.level === 1) {
+      const level = match.level;
+      if (level === 1) {
         endPoint(2, selectedPointOutcome || "p2Winner");
-      } else if (match.level === 2) {
+      } else if (level === (2 as 1 | 2 | 3)) {
         trackPointWithLevel(2, selectedPointOutcome || "p2Winner", 2);
-      } else {
+      } else if (level === 3) {
         trackPointWithLevel(2, selectedPointOutcome || "p2Winner", 3);
       }
     }
@@ -3350,7 +3417,7 @@ const MatchTracker: React.FC = () => {
       <div className="flex justify-between items-center py-3 md:py-4 bg-[#1E293B] rounded-xl shadow-lg px-4">
         <div className="flex gap-3 md:gap-4">
           <button 
-            className="p-1.5 md:p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 md:p-2 bg-[var(--bg-primary)] rounded-lg shadow-md hover:shadow-lg border border-[var(--border-primary)] transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleUndo}
             disabled={gameHistory.length === 0}
           >
@@ -3360,7 +3427,7 @@ const MatchTracker: React.FC = () => {
           </button>
           
           <button 
-            className="p-1.5 md:p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 md:p-2 bg-[var(--bg-primary)] rounded-lg shadow-md hover:shadow-lg border border-[var(--border-primary)] transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleRedo}
             disabled={redoHistory.length === 0}
           >
@@ -3371,7 +3438,7 @@ const MatchTracker: React.FC = () => {
           
           <button 
             onClick={openNoteModal}
-            className="p-1.5 md:p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+            className="p-1.5 md:p-2 bg-[var(--bg-primary)] rounded-lg shadow-md hover:shadow-lg border border-[var(--border-primary)] transition-all duration-200 hover:scale-105"
           >
             <svg className="w-4 h-4 md:w-5 md:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -3409,10 +3476,15 @@ const MatchTracker: React.FC = () => {
           {!isMatchComplete() && (
             <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded mt-1 text-center">
               {(() => {
-                const requiredSets = Math.ceil(match.bestOf / 2);
+                const rules = getMatchRules(
+                  match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                  match.scoringVariation,
+                  match.customTiebreakRules,
+                  match.noAdScoring
+                );
                 const p1Sets = match.sets.filter(set => set.player1 > set.player2).length;
                 const p2Sets = match.sets.filter(set => set.player2 > set.player1).length;
-                return `Need ${requiredSets} sets to win. P1: ${p1Sets}, P2: ${p2Sets}`;
+                return `Need ${rules.setsToWin} sets to win. P1: ${p1Sets}, P2: ${p2Sets}`;
               })()}
             </div>
           )}
@@ -3427,7 +3499,7 @@ const MatchTracker: React.FC = () => {
               icon: 'ℹ️',
             });
           }}
-          className="p-1.5 md:p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+          className="p-1.5 md:p-2 bg-[var(--bg-primary)] rounded-lg shadow-md hover:shadow-lg border border-[var(--border-primary)] transition-all duration-200 hover:scale-105"
           title="Match Information"
         >
           <div className="w-4 h-4 md:w-5 md:h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -3877,7 +3949,7 @@ const MatchTracker: React.FC = () => {
       </div>
 
       {/* Scoreboard */}
-      <div className="bg-white text-black p-3 md:p-4 rounded-lg shadow-lg">
+      <div className="bg-[var(--bg-card)] text-[var(--text-primary)] p-3 md:p-4 rounded-lg shadow-lg border border-[var(--border-primary)]">
         {/* Level Indicator */}
         <div className="text-center mb-2">
           <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
@@ -4152,7 +4224,7 @@ const MatchTracker: React.FC = () => {
      {/* Level 2 Point Outcome Modal */}
 {showPointOutcomeModal && (
   <div className="fixed inset-0 z-50 flex items-start justify-center bg-transparent backdrop-blur-sm overflow-y-auto py-8">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl mx-4 my-8 overflow-hidden">
+    <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-6xl mx-4 my-8 overflow-hidden border border-[var(--border-primary)]">
              {/* Header */}
        <div className={`p-6 text-white ${
          lastPointWinner === 1 
@@ -4248,8 +4320,8 @@ const MatchTracker: React.FC = () => {
                     onClick={() => setPlayer1Reaction(reaction.type)}
                     className={`p-3 rounded-lg flex flex-col items-center transition-all ${
                       player1Reaction === reaction.type
-                        ? 'bg-white border-2 border-blue-400 shadow-sm transform scale-[1.03]'
-                        : 'bg-white/70 hover:bg-white border border-gray-200'
+                        ? 'bg-[var(--bg-primary)] border-2 border-blue-400 shadow-sm transform scale-[1.03]'
+                        : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] border border-[var(--border-primary)]'
                     }`}
                   >
                     <span className="text-3xl mb-1">{reaction.icon}</span>
@@ -4279,8 +4351,8 @@ const MatchTracker: React.FC = () => {
                     onClick={() => setPlayer2Reaction(reaction.type)}
                     className={`p-3 rounded-lg flex flex-col items-center transition-all ${
                       player2Reaction === reaction.type
-                        ? 'bg-white border-2 border-blue-400 shadow-sm transform scale-[1.03]'
-                        : 'bg-white/70 hover:bg-white border border-gray-200'
+                        ? 'bg-[var(--bg-primary)] border-2 border-blue-400 shadow-sm transform scale-[1.03]'
+                        : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] border border-[var(--border-primary)]'
                     }`}
                   >
                     <span className="text-3xl mb-1">{reaction.icon}</span>
@@ -4325,7 +4397,7 @@ const MatchTracker: React.FC = () => {
           {/* Point Outcome Modal (First Image) */}
           {level3ModalType === 'point_outcome' && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 text-white">
                   <div className="flex items-center justify-between">
@@ -4400,7 +4472,7 @@ const MatchTracker: React.FC = () => {
           {/* Shot Details Modal (Second Image) - For Return Winner - Only show for Level 2+ */}
           {level3ModalType === 'shot_details' && match.level > 1 && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
                 {/* Header */}
                 <div className={`p-6 text-white ${
                   lastPointWinner === 1 
@@ -4443,7 +4515,7 @@ const MatchTracker: React.FC = () => {
                           className={`p-4 rounded-lg border-2 transition-all ${
                             selectedShotPlacement === placement.type
                               ? 'bg-blue-100 border-blue-500 text-blue-800'
-                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                              : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
                           <span className="font-medium">{placement.label}</span>
@@ -4463,7 +4535,7 @@ const MatchTracker: React.FC = () => {
                           className={`p-4 rounded-lg border-2 transition-all ${
                             selectedShotType === type.type
                               ? 'bg-blue-100 border-blue-500 text-blue-800'
-                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                              : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
                           <span className="font-medium">{type.label}</span>
@@ -4506,7 +4578,7 @@ const MatchTracker: React.FC = () => {
           {/* Ball In Court Modal */}
           {level3ModalType === 'ball_in_court' && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
                 {/* Header */}
                 <div className={`p-6 text-white ${
                   lastPointWinner === 1 
@@ -4559,7 +4631,7 @@ const MatchTracker: React.FC = () => {
                             className={`w-full p-4 rounded-lg border-2 transition-all ${
                   lastPointWinner === 1 
                                 ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
-                                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                                : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                             }`}
                           >
                             <div className="flex items-center space-x-3">
@@ -4580,7 +4652,7 @@ const MatchTracker: React.FC = () => {
                             className={`w-full p-4 rounded-lg border-2 transition-all ${
                               lastPointWinner === 2
                                 ? 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white' 
-                                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                                : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                             }`}
                           >
                             <div className="flex items-center space-x-3">
@@ -4613,7 +4685,7 @@ const MatchTracker: React.FC = () => {
                               ? (lastPointWinner === 1 
                                   ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
                                   : 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white')
-                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                              : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
@@ -4640,7 +4712,7 @@ const MatchTracker: React.FC = () => {
                               ? (lastPointWinner === 1 
                                   ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
                                   : 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white')
-                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                              : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
                           <span className="font-medium">{lastPointWinner === 1 ? player1.name : player2.name} Forced an Error</span>
@@ -4654,7 +4726,7 @@ const MatchTracker: React.FC = () => {
                               ? (lastPointWinner === 1 
                                   ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
                                   : 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white')
-                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                              : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
                           <span className="font-medium">{lastPointWinner === 1 ? player2.name : player1.name} Unforced Error</span>
@@ -4680,7 +4752,7 @@ const MatchTracker: React.FC = () => {
                                     : lastPointWinner === 2
                                     ? 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white'
                                     : 'bg-gray-100 border-gray-300 text-gray-600')
-                                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                                : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                             }`}
                           >
                             <span className="font-medium">{rally.label}</span>
@@ -4761,7 +4833,7 @@ const MatchTracker: React.FC = () => {
                                   ? (lastPointWinner === 1 
                                       ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
                                       : 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white')
-                                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                                  : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                               }`}
                             >
                               <span className="font-medium capitalize">{way}</span>
@@ -4783,7 +4855,7 @@ const MatchTracker: React.FC = () => {
                                   ? (lastPointWinner === 1 
                                       ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
                                       : 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white')
-                                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                                  : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                               }`}
                             >
                               <span className="font-medium capitalize">{shot}</span>
@@ -4805,7 +4877,7 @@ const MatchTracker: React.FC = () => {
                                   ? (lastPointWinner === 1 
                                       ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
                                       : 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white')
-                                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                                  : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                               }`}
                             >
                               <span className="font-medium capitalize">{place.replace(/([A-Z])/g, ' $1').trim()}</span>
@@ -4879,7 +4951,7 @@ const MatchTracker: React.FC = () => {
           {/* Reaction Modal - Only show for Level 2+ */}
           {level3ModalType === 'reaction' && match.level > 1 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
             {/* Header */}
                 <div className={`p-6 text-white ${
                   lastPointWinner === 1 
@@ -4941,8 +5013,8 @@ const MatchTracker: React.FC = () => {
                               onClick={() => setPlayer1Reaction(reaction.type)}
                               className={`p-3 rounded-lg flex flex-col items-center transition-all ${
                                 player1Reaction === reaction.type
-                                  ? 'bg-white border-2 border-blue-400 shadow-sm transform scale-[1.03]'
-                                  : 'bg-white/70 hover:bg-white border border-gray-200'
+                                  ? 'bg-[var(--bg-primary)] border-2 border-blue-400 shadow-sm transform scale-[1.03]'
+                                  : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] border border-[var(--border-primary)]'
                               }`}
                             >
                               <span className="text-3xl mb-1">{reaction.icon}</span>
@@ -4972,8 +5044,8 @@ const MatchTracker: React.FC = () => {
                               onClick={() => setPlayer2Reaction(reaction.type)}
                               className={`p-3 rounded-lg flex flex-col items-center transition-all ${
                                 player2Reaction === reaction.type
-                                  ? 'bg-white border-2 border-blue-400 shadow-sm transform scale-[1.03]'
-                                  : 'bg-white/70 hover:bg-white border border-gray-200'
+                                  ? 'bg-[var(--bg-primary)] border-2 border-blue-400 shadow-sm transform scale-[1.03]'
+                                  : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] border border-[var(--border-primary)]'
                               }`}
                             >
                               <span className="text-3xl mb-1">{reaction.icon}</span>
@@ -5036,7 +5108,7 @@ const MatchTracker: React.FC = () => {
           {/* Return Error Choice Modal */}
           {level3ModalType === 'return_error_choice' && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-2xl mx-4 overflow-hidden">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white">
                   <div className="flex items-center justify-between">
@@ -5094,20 +5166,20 @@ const MatchTracker: React.FC = () => {
 
       {/* Match Info Modal */}
       {showInfoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+          <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-3xl mx-4 overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 text-white">
+            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <h2 className="text-2xl font-bold">Match Information</h2>
+                  <h2 className="text-xl font-bold">Match Information</h2>
                 </div>
                 <button 
                   onClick={() => setShowInfoModal(false)}
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
                   aria-label="Close modal"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -5115,126 +5187,183 @@ const MatchTracker: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-8 space-y-8">
-              {/* Match Overview */}
-              <section className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <svg className="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Match Overview
+            <div className="p-6 space-y-6">
+              {/* Compact Match Format Details */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="w-5 h-5 mr-2 text-blue-500">🎾</span>
+                  Match Format
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">Match Type</h4>
-                    <p className="text-gray-600">Best of {match.bestOf} sets</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs text-blue-600 font-medium">Format</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {match.matchFormat ? getMatchFormatDisplayName(match.matchFormat) : `Best of ${match.bestOf} sets`}
+                    </p>
                   </div>
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">Tracking Level</h4>
-                    <p className="text-gray-600">
-                      Level {match.level} - {
-                        match.level === 1 ? 'Basic Scoring' : 
-                        match.level === 2 ? 'Detailed Tracking' : 
-                        'Advanced Charting'
+
+                  <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs text-green-600 font-medium">Scoring</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {match.scoringVariation ? 
+                        match.scoringVariation.charAt(0).toUpperCase() + match.scoringVariation.slice(1).replace(/([A-Z])/g, ' $1') : 
+                        'Standard'
                       }
                     </p>
                   </div>
+
+                  <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs text-purple-600 font-medium">Level</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      Level {match.level}
+                    </p>
+                  </div>
+
+                  <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs text-yellow-600 font-medium">Type</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {match.noAdScoring ? 'No-Ad' : 'Standard'}
+                    </p>
+                  </div>
+
+                  <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs text-orange-600 font-medium">Tiebreak</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">{match.tieBreakRule || 7} pts</p>
+                  </div>
+
+                  {match.customTiebreakRules && Object.keys(match.customTiebreakRules).length > 0 && (
+                    <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
+                      <div className="flex items-center mb-1">
+                        <span className="text-xs text-indigo-600 font-medium">Custom</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {Object.entries(match.customTiebreakRules).map(([set, points]) => `S${set}:${points}`).join(', ')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Compact Match Progress */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="w-5 h-5 mr-2 text-gray-500">📋</span>
+                  Progress
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-medium text-gray-700">
+                    {(() => {
+                      const rules = getMatchRules(
+                        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                        match.scoringVariation,
+                        match.customTiebreakRules,
+                        match.noAdScoring
+                      );
+                      return getMatchProgressDescription(match.sets, rules);
+                    })()}
+                  </p>
                 </div>
               </section>
 
               {/* Current Status */}
-              <section className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <svg className="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+              <section>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="w-5 h-5 mr-2 text-green-500">✓</span>
                   Current Status
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 rounded-xl p-4 text-center">
-                    <h4 className="font-semibold text-gray-800 mb-2">Current Set</h4>
-                    <p className="text-2xl font-bold text-blue-600">{match.currentSet + 1}</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <h4 className="text-xs text-gray-600 mb-1">Set</h4>
+                    <p className="text-lg font-bold text-blue-600">{match.currentSet + 1}</p>
                   </div>
-                  <div className="bg-gray-50 rounded-xl p-4 text-center">
-                    <h4 className="font-semibold text-gray-800 mb-2">Match Status</h4>
-                    <p className={`text-lg font-semibold ${
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <h4 className="text-xs text-gray-600 mb-1">Status</h4>
+                    <p className={`text-sm font-semibold ${
                       isGameRunning ? 'text-green-600' : 'text-yellow-600'
                     }`}>
                       {isGameRunning ? 'Active' : 'Paused'}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-xl p-4 text-center">
-                    <h4 className="font-semibold text-gray-800 mb-2">Server</h4>
-                    <p className="text-lg font-semibold text-blue-600">
-                      {match.server === 1 ? player1.name : player2.name}
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <h4 className="text-xs text-gray-600 mb-1">Server</h4>
+                    <p className="text-sm font-semibold text-blue-600 truncate">
+                      {match.server === 1 ? player1.name.split(' ')[0] : player2.name.split(' ')[0]}
                     </p>
                   </div>
                 </div>
               </section>
 
               {/* Player Information */}
-              <section className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <svg className="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                  Player Information
+              <section>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="w-5 h-5 mr-2 text-purple-500">👥</span>
+                  Players
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Player 1 */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-                    <div className="flex items-center mb-3">
+                  <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                    <div className="flex items-center mb-2">
                       <img 
                         src={player1.image} 
                         alt={player1.name} 
-                        className="w-12 h-12 rounded-full border-2 border-[#D4FF5A] mr-3"
+                        className="w-8 h-8 rounded-full border-2 border-[#D4FF5A] mr-2"
                       />
-                      <div>
-                        <h4 className="font-semibold text-gray-800">{player1.name}</h4>
-                        <p className="text-sm text-green-600">Player 1</p>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-semibold text-gray-800 truncate">{player1.name}</h4>
+                        <p className="text-xs text-green-600">P1</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="grid grid-cols-3 gap-1 text-center">
                       <div>
-                        <p className="text-xs text-gray-600">Sets</p>
-                        <p className="text-lg font-bold text-gray-800">{player1.sets}</p>
+                        <p className="text-xs text-gray-600">S</p>
+                        <p className="text-sm font-bold text-gray-800">{player1.sets}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600">Games</p>
-                        <p className="text-lg font-bold text-gray-800">{player1.games}</p>
+                        <p className="text-xs text-gray-600">G</p>
+                        <p className="text-sm font-bold text-gray-800">{player1.games}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600">Points</p>
-                        <p className="text-lg font-bold text-gray-800">{player1.points}</p>
+                        <p className="text-xs text-gray-600">P</p>
+                        <p className="text-sm font-bold text-gray-800">{player1.points}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Player 2 */}
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-                    <div className="flex items-center mb-3">
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div className="flex items-center mb-2">
                       <img 
                         src={player2.image} 
                         alt={player2.name} 
-                        className="w-12 h-12 rounded-full border-2 border-[#4C6BFF] mr-3"
+                        className="w-8 h-8 rounded-full border-2 border-[#4C6BFF] mr-2"
                       />
-                      <div>
-                        <h4 className="font-semibold text-gray-800">{player2.name}</h4>
-                        <p className="text-sm text-blue-600">Player 2</p>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-semibold text-gray-800 truncate">{player2.name}</h4>
+                        <p className="text-xs text-blue-600">P2</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="grid grid-cols-3 gap-1 text-center">
                       <div>
-                        <p className="text-xs text-gray-600">Sets</p>
-                        <p className="text-lg font-bold text-gray-800">{player2.sets}</p>
+                        <p className="text-xs text-gray-600">S</p>
+                        <p className="text-sm font-bold text-gray-800">{player2.sets}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600">Games</p>
-                        <p className="text-lg font-bold text-gray-800">{player2.games}</p>
+                        <p className="text-xs text-gray-600">G</p>
+                        <p className="text-sm font-bold text-gray-800">{player2.games}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600">Points</p>
-                        <p className="text-lg font-bold text-gray-800">{player2.points}</p>
+                        <p className="text-xs text-gray-600">P</p>
+                        <p className="text-sm font-bold text-gray-800">{player2.points}</p>
                       </div>
                     </div>
                   </div>
@@ -5242,54 +5371,50 @@ const MatchTracker: React.FC = () => {
               </section>
 
               {/* Match Statistics */}
-              <section className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <svg className="w-6 h-6 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  Match Statistics
+              <section>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="w-5 h-5 mr-2 text-orange-500">📊</span>
+                  Statistics
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">Game Time</h4>
-                    <p className="text-2xl font-mono font-bold text-blue-600">{formatTime(gameTime)}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <h4 className="text-xs text-gray-600 mb-1">Time</h4>
+                    <p className="text-lg font-mono font-bold text-blue-600">{formatTime(gameTime)}</p>
                   </div>
                   {match.level === 3 && (
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <h4 className="font-semibold text-gray-800 mb-2">In-Between Time</h4>
-                      <p className="text-2xl font-mono font-bold text-green-600">{formatTime(inBetweenTime)}</p>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <h4 className="text-xs text-gray-600 mb-1">Between</h4>
+                      <p className="text-lg font-mono font-bold text-green-600">{formatTime(inBetweenTime)}</p>
                     </div>
                   )}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">Total Points Tracked</h4>
-                    <p className="text-2xl font-bold text-purple-600">{pointHistory.length}</p>
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <h4 className="text-xs text-gray-600 mb-1">Points</h4>
+                    <p className="text-lg font-bold text-purple-600">{pointHistory.length}</p>
                   </div>
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">Current Game Points</h4>
-                    <p className="text-2xl font-bold text-orange-600">{currentGameScores.length}</p>
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <h4 className="text-xs text-gray-600 mb-1">Game Pts</h4>
+                    <p className="text-lg font-bold text-orange-600">{currentGameScores.length}</p>
                   </div>
                 </div>
               </section>
 
               {/* Set Scores */}
-              <section className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <svg className="w-6 h-6 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
+              <section>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="w-5 h-5 mr-2 text-red-500">📋</span>
                   Set Scores
                 </h3>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="text-sm font-medium text-gray-600">Set</div>
-                    <div className="text-sm font-medium text-gray-600">{player1.name}</div>
-                    <div className="text-sm font-medium text-gray-600">{player2.name}</div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="text-xs font-medium text-gray-600">Set</div>
+                    <div className="text-xs font-medium text-gray-600 truncate">{player1.name.split(' ')[0]}</div>
+                    <div className="text-xs font-medium text-gray-600 truncate">{player2.name.split(' ')[0]}</div>
                     
                     {match.sets.map((set, index) => (
                       <React.Fragment key={index}>
-                        <div className="text-lg font-semibold text-gray-800">{index + 1}</div>
-                        <div className="text-lg font-bold text-gray-800">{set.player1}</div>
-                        <div className="text-lg font-bold text-gray-800">{set.player2}</div>
+                        <div className="text-sm font-semibold text-gray-800">{index + 1}</div>
+                        <div className="text-sm font-bold text-gray-800">{set.player1}</div>
+                        <div className="text-sm font-bold text-gray-800">{set.player2}</div>
                       </React.Fragment>
                     ))}
                   </div>
@@ -5297,10 +5422,10 @@ const MatchTracker: React.FC = () => {
               </section>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowInfoModal(false)}
-                  className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300"
                 >
                   Close
                 </button>
@@ -5314,9 +5439,9 @@ const MatchTracker: React.FC = () => {
                       icon: '💾',
                     });
                   }}
-                  className="px-6 py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                  className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
                 >
-                  Save Match State
+                  Save State
                 </button>
               </div>
             </div>
@@ -5326,8 +5451,8 @@ const MatchTracker: React.FC = () => {
 
       {/* Note Modal */}
       {showNoteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-6xl mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+          <div className="relative bg-[var(--bg-card)] rounded-3xl shadow-2xl border border-[var(--border-primary)] w-full max-w-6xl mx-4 overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 text-white">
               <div className="flex items-center justify-between">
@@ -5461,6 +5586,7 @@ const MatchTracker: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
     </>
   );

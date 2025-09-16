@@ -11,7 +11,8 @@ import { decodeToken } from '@/utils/jwt';
 import type { LoginPayload, LoginResponse } from "@/interface";
 import { useAuthStore } from "@/store/auth.store";
 import icons from "@/utils/icons";
-import { required, toast } from "@/utils/utils";
+import { required } from "@/utils/utils";
+import { toast, ToastContainer } from 'react-toastify';
 
 import { getDeviceInfo } from "@/utils/deviceInfo";
 import React from "react";
@@ -64,7 +65,7 @@ export default function Login() {
 				
 					} else {
 						console.error('Invalid response structure:', res.data);
-						toast('e', 'Login failed', 'Invalid response structure');
+						toast.error('Invalid response structure from server');
 						return;
 					}
 
@@ -85,6 +86,9 @@ export default function Login() {
 							authStore.setSession(sessionData);
 						}
 
+						// Show success message
+						toast.success('Login successful!');
+
 						// Navigate based on next step (not role-based)
 						if (userData.nextStep === 'profile_completion') {
 							navigate('/create_profile');
@@ -102,11 +106,37 @@ export default function Login() {
 						document.cookie = `refreshToken=${tokensData.refreshToken}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30 days
 					} else {
 						console.error('Invalid response structure:', res.data);
-						toast('e', 'Login failed', 'Invalid response structure');
+						toast.error('Invalid response structure from server');
 					}
 				} else {
 					console.error('Login failed:', res);
-					toast('e', 'Login failed', res.error || 'Unknown error');
+					console.log('Full error response:', res);
+					console.log('Error data:', res.data);
+					// Show more specific error messages
+					if (res.error) {
+						// Check for specific error messages from backend
+						if (res.error.includes('Access temporarily restricted') || res.error.includes('IP has been temporarily blocked')) {
+							// Access retryAfter from the error response data if available
+							const retryAfter = (res.data as any)?.retryAfter;
+							const retryMessage = retryAfter ? ` Please try again in ${Math.ceil(retryAfter / 60)} minutes.` : '';
+							toast.error(`Access temporarily restricted: ${res.error}${retryMessage}`, {
+								autoClose: 10000, // Keep this error visible longer
+								position: "top-center"
+							});
+						} else if (res.error.includes('Invalid credentials') || res.error.includes('401')) {
+							toast.error('Invalid email or password. Please try again.');
+						} else if (res.error.includes('429') || res.error.includes('too many')) {
+							toast.error('Too many login attempts. Please try again later.');
+						} else if (res.error.includes('500') || res.error.includes('server error')) {
+							toast.error('Server error. Please try again later.');
+						} else if (res.error.includes('403') || res.error.includes('Forbidden')) {
+							toast.error(`Access denied: ${res.error}`);
+						} else {
+							toast.error(res.error);
+						}
+					} else {
+						toast.error('Login failed. Please check your connection and try again.');
+					}
 				}
 			}
 		)
@@ -118,65 +148,83 @@ export default function Login() {
     }
 
   return (
-    <div
-      style={{
-        backgroundImage: 'url("/bg-image.jpg")',
-      }}
-      className="h-full overflow-auto min-h-full w-full bg-cover flex justify-start flex-col gap-12 p-6 pt-24 pl-32"
-    >
-      <Button
-        className="rounded-tl-none !min-h-11 !px-6 self-start font-bold"
-        type="neutral"
-        icon={icons.back}
+    <>
+      <div
+        style={{
+          backgroundImage: 'url("/bg-image.jpg")',
+        }}
+        className="h-full overflow-auto min-h-full w-full bg-cover flex justify-start flex-col gap-12 p-6 pt-24 pl-32"
       >
-        Go Back
-      </Button>
-      <div className="flex flex-col gap-9 p-9 w-[30rem] rounded-[20px] bg-white shadow-lg border border-gray-200">
-        <div className="flex flex-col gap-6 justify-center items-center">
-          <img src="/logo.png" className="max-w-full w-[8rem]" />
-          <div className="flex gap-2 items-center">
-            <span className="font-bold text-2xl text-gray-800">Welcome Back</span>
-            👋
-          </div>
-        </div>  
-        <Form<LoginPayload>
-          form={({ onSubmit }) => {
-            return (
-              <div className="flex flex-col gap-6">
-                <Input
-                  validation={{ required: required }}
-                  name="email"
-                  label="Email"
-                  placeholder="Enter Your Email"
-                />
-                <InputPassword />
-                <div className="flex justify-between items-center">
-                  <Checkbox name="agree">
-                    Keep me logged in
-                  </Checkbox>
-                  <Link to="/forgot-password" className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
-                    Forgot Password?
-                  </Link>
+        <Button
+          className="rounded-tl-none !min-h-11 !px-6 self-start font-bold"
+          type="neutral"
+          icon={icons.back}
+        >
+          Go Back
+        </Button>
+        <div className="flex flex-col gap-9 p-9 w-[30rem] rounded-[20px] bg-white shadow-lg border border-gray-200">
+          <div className="flex flex-col gap-6 justify-center items-center">
+            <img src="/logo.png" className="max-w-full w-[8rem]" />
+            <div className="flex gap-2 items-center">
+              <span className="font-bold text-2xl text-gray-800">Welcome Back</span>
+              👋
+            </div>
+          </div>  
+          
+          <Form<LoginPayload>
+            form={({ onSubmit }) => {
+              return (
+                <div className="flex flex-col gap-6">
+                  <Input
+                    validation={{ required: required }}
+                    name="email"
+                    label="Email"
+                    placeholder="Enter Your Email"
+                  />
+                  <InputPassword />
+                  <div className="flex justify-between items-center">
+                    <Checkbox name="agree">
+                      Keep me logged in
+                    </Checkbox>
+                    <Link to="/forgot-password" className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                      Forgot Password?
+                    </Link>
+                  </div>
+                  <Button
+                    pending={loginReq.pending}
+                    size="lg"
+                    onClick={onSubmit(sub)}
+                    className="mt-2.5"
+                    type="action"
+                    disabled={loginReq.pending}
+                  >
+                    {loginReq.pending ? 'Logging in...' : 'Login'}
+                  </Button>
                 </div>
-                <Button
-                  pending={loginReq.pending}
-                  size="lg"
-                  onClick={onSubmit(sub)}
-                  className="mt-2.5"
-                  type="action"
-                >
-                  Login
-                </Button>
-              </div>
-            );
-          }}
-        />
-        <OrLoginWithGoogle>
-            <Button icon={icons.mail} className="!bg-[#EEF0FF] text-[#4E5969] !justify-center border-0" onClick={navigateToSignup}>
-                Register with Email
-            </Button>
-        </OrLoginWithGoogle>
+              );
+            }}
+          />
+          <OrLoginWithGoogle>
+              <Button icon={icons.mail} className="!bg-[#EEF0FF] text-[#4E5969] !justify-center border-0" onClick={navigateToSignup}>
+                  Register with Email
+              </Button>
+          </OrLoginWithGoogle>
+        </div>
       </div>
-    </div>
+      
+      {/* ToastContainer for login page */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </>
   );
 }

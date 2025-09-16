@@ -50,6 +50,27 @@ export interface AsyncResponse<T = any> {
   message?: string;
 }
 
+export interface PersonalAchievement {
+  _id: string;
+  title: string;
+  description: string;
+  achievedOn: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAchievementRequest {
+  title: string;
+  description: string;
+  achievedOn: string;
+}
+
+export interface UpdateAchievementRequest {
+  title?: string;
+  description?: string;
+  achievedOn?: string;
+}
+
 export type Player = {
   _id: string;
   firstName: string;
