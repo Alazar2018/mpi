@@ -112,7 +112,8 @@ export default function Groups() {
       setGroupName("");
       setMessageText("");
       toast.success(`Group "${groupName.trim()}" created successfully with ${selectedUsers.length} member${selectedUsers.length !== 1 ? 's' : ''}!`);
-      navigate(`/chat/${chat._id}`);
+      // Navigate to the connect messages page where the new group will be visible
+      navigate('/admin/connect');
     } catch (error) {
       console.error('Failed to create group:', error);
       toast.error('Failed to create group. Please try again.');
@@ -337,7 +338,7 @@ export default function Groups() {
 
       {/* Create Group Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-800">Create New Group</h3>

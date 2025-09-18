@@ -34,6 +34,22 @@ const eventTypes = [
     { value: 'classScheduleRequest', label: 'Class Schedule Request', allowedRoles: ['player', 'coach', 'admin', 'parent'] }
 ];
 
+// Function to get dynamic button text based on event type
+const getButtonText = (eventType: string): string => {
+    switch (eventType) {
+        case 'reminder':
+            return 'Add Reminder';
+        case 'class':
+            return 'Add Class';
+        case 'classScheduleRequest':
+            return 'Add Class Schedule Request';
+        case 'training':
+            return 'Add Training';
+        default:
+            return 'Add Event';
+    }
+};
+
 const sessionTypes = [
     { value: 'individual', label: 'Individual Session' },
     { value: 'group', label: 'Group Session' },
@@ -2678,7 +2694,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 disabled={isSubmitting}
                             className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isSubmitting ? 'Creating...' : 'Add Class / Session'}
+                            {isSubmitting ? 'Creating...' : getButtonText(formData.type)}
                                                             </button>
                         </div>
                     </form>
