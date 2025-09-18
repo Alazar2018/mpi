@@ -206,7 +206,7 @@ const ReportTab: React.FC<ReportTabProps> = ({ matchData }) => {
           <p className="text-[var(--text-secondary)] mb-2 transition-colors duration-300">This match doesn't have any detailed report data recorded yet.</p>
           <p className="text-sm text-[var(--text-tertiary)] transition-colors duration-300">Report data will appear here once the match is completed and analyzed.</p>
         </div>
-      </div>i
+      </div>
     );
   }
 
