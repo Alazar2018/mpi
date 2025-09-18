@@ -159,6 +159,7 @@ export default function Login() {
           className="rounded-tl-none !min-h-11 !px-6 self-start font-bold"
           type="neutral"
           icon={icons.back}
+          onClick={() => navigate('/')}
         >
           Go Back
         </Button>
