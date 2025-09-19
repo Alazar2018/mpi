@@ -6,6 +6,7 @@ import { getNavsByRole } from "@/config/navs";
 import {useAuthStore} from "@/store/auth.store";
 
 import { ToastContainer, toast } from 'react-toastify';
+import { Toaster } from 'react-hot-toast';
 import { useEffect, useState } from "react";
 import {
     Link,
@@ -285,6 +286,37 @@ export default function MainLayout() {
                 draggable
                 pauseOnHover
                 theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+            />
+            <Toaster
+                position="top-center"
+                reverseOrder={false}
+                gutter={8}
+                containerClassName=""
+                containerStyle={{}}
+                toastOptions={{
+                    // Default options for all toasts
+                    className: '',
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    // Default options for specific types
+                    success: {
+                        duration: 3000,
+                        iconTheme: {
+                            primary: '#10B981',
+                            secondary: '#FFFFFF',
+                        },
+                    },
+                    error: {
+                        duration: 5000,
+                        iconTheme: {
+                            primary: '#EF4444',
+                            secondary: '#FFFFFF',
+                        },
+                    },
+                }}
             />
         </>
     ) : (

@@ -338,9 +338,14 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
     // Fetch coach availability when coach or date changes
     useEffect(() => {
         if (formData.type === 'classScheduleRequest' && selectedCoach && formData.date) {
-            fetchCoachAvailabilityForDate(selectedCoach, formData.date);
+            // Extract date part only to avoid refetching when time changes
+            const dateOnly = formData.date.split('T')[0];
+            // Only fetch if we have a valid date
+            if (dateOnly && dateOnly !== '') {
+                fetchCoachAvailabilityForDate(selectedCoach, dateOnly);
+            }
         }
-    }, [selectedCoach, formData.date, formData.type]);
+    }, [selectedCoach, formData.type, formData.date ? formData.date.split('T')[0] : '']); // Only depend on date part, not time
 
     // Fetch player goals when selected players change for individual sessions
     useEffect(() => {
@@ -350,7 +355,10 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
         } else if (formData.type === 'class' && formData.sessionType !== 'individual') {
             // Clear goals when not individual session
             setPlayerGoals([]);
-            setFormData(prev => ({ ...prev, goal: '' }));
+            // Only clear goal if it's currently set to avoid unnecessary re-renders
+            if (formData.goal) {
+                setFormData(prev => ({ ...prev, goal: '' }));
+            }
         }
     }, [formData.type, formData.sessionType, formData.selectedClassPlayers]);
 
@@ -464,11 +472,10 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
         
         // Update formData.date to include the selected time
         if (formData.date) {
-            const dateObj = new Date(formData.date);
-            const [hours, minutes] = time.split(':').map(Number);
-            dateObj.setHours(hours, minutes, 0, 0);
-            const localDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000));
-            const dateTimeLocal = localDate.toISOString().slice(0, 16);
+            // Get the date part only (YYYY-MM-DD)
+            const dateOnly = formData.date.split('T')[0];
+            // Combine with selected time
+            const dateTimeLocal = `${dateOnly}T${time}`;
             setFormData(prev => ({ ...prev, date: dateTimeLocal }));
         }
     };
@@ -1521,7 +1528,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <select
                                             value={formData.sessionType}
                                             onChange={(e) => handleSessionTypeChange(e.target.value)}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none'
+                                            }}
                                             required
                                         >
                                             <option value="">Select session type...</option>
@@ -1539,7 +1550,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <select
                                             value={formData.levelPlan}
                                             onChange={(e) => setFormData({ ...formData, levelPlan: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none'
+                                            }}
                                             required
                                         >
                                             <option value="">Select level plan...</option>
@@ -1560,7 +1575,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <select
                                             value={formData.goal}
                                             onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none'
+                                            }}
                                             required
                                             disabled={isLoadingGoals || playerGoals.length === 0}
                                         >
@@ -1581,6 +1600,10 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             value={formData.goal}
                                             onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
                                             className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'textfield'
+                                            }}
                                             placeholder="Enter session goal..."
                                         />
                                     )}
@@ -1595,7 +1618,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     <select
                                         value={formData.objective}
                                         onChange={(e) => handleObjectiveChange(e.target.value as 'physical' | 'technical' | 'tactics' | 'mental' | 'recovery' | '')}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                        style={{ 
+                                            WebkitAppearance: 'none',
+                                            MozAppearance: 'none'
+                                        }}
                                         required
                                     >
                                         <option value="">Select objective...</option>
@@ -1613,7 +1640,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <select
                                             value={formData.subObjective}
                                             onChange={(e) => handleSubObjectiveChange(e.target.value)}
-                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none'
+                                            }}
                                             required
                                         >
                                             <option value="">Select sub-objective...</option>
@@ -1633,7 +1664,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <select
                                             value={formData.nestedSubObjective}
                                             onChange={(e) => setFormData({ ...formData, nestedSubObjective: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none'
+                                            }}
                                             required
                                         >
                                             <option value="">Select nested sub-objective...</option>
@@ -1653,7 +1688,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             <select
                                                 value={formData.technicalStroke}
                                                 onChange={(e) => setFormData({ ...formData, technicalStroke: e.target.value })}
-                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                                style={{ 
+                                                    WebkitAppearance: 'none',
+                                                    MozAppearance: 'none'
+                                                }}
                                                 required
                                             >
                                                 <option value="">Select technical stroke...</option>
@@ -1669,6 +1708,10 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                 value={formData.technicalProblem}
                                                 onChange={(e) => setFormData({ ...formData, technicalProblem: e.target.value })}
                                                 className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                style={{ 
+                                                    WebkitAppearance: 'none',
+                                                    MozAppearance: 'textfield'
+                                                }}
                                                 placeholder="Problems with forehand strokes"
                                                 required
                                             />
@@ -1695,7 +1738,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <select
                                             value={formData.tacticsType}
                                             onChange={(e) => handleTacticsTypeChange(e.target.value)}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none'
+                                            }}
                                             required
                                         >
                                             <option value="">Select tactics type...</option>
@@ -2284,6 +2331,10 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             value={formData.title}
                                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                             className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'textfield'
+                                            }}
                                             placeholder="Enter reminder title..."
                                                             required
                                                         />
@@ -2311,7 +2362,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             <select
                                                 value={selectedChild}
                                                 onChange={(e) => setSelectedChild(e.target.value)}
-                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                                style={{ 
+                                                    WebkitAppearance: 'none',
+                                                    MozAppearance: 'none'
+                                                }}
                                                 required
                                                 disabled={isLoadingChildren}
                                             >
@@ -2331,7 +2386,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <select
                                             value={selectedCoach}
                                             onChange={(e) => setSelectedCoach(e.target.value)}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none'
+                                            }}
                                             required
                                             disabled={isLoadingCoaches}
                                         >
@@ -2478,6 +2537,10 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             value={formData.type === 'class' ? classSearchTerm : searchTerm}
                                             onChange={(e) => formData.type === 'class' ? setClassSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
                                             className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'textfield'
+                                            }}
                                             placeholder="Search player"
                                                         />
                                                     </div>
@@ -2566,7 +2629,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         type="date"
                                         value={formData.date}
                                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                            className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                        style={{ 
+                                            WebkitAppearance: 'none',
+                                            MozAppearance: 'textfield'
+                                        }}
                                             placeholder="Set Date"
                                         required
                                     />
@@ -2577,17 +2644,16 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
                                 <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                                    </div>
                                     <input
                                         type="time"
                                         value={formData.time}
                                         onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                                className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                                placeholder="Add Time"
+                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer appearance-none webkit-appearance-none"
+                                        style={{ 
+                                            WebkitAppearance: 'none',
+                                            MozAppearance: 'textfield'
+                                        }}
+                                        placeholder="Add Time"
                                         required
                                     />
                                 </div>
@@ -2597,17 +2663,16 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
                                     <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    </div>
                                         <input
                                             type="time"
                                             value={formData.endTime}
                                             onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                                                    className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                                    placeholder="Add Time"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer appearance-none webkit-appearance-none"
+                                            style={{ 
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'textfield'
+                                            }}
+                                            placeholder="Add Time"
                                             required
                                         />
                                     </div>

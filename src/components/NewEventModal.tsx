@@ -99,7 +99,11 @@ export default function NewEventModal({ isOpen, onClose, onSubmit, initialDate }
                             <select
                                 value={formData.type}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer"
+                                style={{ 
+                                    WebkitAppearance: 'none',
+                                    MozAppearance: 'none'
+                                }}
                                 required
                             >
                                 <option value="">Select type...</option>
@@ -125,6 +129,10 @@ export default function NewEventModal({ isOpen, onClose, onSubmit, initialDate }
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            style={{ 
+                                WebkitAppearance: 'none',
+                                MozAppearance: 'textfield'
+                            }}
                             placeholder="Enter event title"
                             required
                         />
@@ -144,6 +152,10 @@ export default function NewEventModal({ isOpen, onClose, onSubmit, initialDate }
                                 value={formData.place}
                                 onChange={(e) => setFormData({ ...formData, place: e.target.value })}
                                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                style={{ 
+                                    WebkitAppearance: 'none',
+                                    MozAppearance: 'textfield'
+                                }}
                                 placeholder="Enter location"
                             />
                         </div>
@@ -163,7 +175,11 @@ export default function NewEventModal({ isOpen, onClose, onSubmit, initialDate }
                                     type="date"
                                     value={formData.date}
                                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                                    style={{ 
+                                        WebkitAppearance: 'none',
+                                        MozAppearance: 'textfield'
+                                    }}
                                     required
                                 />
                             </div>
@@ -173,14 +189,15 @@ export default function NewEventModal({ isOpen, onClose, onSubmit, initialDate }
                                 Add Time
                             </label>
                             <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i dangerouslySetInnerHTML={{ __html: icons.clock }} />
-                                </div>
                                 <input
                                     type="time"
                                     value={formData.time}
                                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer appearance-none webkit-appearance-none"
+                                    style={{ 
+                                        WebkitAppearance: 'none',
+                                        MozAppearance: 'textfield'
+                                    }}
                                     required
                                 />
                             </div>

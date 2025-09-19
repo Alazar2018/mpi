@@ -46,11 +46,29 @@ export function createMatch(matchData: CreateMatchRequest): Promise<AsyncRespons
 		success: true,
 		data,
 		status: 200
-	})).catch(error => ({
-		success: false,
-		error: error.message || 'Failed to create match',
-		status: 500
-	}));
+	})).catch(error => {
+		console.error('createMatch API error:', error);
+		
+		// Extract the actual server error message
+		let errorMessage = 'Failed to create match';
+		
+		if (error.response?.data?.message) {
+			// Server returned a specific error message
+			errorMessage = error.response.data.message;
+		} else if (error.response?.data?.error) {
+			// Alternative error field
+			errorMessage = error.response.data.error;
+		} else if (error.message) {
+			// Fallback to axios error message
+			errorMessage = error.message;
+		}
+		
+		return {
+			success: false,
+			error: errorMessage,
+			status: error.response?.status || 500
+		};
+	});
 }
 
 export function updateMatchStatus(matchId: string, status: "confirmed" | "rejected"): Promise<AsyncResponse<any>> {
