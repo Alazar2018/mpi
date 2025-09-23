@@ -14,6 +14,7 @@ import {
   getMatchProgressDescription,
   getSetProgressDescription,
   convertLegacyMatchType,
+  getTiebreakRuleForSet,
   type MatchFormat,
   type ScoringVariation,
   type MatchRules
@@ -631,6 +632,17 @@ const MatchTracker: React.FC = () => {
     }
   };
 
+  // Get score display considering no-ad scoring
+  const getScoreDisplay = (points: number, isNoAd: boolean) => {
+    if (isNoAd) {
+      // No-ad scoring: just show the point number
+      return points.toString();
+    } else {
+      // Standard scoring
+      return pointToScore(points);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -1091,17 +1103,44 @@ const MatchTracker: React.FC = () => {
 
   const checkGameWinner = (p1Points: number, p2Points: number) => {
     if (match.isTieBreak) {
-      const winner = (p1Points >= 7 && p1Points - p2Points >= 2) ? 1 : 
-             (p2Points >= 7 && p2Points - p1Points >= 2) ? 2 : null;
+      // Get the correct tiebreak rule for current set
+      const rules = getMatchRules(
+        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+        match.scoringVariation,
+        match.customTiebreakRules,
+        match.noAdScoring
+      );
+      const tiebreakRule = getTiebreakRuleForSet(match.currentSet + 1, rules, match.matchFormat || 'bestOfThree');
+      
+      const winner = (p1Points >= tiebreakRule && p1Points - p2Points >= 2) ? 1 : 
+             (p2Points >= tiebreakRule && p2Points - p1Points >= 2) ? 2 : null;
       return winner;
     }
     
-    // Check for game win (4+ points with 2+ point lead)
-    if (p1Points >= 4 && p1Points - p2Points >= 2) {
-      return 1;
-    }
-    if (p2Points >= 4 && p2Points - p1Points >= 2) {
-      return 2;
+    // Check for game win based on no-ad scoring rules
+    const rules = getMatchRules(
+      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
+    
+    if (rules.noAdScoring) {
+      // No-ad scoring: first to 4 points wins (no advantage)
+      if (p1Points >= 4 && p1Points > p2Points) {
+        return 1;
+      }
+      if (p2Points >= 4 && p2Points > p1Points) {
+        return 2;
+      }
+    } else {
+      // Standard scoring: 4+ points with 2+ point lead
+      if (p1Points >= 4 && p1Points - p2Points >= 2) {
+        return 1;
+      }
+      if (p2Points >= 4 && p2Points - p1Points >= 2) {
+        return 2;
+      }
     }
     
     return null;
@@ -2565,9 +2604,21 @@ const MatchTracker: React.FC = () => {
           setPlayer1(prev => ({ ...prev, points: 0 }));
           setPlayer2(prev => ({ ...prev, points: 0 }));
         } else {
-          // Check for tiebreak (6-6 in games)
-          if (newGames[match.currentSet].player1 === 6 && 
-              newGames[match.currentSet].player2 === 6) {
+          // Check for tiebreak based on format rules
+          const rules = getMatchRules(
+            match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+            match.scoringVariation,
+            match.customTiebreakRules,
+            match.noAdScoring
+          );
+          
+          const shouldStartTiebreakNow = shouldStartTiebreak(
+            newGames[match.currentSet].player1,
+            newGames[match.currentSet].player2,
+            rules
+          );
+          
+          if (shouldStartTiebreakNow) {
             setMatch(prev => ({ ...prev, isTieBreak: true }));
           }
 
@@ -2605,31 +2656,44 @@ const MatchTracker: React.FC = () => {
   const handleDeuceAdvantage = (p1Total: number, p2Total: number) => {
         // Check for deuce/advantage in regular game (not tiebreak)
         if (!match.isTieBreak) {
-      // Both players at 40 (3 points) - set to deuce
-          if (p1Total >= 3 && p2Total >= 3 && p1Total === p2Total) {
-            setMatch(prev => ({ ...prev, isDeuce: true, hasAdvantage: null }));
-      } 
-      // One player has 4+ points - check for advantage or game win
-      else if (p1Total >= 4 || p2Total >= 4) {
-        // If both players are at 40+ and scores are equal, return to deuce
-        if (p1Total === p2Total) {
-          setMatch(prev => ({
-            ...prev,
-            isDeuce: true,
-            hasAdvantage: null
-          }));
-        } 
-        // One player has advantage (1 point lead)
-        else if (Math.abs(p1Total - p2Total) === 1) {
-          const advantagePlayer = p1Total > p2Total ? 1 : 2;
-            setMatch(prev => ({
-              ...prev,
-              isDeuce: false,
-            hasAdvantage: advantagePlayer
-            }));
+          const rules = getMatchRules(
+            match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+            match.scoringVariation,
+            match.customTiebreakRules,
+            match.noAdScoring
+          );
+          
+          if (rules.noAdScoring) {
+            // No-ad scoring: no deuce/advantage, first to 4 points wins
+            setMatch(prev => ({ ...prev, isDeuce: false, hasAdvantage: null }));
+          } else {
+            // Standard scoring with deuce/advantage
+            // Both players at 40 (3 points) - set to deuce
+            if (p1Total >= 3 && p2Total >= 3 && p1Total === p2Total) {
+              setMatch(prev => ({ ...prev, isDeuce: true, hasAdvantage: null }));
+            } 
+            // One player has 4+ points - check for advantage or game win
+            else if (p1Total >= 4 || p2Total >= 4) {
+              // If both players are at 40+ and scores are equal, return to deuce
+              if (p1Total === p2Total) {
+                setMatch(prev => ({
+                  ...prev,
+                  isDeuce: true,
+                  hasAdvantage: null
+                }));
+              } 
+              // One player has advantage (1 point lead)
+              else if (Math.abs(p1Total - p2Total) === 1) {
+                const advantagePlayer = p1Total > p2Total ? 1 : 2;
+                setMatch(prev => ({
+                  ...prev,
+                  isDeuce: false,
+                  hasAdvantage: advantagePlayer
+                }));
+              }
+            }
           }
         }
-      }
   };
 
   const handleRedo = () => {
@@ -4030,7 +4094,20 @@ const MatchTracker: React.FC = () => {
             {courtRotation === 0 ? (match.games[match.currentSet]?.player1 ?? 0) : (match.games[match.currentSet]?.player2 ?? 0)}
           </div>
                 <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
-                  {match.isTieBreak ? (courtRotation === 0 ? player1.points : player2.points) : match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : pointToScore(courtRotation === 0 ? player1.points : player2.points)}
+                  {match.isTieBreak ? (courtRotation === 0 ? player1.points : player2.points) : 
+                    (() => {
+                      const rules = getMatchRules(
+                        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                        match.scoringVariation,
+                        match.customTiebreakRules,
+                        match.noAdScoring
+                      );
+                      if (rules.noAdScoring) {
+                        return getScoreDisplay(courtRotation === 0 ? player1.points : player2.points, true);
+                      } else {
+                        return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : pointToScore(courtRotation === 0 ? player1.points : player2.points);
+                      }
+                    })()}
           </div>
           
                 {/* Right Court Player Scores (Bottom Row) */}
@@ -4041,7 +4118,20 @@ const MatchTracker: React.FC = () => {
             {courtRotation === 0 ? (match.games[match.currentSet]?.player2 ?? 0) : (match.games[match.currentSet]?.player1 ?? 0)}
           </div>
                 <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
-                  {match.isTieBreak ? (courtRotation === 0 ? player2.points : player1.points) : match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : pointToScore(courtRotation === 0 ? player2.points : player1.points)}
+                  {match.isTieBreak ? (courtRotation === 0 ? player2.points : player1.points) : 
+                    (() => {
+                      const rules = getMatchRules(
+                        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                        match.scoringVariation,
+                        match.customTiebreakRules,
+                        match.noAdScoring
+                      );
+                      if (rules.noAdScoring) {
+                        return getScoreDisplay(courtRotation === 0 ? player2.points : player1.points, true);
+                      } else {
+                        return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : pointToScore(courtRotation === 0 ? player2.points : player1.points);
+                      }
+                    })()}
           </div>
               </div>
             </div>
@@ -5238,7 +5328,18 @@ const MatchTracker: React.FC = () => {
                     <div className="flex items-center mb-1">
                       <span className="text-xs text-orange-600 font-medium">Tiebreak</span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-800">{match.tieBreakRule || 7} pts</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {(() => {
+                        const rules = getMatchRules(
+                          match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                          match.scoringVariation,
+                          match.customTiebreakRules,
+                          match.noAdScoring
+                        );
+                        const tiebreakRule = getTiebreakRuleForSet(match.currentSet + 1, rules, match.matchFormat || 'bestOfThree');
+                        return `${tiebreakRule} pts`;
+                      })()}
+                    </p>
                   </div>
 
                   {match.customTiebreakRules && Object.keys(match.customTiebreakRules).length > 0 && (

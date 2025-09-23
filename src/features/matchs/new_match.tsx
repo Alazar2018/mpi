@@ -9,6 +9,7 @@ import SearchableSelect from "@/components/form/SearchableSelect";
 import icons from "@/utils/icons";
 import { required } from "@/utils/utils";
 import { createMatch, getMatchFormats, getScoringVariations } from "./api/matchs.api";
+import { isFormatCompatibleWithVariation } from "@/utils/matchFormatUtils";
 import { friendsService } from "@/service/friends.server";
 import { useAuthStore } from "@/store/auth.store";
 import { toast } from "react-hot-toast";
@@ -29,13 +30,13 @@ const TOURNAMENT_LEVELS = {
   ]
 }
 
-// Enhanced Match Format Options
+// Enhanced Match Format Options based on tennis rules
 const MATCH_FORMAT_OPTIONS = [
-  { value: 'oneSet', label: 'One Set (Quick Practice)', description: 'Single set with 7-point tiebreak at 6-6' },
-  { value: 'bestOfThree', label: 'Best of 3 Sets (Standard)', description: 'Traditional 2 out of 3 sets format' },
-  { value: 'bestOfFive', label: 'Best of 5 Sets (Professional)', description: 'Professional tournament format' },
-  { value: 'shortSets', label: 'Short Sets (4/7)', description: '4 out of 7 sets with no-ad scoring' },
-  { value: 'proSet8', label: '8-Game Pro Set', description: '8-game pro set with tiebreak at 8-8' },
+  { value: 'oneSet', label: 'One Set', description: 'One set with 7-point tiebreak at 6-6' },
+  { value: 'bestOfThree', label: 'Best of 3 Sets', description: '2 out of 3 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
+  { value: 'bestOfFive', label: 'Best of 5 Sets', description: '3 out of 5 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
+  { value: 'shortSets', label: 'Short Sets (4/7)', description: '4 out of 7 sets (no-ad scoring and 7-point tiebreak at 3-3)' },
+  { value: 'proSet8', label: '8-Game Pro Set', description: '8-game pro set with 7-point tiebreak at 8-8' },
   { value: 'tiebreak7', label: '7-Point Tiebreak Only', description: 'Single 7-point tiebreaker' },
   { value: 'tiebreak10', label: '10-Point Tiebreak Only', description: 'Single 10-point tiebreaker' },
   { value: 'tiebreak21', label: '21-Point Tiebreak Only', description: 'Single 21-point tiebreaker' }
@@ -332,11 +333,7 @@ export default function ScheduleMatch() {
         label: format.label
     }));
 
-    // Scoring variation options
-    const scoringVariationOptions = availableVariations.map(variation => ({
-        value: variation.value,
-        label: variation.label
-    }));
+    // Scoring variation options will be calculated inside the form component
 
     // Tracking level options
     const trackingLevelOptions = availableTrackingLevels.map(level => ({
@@ -378,9 +375,10 @@ export default function ScheduleMatch() {
             <div className="w-full mx-auto px-4">
                 <Form<MatchFormData>
                     form={({ onSubmit, watch, setValue, errors }) => {
-                        // Watch for match category changes
+                        // Watch for match category and format changes
                         const currentMatchCategory = watch('matchCategory') as "practice" | "tournament";
                         const currentTournamentType = watch('tournamentType') as keyof typeof TOURNAMENT_LEVELS;
+                        const currentMatchFormat = watch('matchFormat') as MatchFormat;
                         
                         // Update local state when form value changes
                         useEffect(() => {
@@ -388,6 +386,27 @@ export default function ScheduleMatch() {
                                 setMatchCategory(currentMatchCategory);
                             }
                         }, [currentMatchCategory]);
+
+                        // Clear scoring variation if it's not compatible with the selected match format
+                        useEffect(() => {
+                            if (currentMatchFormat) {
+                                const currentScoringVariation = watch('scoringVariation') as ScoringVariation;
+                                if (currentScoringVariation && !isFormatCompatibleWithVariation(currentMatchFormat, currentScoringVariation)) {
+                                    setValue('scoringVariation', 'standard');
+                                }
+                            }
+                        }, [currentMatchFormat, watch, setValue]);
+
+                        // Calculate scoring variation options based on selected match format
+                        const scoringVariationOptions = availableVariations
+                            .filter(variation => 
+                                !currentMatchFormat || 
+                                isFormatCompatibleWithVariation(currentMatchFormat, variation.value as ScoringVariation)
+                            )
+                            .map(variation => ({
+                                value: variation.value,
+                                label: variation.label
+                            }));
 
                     return (
                             <div className=" w-full">
@@ -570,6 +589,18 @@ export default function ScheduleMatch() {
                                                 validation={{ required: required }}
                                                 name="scoringVariation"
                                             />
+                                            {/* Help text for scoring variations */}
+                                            {currentMatchFormat && (
+                                                <div className="text-xs text-gray-600 mt-1">
+                                                    {currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive' ? (
+                                                        <span>✅ Final set can use 10-point tiebreak</span>
+                                                    ) : currentMatchFormat === 'oneSet' ? (
+                                                        <span>✅ Can use 10-point tiebreak</span>
+                                                    ) : (
+                                                        <span>ℹ️ Only standard scoring available for this format</span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         
                                         <div className="space-y-3">

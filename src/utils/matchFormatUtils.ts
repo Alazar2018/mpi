@@ -39,12 +39,13 @@ export interface MatchRules {
   gamesPerSet: number;
   tiebreakAt: number;
   tiebreakRule: number;
+  finalSetTiebreakRule: number; // Different tiebreak rule for final set
   noAdScoring: boolean;
   isTiebreakOnly: boolean;
   isProSet: boolean;
 }
 
-// Match format configurations
+// Match format configurations based on tennis rules
 const MATCH_FORMATS: Record<MatchFormat, MatchFormatConfig> = {
   oneSet: {
     format: 'oneSet',
@@ -59,44 +60,44 @@ const MATCH_FORMATS: Record<MatchFormat, MatchFormatConfig> = {
   },
   bestOfThree: {
     format: 'bestOfThree',
-    description: 'Best of 3 Sets (Traditional)',
+    description: '2 out of 3 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak',
     maxSets: 3,
     setsToWin: 2,
     gamesPerSet: 6,
     tiebreakAt: 6,
-    defaultTiebreakRule: 7,
+    defaultTiebreakRule: 7, // First 2 sets use 7-point, final set uses 10-point
     noAdScoring: false,
     trackingLevels: ['level1', 'level2', 'level3']
   },
   bestOfFive: {
     format: 'bestOfFive',
-    description: 'Best of 5 Sets (Professional)',
+    description: '3 out of 5 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak',
     maxSets: 5,
     setsToWin: 3,
     gamesPerSet: 6,
     tiebreakAt: 6,
-    defaultTiebreakRule: 7,
+    defaultTiebreakRule: 7, // First 4 sets use 7-point, final set uses 10-point
     noAdScoring: false,
     trackingLevels: ['level1', 'level2', 'level3']
   },
   shortSets: {
     format: 'shortSets',
-    description: 'Short Sets (4 out of 7) with no-ad scoring',
+    description: '4 out of 7 sets (no-ad scoring and 7-point tiebreak at 3-3)',
     maxSets: 7,
     setsToWin: 4,
     gamesPerSet: 4,
-    tiebreakAt: 4,
+    tiebreakAt: 3, // Tiebreak at 3-3 for short sets
     defaultTiebreakRule: 7,
-    noAdScoring: true,
+    noAdScoring: true, // No-ad scoring for short sets
     trackingLevels: ['level1', 'level2', 'level3']
   },
   proSet8: {
     format: 'proSet8',
-    description: '8-Game Pro Set with tiebreak at 8-8',
+    description: '8-game pro set with 7-point tiebreak at 8-8',
     maxSets: 1,
     setsToWin: 1,
     gamesPerSet: 8,
-    tiebreakAt: 8,
+    tiebreakAt: 8, // Tiebreak at 8-8
     defaultTiebreakRule: 7,
     noAdScoring: false,
     trackingLevels: ['level1', 'level2', 'level3']
@@ -159,7 +160,27 @@ export function getMatchRules(
   let gamesPerSet = config.gamesPerSet;
   let tiebreakAt = config.tiebreakAt;
   
-  if (scoringVariation === 'finalSetTiebreak10' && format !== 'oneSet') {
+  // Apply tennis rules for different formats
+  if (format === 'bestOfThree') {
+    // 2 out of 3 sets: first 2 sets use 7-point tiebreak, final set uses 10-point
+    tiebreakRule = 7; // Default for first sets
+  } else if (format === 'bestOfFive') {
+    // 3 out of 5 sets: first 4 sets use 7-point tiebreak, final set uses 10-point
+    tiebreakRule = 7; // Default for first sets
+  } else if (format === 'shortSets') {
+    // 4 out of 7 sets: no-ad scoring, 7-point tiebreak at 3-3
+    tiebreakRule = 7;
+    gamesPerSet = 4;
+    tiebreakAt = 3;
+  } else if (format === 'proSet8') {
+    // 8-game pro set: 7-point tiebreak at 8-8
+    tiebreakRule = 7;
+    gamesPerSet = 8;
+    tiebreakAt = 8;
+  }
+  
+  // Handle scoring variations
+  if (scoringVariation === 'finalSetTiebreak10' && (format === 'bestOfThree' || format === 'bestOfFive')) {
     // Final set uses 10-point tiebreak
     tiebreakRule = 10;
   } else if (scoringVariation === 'oneSetTiebreak10' && format === 'oneSet') {
@@ -179,12 +200,20 @@ export function getMatchRules(
   // Override no-ad scoring if specified
   const finalNoAdScoring = noAdScoring !== undefined ? noAdScoring : config.noAdScoring;
   
+  // Determine final set tiebreak rule
+  let finalSetTiebreakRule = tiebreakRule;
+  if (format === 'bestOfThree' || format === 'bestOfFive') {
+    // Final set uses 10-point tiebreak for best of 3/5
+    finalSetTiebreakRule = 10;
+  }
+
   return {
     setsToWin: config.setsToWin,
     maxSets: config.maxSets,
     gamesPerSet,
     tiebreakAt,
     tiebreakRule,
+    finalSetTiebreakRule,
     noAdScoring: finalNoAdScoring,
     isTiebreakOnly: format.startsWith('tiebreak'),
     isProSet: format === 'proSet8'
@@ -352,6 +381,23 @@ export function convertLegacyMatchType(matchType: 'one' | 'three' | 'five'): Mat
 }
 
 /**
+ * Get tiebreak rule for a specific set
+ */
+export function getTiebreakRuleForSet(
+  setNumber: number,
+  rules: MatchRules,
+  format: MatchFormat
+): number {
+  // For best of 3/5, final set uses different tiebreak rule
+  if ((format === 'bestOfThree' || format === 'bestOfFive') && 
+      setNumber === rules.maxSets) {
+    return rules.finalSetTiebreakRule;
+  }
+  
+  return rules.tiebreakRule;
+}
+
+/**
  * Check if format is compatible with scoring variation
  */
 export function isFormatCompatibleWithVariation(
@@ -359,12 +405,12 @@ export function isFormatCompatibleWithVariation(
   variation: ScoringVariation
 ): boolean {
   const compatibility = {
-    oneSet: ['standard', 'oneSetTiebreak10'],
-    bestOfThree: ['standard', 'finalSetTiebreak10'],
-    bestOfFive: ['standard', 'finalSetTiebreak10'],
-    shortSets: ['standard'],
-    proSet8: ['standard'],
-    tiebreak7: ['standard'],
+    oneSet: ['standard', 'oneSetTiebreak10'], // One set can have 10-point tiebreak
+    bestOfThree: ['standard', 'finalSetTiebreak10'], // 2 out of 3 can have final set 10-point tiebreak
+    bestOfFive: ['standard', 'finalSetTiebreak10'], // 3 out of 5 can have final set 10-point tiebreak
+    shortSets: ['standard'], // Short sets only use standard scoring
+    proSet8: ['standard'], // Pro set only uses standard scoring
+    tiebreak7: ['standard'], // Tiebreak-only formats only use standard scoring
     tiebreak10: ['standard'],
     tiebreak21: ['standard']
   };
