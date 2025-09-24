@@ -2681,45 +2681,69 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             )}
                         </div>
                         
-                        {/* Custom Time Picker */}
+                        {/* Custom Time Picker - Safari Compatible */}
                         <div className="mt-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Custom Time Selection</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={formData.customTime}
-                                    onChange={(e) => setFormData({ ...formData, customTime: e.target.value })}
-                                    onClick={() => {
-                                        // Create a time picker dialog
-                                        const timeInput = document.createElement('input');
-                                        timeInput.type = 'time';
-                                        timeInput.style.position = 'absolute';
-                                        timeInput.style.left = '-9999px';
-                                        timeInput.style.opacity = '0';
-                                        document.body.appendChild(timeInput);
-                                        
-                                        timeInput.addEventListener('change', (e) => {
-                                            const target = e.target as HTMLInputElement;
-                                            setFormData({ ...formData, customTime: target.value });
-                                            document.body.removeChild(timeInput);
-                                        });
-                                        
-                                        timeInput.addEventListener('blur', () => {
-                                            document.body.removeChild(timeInput);
-                                        });
-                                        
-                                        timeInput.click();
-                                    }}
-                                    className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                    placeholder="Click to select time"
-                                    readOnly
-                                />
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                            <div className="flex gap-2">
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">Hour</label>
+                                    <select
+                                        value={formData.customTime ? formData.customTime.split(':')[0] || '00' : '00'}
+                                        onChange={(e) => {
+                                            const currentMinute = formData.customTime ? formData.customTime.split(':')[1] || '00' : '00';
+                                            setFormData({ 
+                                                ...formData, 
+                                                customTime: `${e.target.value.padStart(2, '0')}:${currentMinute}` 
+                                            });
+                                        }}
+                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                    >
+                                        {Array.from({ length: 24 }, (_, i) => (
+                                            <option key={i} value={i.toString().padStart(2, '0')}>
+                                                {i.toString().padStart(2, '0')}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">Minute</label>
+                                    <select
+                                        value={formData.customTime ? formData.customTime.split(':')[1] || '00' : '00'}
+                                        onChange={(e) => {
+                                            const currentHour = formData.customTime ? formData.customTime.split(':')[0] || '00' : '00';
+                                            setFormData({ 
+                                                ...formData, 
+                                                customTime: `${currentHour}:${e.target.value.padStart(2, '0')}` 
+                                            });
+                                        }}
+                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                    >
+                                        {Array.from({ length: 60 }, (_, i) => (
+                                            <option key={i} value={i.toString().padStart(2, '0')}>
+                                                {i.toString().padStart(2, '0')}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex items-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const now = new Date();
+                                            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                                            setFormData({ ...formData, customTime: timeString });
+                                        }}
+                                        className="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                                    >
+                                        Now
+                                    </button>
                                 </div>
                             </div>
+                            {formData.customTime && (
+                                <div className="mt-2 text-sm text-gray-600">
+                                    Selected time: <span className="font-medium">{formData.customTime}</span>
+                                </div>
+                            )}
                         </div>
                         </div>
 
