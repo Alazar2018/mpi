@@ -2662,52 +2662,110 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             required
                                         />
                                     ) : (
-                                        <div className="flex gap-2">
-                                            <div className="flex-1">
-                                                <select
-                                                    value={formData.time ? formData.time.split(':')[0] || '00' : '00'}
-                                                    onChange={(e) => {
-                                                        const currentMinute = formData.time ? formData.time.split(':')[1] || '00' : '00';
-                                                        setFormData({ 
-                                                            ...formData, 
-                                                            time: `${e.target.value.padStart(2, '0')}:${currentMinute}` 
-                                                        });
-                                                    }}
-                                                    className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                                    style={{ 
-                                                        WebkitAppearance: 'menulist',
-                                                        MozAppearance: 'menulist'
-                                                    }}
-                                                >
-                                                    {Array.from({ length: 24 }, (_, i) => (
-                                                        <option key={i} value={i.toString().padStart(2, '0')}>
-                                                            {i.toString().padStart(2, '0')}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                        <div>
+                                            <div className="flex gap-2 mb-2">
+                                                <div className="flex-1">
+                                                    <label className="block text-xs text-gray-500 mb-1">Hour</label>
+                                                    <select
+                                                        value={formData.time ? formData.time.split(':')[0] || '12' : '12'}
+                                                        onChange={(e) => {
+                                                            const currentMinute = formData.time ? formData.time.split(':')[1] || '00' : '00';
+                                                            const currentAmPm = formData.time ? formData.time.split(':')[2] || 'AM' : 'AM';
+                                                            setFormData({ 
+                                                                ...formData, 
+                                                                time: `${e.target.value.padStart(2, '0')}:${currentMinute}:${currentAmPm}` 
+                                                            });
+                                                        }}
+                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        style={{ 
+                                                            WebkitAppearance: 'menulist',
+                                                            MozAppearance: 'menulist'
+                                                        }}
+                                                    >
+                                                        {Array.from({ length: 12 }, (_, i) => (
+                                                            <option key={i} value={(i + 1).toString().padStart(2, '0')}>
+                                                                {(i + 1).toString().padStart(2, '0')}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="block text-xs text-gray-500 mb-1">Minute</label>
+                                                    <select
+                                                        value={formData.time ? formData.time.split(':')[1] || '00' : '00'}
+                                                        onChange={(e) => {
+                                                            const currentHour = formData.time ? formData.time.split(':')[0] || '12' : '12';
+                                                            const currentAmPm = formData.time ? formData.time.split(':')[2] || 'AM' : 'AM';
+                                                            setFormData({ 
+                                                                ...formData, 
+                                                                time: `${currentHour}:${e.target.value.padStart(2, '0')}:${currentAmPm}` 
+                                                            });
+                                                        }}
+                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        style={{ 
+                                                            WebkitAppearance: 'menulist',
+                                                            MozAppearance: 'menulist'
+                                                        }}
+                                                    >
+                                                        {Array.from({ length: 60 }, (_, i) => (
+                                                            <option key={i} value={i.toString().padStart(2, '0')}>
+                                                                {i.toString().padStart(2, '0')}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="block text-xs text-gray-500 mb-1">AM/PM</label>
+                                                    <select
+                                                        value={formData.time ? formData.time.split(':')[2] || 'AM' : 'AM'}
+                                                        onChange={(e) => {
+                                                            const currentHour = formData.time ? formData.time.split(':')[0] || '12' : '12';
+                                                            const currentMinute = formData.time ? formData.time.split(':')[1] || '00' : '00';
+                                                            setFormData({ 
+                                                                ...formData, 
+                                                                time: `${currentHour}:${currentMinute}:${e.target.value}` 
+                                                            });
+                                                        }}
+                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        style={{ 
+                                                            WebkitAppearance: 'menulist',
+                                                            MozAppearance: 'menulist'
+                                                        }}
+                                                    >
+                                                        <option value="AM">AM</option>
+                                                        <option value="PM">PM</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                            <div className="flex-1">
-                                                <select
-                                                    value={formData.time ? formData.time.split(':')[1] || '00' : '00'}
-                                                    onChange={(e) => {
-                                                        const currentHour = formData.time ? formData.time.split(':')[0] || '00' : '00';
-                                                        setFormData({ 
-                                                            ...formData, 
-                                                            time: `${currentHour}:${e.target.value.padStart(2, '0')}` 
-                                                        });
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const now = new Date();
+                                                        const hour = now.getHours();
+                                                        const minute = now.getMinutes();
+                                                        const amPm = hour >= 12 ? 'PM' : 'AM';
+                                                        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+                                                        const timeString = `${displayHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${amPm}`;
+                                                        setFormData({ ...formData, time: timeString });
                                                     }}
-                                                    className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                                    style={{ 
-                                                        WebkitAppearance: 'menulist',
-                                                        MozAppearance: 'menulist'
-                                                    }}
+                                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
                                                 >
-                                                    {Array.from({ length: 60 }, (_, i) => (
-                                                        <option key={i} value={i.toString().padStart(2, '0')}>
-                                                            {i.toString().padStart(2, '0')}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    Now
+                                                </button>
+                                                {formData.time && (
+                                                    <div className="flex items-center px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700">
+                                                        <span className="font-medium">
+                                                            {(() => {
+                                                                const parts = formData.time.split(':');
+                                                                if (parts.length === 3) {
+                                                                    return `${parts[0]}:${parts[1]} ${parts[2]}`;
+                                                                }
+                                                                return formData.time;
+                                                            })()}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -2732,52 +2790,110 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                 required
                                             />
                                         ) : (
-                                            <div className="flex gap-2">
-                                                <div className="flex-1">
-                                                    <select
-                                                        value={formData.endTime ? formData.endTime.split(':')[0] || '00' : '00'}
-                                                        onChange={(e) => {
-                                                            const currentMinute = formData.endTime ? formData.endTime.split(':')[1] || '00' : '00';
-                                                            setFormData({ 
-                                                                ...formData, 
-                                                                endTime: `${e.target.value.padStart(2, '0')}:${currentMinute}` 
-                                                            });
-                                                        }}
-                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                                        style={{ 
-                                                            WebkitAppearance: 'menulist',
-                                                            MozAppearance: 'menulist'
-                                                        }}
-                                                    >
-                                                        {Array.from({ length: 24 }, (_, i) => (
-                                                            <option key={i} value={i.toString().padStart(2, '0')}>
-                                                                {i.toString().padStart(2, '0')}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                            <div>
+                                                <div className="flex gap-2 mb-2">
+                                                    <div className="flex-1">
+                                                        <label className="block text-xs text-gray-500 mb-1">Hour</label>
+                                                        <select
+                                                            value={formData.endTime ? formData.endTime.split(':')[0] || '12' : '12'}
+                                                            onChange={(e) => {
+                                                                const currentMinute = formData.endTime ? formData.endTime.split(':')[1] || '00' : '00';
+                                                                const currentAmPm = formData.endTime ? formData.endTime.split(':')[2] || 'AM' : 'AM';
+                                                                setFormData({ 
+                                                                    ...formData, 
+                                                                    endTime: `${e.target.value.padStart(2, '0')}:${currentMinute}:${currentAmPm}` 
+                                                                });
+                                                            }}
+                                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                            style={{ 
+                                                                WebkitAppearance: 'menulist',
+                                                                MozAppearance: 'menulist'
+                                                            }}
+                                                        >
+                                                            {Array.from({ length: 12 }, (_, i) => (
+                                                                <option key={i} value={(i + 1).toString().padStart(2, '0')}>
+                                                                    {(i + 1).toString().padStart(2, '0')}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="block text-xs text-gray-500 mb-1">Minute</label>
+                                                        <select
+                                                            value={formData.endTime ? formData.endTime.split(':')[1] || '00' : '00'}
+                                                            onChange={(e) => {
+                                                                const currentHour = formData.endTime ? formData.endTime.split(':')[0] || '12' : '12';
+                                                                const currentAmPm = formData.endTime ? formData.endTime.split(':')[2] || 'AM' : 'AM';
+                                                                setFormData({ 
+                                                                    ...formData, 
+                                                                    endTime: `${currentHour}:${e.target.value.padStart(2, '0')}:${currentAmPm}` 
+                                                                });
+                                                            }}
+                                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                            style={{ 
+                                                                WebkitAppearance: 'menulist',
+                                                                MozAppearance: 'menulist'
+                                                            }}
+                                                        >
+                                                            {Array.from({ length: 60 }, (_, i) => (
+                                                                <option key={i} value={i.toString().padStart(2, '0')}>
+                                                                    {i.toString().padStart(2, '0')}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="block text-xs text-gray-500 mb-1">AM/PM</label>
+                                                        <select
+                                                            value={formData.endTime ? formData.endTime.split(':')[2] || 'AM' : 'AM'}
+                                                            onChange={(e) => {
+                                                                const currentHour = formData.endTime ? formData.endTime.split(':')[0] || '12' : '12';
+                                                                const currentMinute = formData.endTime ? formData.endTime.split(':')[1] || '00' : '00';
+                                                                setFormData({ 
+                                                                    ...formData, 
+                                                                    endTime: `${currentHour}:${currentMinute}:${e.target.value}` 
+                                                                });
+                                                            }}
+                                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                            style={{ 
+                                                                WebkitAppearance: 'menulist',
+                                                                MozAppearance: 'menulist'
+                                                            }}
+                                                        >
+                                                            <option value="AM">AM</option>
+                                                            <option value="PM">PM</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <select
-                                                        value={formData.endTime ? formData.endTime.split(':')[1] || '00' : '00'}
-                                                        onChange={(e) => {
-                                                            const currentHour = formData.endTime ? formData.endTime.split(':')[0] || '00' : '00';
-                                                            setFormData({ 
-                                                                ...formData, 
-                                                                endTime: `${currentHour}:${e.target.value.padStart(2, '0')}` 
-                                                            });
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const now = new Date();
+                                                            const hour = now.getHours();
+                                                            const minute = now.getMinutes();
+                                                            const amPm = hour >= 12 ? 'PM' : 'AM';
+                                                            const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+                                                            const timeString = `${displayHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${amPm}`;
+                                                            setFormData({ ...formData, endTime: timeString });
                                                         }}
-                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                                        style={{ 
-                                                            WebkitAppearance: 'menulist',
-                                                            MozAppearance: 'menulist'
-                                                        }}
+                                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
                                                     >
-                                                        {Array.from({ length: 60 }, (_, i) => (
-                                                            <option key={i} value={i.toString().padStart(2, '0')}>
-                                                                {i.toString().padStart(2, '0')}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                        Now
+                                                    </button>
+                                                    {formData.endTime && (
+                                                        <div className="flex items-center px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700">
+                                                            <span className="font-medium">
+                                                                {(() => {
+                                                                    const parts = formData.endTime.split(':');
+                                                                    if (parts.length === 3) {
+                                                                        return `${parts[0]}:${parts[1]} ${parts[2]}`;
+                                                                    }
+                                                                    return formData.endTime;
+                                                                })()}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
