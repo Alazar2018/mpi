@@ -3943,7 +3943,7 @@ const MatchTracker: React.FC = () => {
             {/* Level 1 & 2 Scoring Areas - Show for all levels except Level 3 */}
             {match.level !== 3 && (
               <>
-                {/* Left Court Scoring Area */}
+                {/* Left Court Scoring Area with Level 3 Visual Style */}
                 <rect 
                   x="310" y="40" width="240" height="520" 
                   fill={isGameRunning ? (getCourtColors().leftCourt === '#D4FF5A' ? "#49682E" : "#2F3FB0") : "#6B7280"} 
@@ -3953,15 +3953,79 @@ const MatchTracker: React.FC = () => {
                   }} 
                 />
                 
-                {/* Right Court Scoring Area */}
-                  <rect 
-                    x="550" y="40" width="240" height="520" 
+                {/* Left Court Zone Lines (Level 3 Style) */}
+                <line x1="310" y1="126" x2="550" y2="126" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="310" y1="212" x2="550" y2="212" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="310" y1="298" x2="550" y2="298" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="310" y1="384" x2="550" y2="384" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="310" y1="470" x2="550" y2="470" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                
+                {/* Right Court Scoring Area with Level 3 Visual Style */}
+                <rect 
+                  x="630" y="40" width="240" height="520" 
                   fill={isGameRunning ? (getCourtColors().rightCourt === '#D4FF5A' ? "#49682E" : "#2F3FB0") : "#6B7280"} 
                   onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 2 : 1)} 
                   style={{ 
                     cursor: isGameRunning ? "pointer" : "not-allowed" 
                   }} 
                 />
+                
+                {/* Right Court Zone Lines (Level 3 Style) */}
+                <line x1="630" y1="126" x2="870" y2="126" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="630" y1="212" x2="870" y2="212" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="630" y1="298" x2="870" y2="298" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="630" y1="384" x2="870" y2="384" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                <line x1="630" y1="470" x2="870" y2="470" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+                
+                {/* Net Design (Level 3 Style) - Smaller Width */}
+                <rect x="550" y="40" width="80" height="520" fill="white" />
+                <g fill="#1B2B5B" fontSize="18" fontWeight="bold">
+                  <text x="590" y="75" textAnchor="middle" transform="rotate(-90, 590, 85)">NET</text>
+                  <text x="590" y="115" textAnchor="middle" transform="rotate(-90, 590, 125)">NET</text>
+                  <text x="590" y="155" textAnchor="middle" transform="rotate(-90, 590, 165)">NET</text>
+                  <text x="590" y="195" textAnchor="middle" transform="rotate(-90, 590, 205)">NET</text>
+                  <text x="590" y="235" textAnchor="middle" transform="rotate(-90, 590, 245)">NET</text>
+                  <text x="590" y="275" textAnchor="middle" transform="rotate(-90, 590, 285)">NET</text>
+                  <text x="590" y="315" textAnchor="middle" transform="rotate(-90, 590, 325)">NET</text>
+                  <text x="590" y="355" textAnchor="middle" transform="rotate(-90, 590, 365)">NET</text>
+                  <text x="590" y="395" textAnchor="middle" transform="rotate(-90, 590, 405)">NET</text>
+                  <text x="590" y="435" textAnchor="middle" transform="rotate(-90, 590, 445)">NET</text>
+                  <text x="590" y="475" textAnchor="middle" transform="rotate(-90, 590, 485)">NET</text>
+                  <text x="590" y="515" textAnchor="middle" transform="rotate(-90, 590, 525)">NET</text>
+                </g>
+                
+                {/* Overlay Shade for Tap-to-Score Areas */}
+                <rect 
+                  x="310" y="40" width="240" height="520" 
+                  fill="rgba(0, 0, 0, 0.1)" 
+                  style={{ 
+                    cursor: isGameRunning ? "pointer" : "not-allowed" 
+                  }} 
+                  onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 1 : 2)} 
+                />
+                <rect 
+                  x="630" y="40" width="240" height="520" 
+                  fill="rgba(0, 0, 0, 0.1)" 
+                  style={{ 
+                    cursor: isGameRunning ? "pointer" : "not-allowed" 
+                  }} 
+                  onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 2 : 1)} 
+                />
+                
+                {/* Zone Labels (Level 3 Style) */}
+                <text x="430" y="95" textAnchor="middle" fontSize="12" fill="white">W</text>
+                <text x="430" y="181" textAnchor="middle" fontSize="12" fill="white">B</text>
+                <text x="430" y="267" textAnchor="middle" fontSize="12" fill="white">T</text>
+                <text x="430" y="353" textAnchor="middle" fontSize="12" fill="white">T</text>
+                <text x="430" y="439" textAnchor="middle" fontSize="12" fill="white">B</text>
+                <text x="430" y="525" textAnchor="middle" fontSize="12" fill="white">W</text>
+                
+                <text x="750" y="95" textAnchor="middle" fontSize="12" fill="white">W</text>
+                <text x="750" y="181" textAnchor="middle" fontSize="12" fill="white">B</text>
+                <text x="750" y="267" textAnchor="middle" fontSize="12" fill="white">T</text>
+                <text x="750" y="353" textAnchor="middle" fontSize="12" fill="white">T</text>
+                <text x="750" y="439" textAnchor="middle" fontSize="12" fill="white">B</text>
+                <text x="750" y="525" textAnchor="middle" fontSize="12" fill="white">W</text>
 
                 {/* Player Labels for Level 1 & 2 */}
                 <rect x="10" y="180" width="50" height="240" fill={getCourtColors().leftCourt} rx="6" />
@@ -3984,13 +4048,13 @@ const MatchTracker: React.FC = () => {
                 <text x="430" y="340" textAnchor="middle" fontSize="14" fill="white">
                   {isGameRunning ? "TAP TO ADD A POINT" : "START MATCH TO SCORE"}
                 </text>
-                <text x="670" y="300" textAnchor="middle" fontSize="40" fontWeight="bold" fill="white">
+                <text x="750" y="300" textAnchor="middle" fontSize="40" fontWeight="bold" fill="white">
                   {match.isDeuce ? "Deuce" : 
                    match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : 
                    match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "40" : 
                    pointToScore(courtRotation === 0 ? player2.points : player1.points)}
                 </text>
-                <text x="670" y="340" textAnchor="middle" fontSize="14" fill="white">
+                <text x="750" y="340" textAnchor="middle" fontSize="14" fill="white">
                   {isGameRunning ? "TAP TO ADD A POINT" : "START MATCH TO SCORE"}
                 </text>
 
