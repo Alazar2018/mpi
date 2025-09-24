@@ -193,11 +193,12 @@ export default function NewEventModal({ isOpen, onClose, onSubmit, initialDate }
                                     type="time"
                                     value={formData.time}
                                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer appearance-none webkit-appearance-none"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                                     style={{ 
-                                        WebkitAppearance: 'none',
+                                        WebkitAppearance: 'textfield',
                                         MozAppearance: 'textfield'
                                     }}
+                                    placeholder="HH:MM"
                                     required
                                 />
                             </div>

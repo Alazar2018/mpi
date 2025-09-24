@@ -2648,12 +2648,12 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         type="time"
                                         value={formData.time}
                                         onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer appearance-none webkit-appearance-none"
+                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                         style={{ 
-                                            WebkitAppearance: 'none',
+                                            WebkitAppearance: 'textfield',
                                             MozAppearance: 'textfield'
                                         }}
-                                        placeholder="Add Time"
+                                        placeholder="HH:MM"
                                         required
                                     />
                                 </div>
@@ -2667,12 +2667,12 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             type="time"
                                             value={formData.endTime}
                                             onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer appearance-none webkit-appearance-none"
+                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                             style={{ 
-                                                WebkitAppearance: 'none',
+                                                WebkitAppearance: 'textfield',
                                                 MozAppearance: 'textfield'
                                             }}
-                                            placeholder="Add Time"
+                                            placeholder="HH:MM"
                                             required
                                         />
                                     </div>
