@@ -171,6 +171,9 @@ const tacticsTypeOptions = {
 };
 
 export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, userRole = 'player' }: CreateEventProps) {
+    // Detect Safari browser
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
     const [formData, setFormData] = useState({
         type: 'reminder', // Default to reminder
         title: '',
@@ -2645,29 +2648,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
                                 <div className="relative">
-                                    <input
-                                        type="time"
-                                        value={formData.time}
-                                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                        style={{ 
-                                            WebkitAppearance: 'textfield',
-                                            MozAppearance: 'textfield'
-                                        }}
-                                        placeholder="HH:MM"
-                                        required
-                                    />
-                                </div>
-                            </div>
-                                    
-                            {formData.type === 'class' && (
-                                <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
-                                    <div className="relative">
+                                    {!isSafari ? (
                                         <input
                                             type="time"
-                                            value={formData.endTime}
-                                            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                                            value={formData.time}
+                                            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                                             className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'textfield',
@@ -2676,75 +2661,131 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             placeholder="HH:MM"
                                             required
                                         />
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <div className="flex-1">
+                                                <select
+                                                    value={formData.time ? formData.time.split(':')[0] || '00' : '00'}
+                                                    onChange={(e) => {
+                                                        const currentMinute = formData.time ? formData.time.split(':')[1] || '00' : '00';
+                                                        setFormData({ 
+                                                            ...formData, 
+                                                            time: `${e.target.value.padStart(2, '0')}:${currentMinute}` 
+                                                        });
+                                                    }}
+                                                    className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                    style={{ 
+                                                        WebkitAppearance: 'menulist',
+                                                        MozAppearance: 'menulist'
+                                                    }}
+                                                >
+                                                    {Array.from({ length: 24 }, (_, i) => (
+                                                        <option key={i} value={i.toString().padStart(2, '0')}>
+                                                            {i.toString().padStart(2, '0')}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="flex-1">
+                                                <select
+                                                    value={formData.time ? formData.time.split(':')[1] || '00' : '00'}
+                                                    onChange={(e) => {
+                                                        const currentHour = formData.time ? formData.time.split(':')[0] || '00' : '00';
+                                                        setFormData({ 
+                                                            ...formData, 
+                                                            time: `${currentHour}:${e.target.value.padStart(2, '0')}` 
+                                                        });
+                                                    }}
+                                                    className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                    style={{ 
+                                                        WebkitAppearance: 'menulist',
+                                                        MozAppearance: 'menulist'
+                                                    }}
+                                                >
+                                                    {Array.from({ length: 60 }, (_, i) => (
+                                                        <option key={i} value={i.toString().padStart(2, '0')}>
+                                                            {i.toString().padStart(2, '0')}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                                    
+                            {formData.type === 'class' && (
+                                <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                                    <div className="relative">
+                                        {!isSafari ? (
+                                            <input
+                                                type="time"
+                                                value={formData.endTime}
+                                                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                style={{ 
+                                                    WebkitAppearance: 'textfield',
+                                                    MozAppearance: 'textfield'
+                                                }}
+                                                placeholder="HH:MM"
+                                                required
+                                            />
+                                        ) : (
+                                            <div className="flex gap-2">
+                                                <div className="flex-1">
+                                                    <select
+                                                        value={formData.endTime ? formData.endTime.split(':')[0] || '00' : '00'}
+                                                        onChange={(e) => {
+                                                            const currentMinute = formData.endTime ? formData.endTime.split(':')[1] || '00' : '00';
+                                                            setFormData({ 
+                                                                ...formData, 
+                                                                endTime: `${e.target.value.padStart(2, '0')}:${currentMinute}` 
+                                                            });
+                                                        }}
+                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        style={{ 
+                                                            WebkitAppearance: 'menulist',
+                                                            MozAppearance: 'menulist'
+                                                        }}
+                                                    >
+                                                        {Array.from({ length: 24 }, (_, i) => (
+                                                            <option key={i} value={i.toString().padStart(2, '0')}>
+                                                                {i.toString().padStart(2, '0')}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <select
+                                                        value={formData.endTime ? formData.endTime.split(':')[1] || '00' : '00'}
+                                                        onChange={(e) => {
+                                                            const currentHour = formData.endTime ? formData.endTime.split(':')[0] || '00' : '00';
+                                                            setFormData({ 
+                                                                ...formData, 
+                                                                endTime: `${currentHour}:${e.target.value.padStart(2, '0')}` 
+                                                            });
+                                                        }}
+                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        style={{ 
+                                                            WebkitAppearance: 'menulist',
+                                                            MozAppearance: 'menulist'
+                                                        }}
+                                                    >
+                                                        {Array.from({ length: 60 }, (_, i) => (
+                                                            <option key={i} value={i.toString().padStart(2, '0')}>
+                                                                {i.toString().padStart(2, '0')}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
                         </div>
                         
-                        {/* Custom Time Picker - Safari Compatible */}
-                        <div className="mt-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Custom Time Selection</label>
-                            <div className="flex gap-2">
-                                <div className="flex-1">
-                                    <label className="block text-xs text-gray-500 mb-1">Hour</label>
-                                    <select
-                                        value={formData.customTime ? formData.customTime.split(':')[0] || '00' : '00'}
-                                        onChange={(e) => {
-                                            const currentMinute = formData.customTime ? formData.customTime.split(':')[1] || '00' : '00';
-                                            setFormData({ 
-                                                ...formData, 
-                                                customTime: `${e.target.value.padStart(2, '0')}:${currentMinute}` 
-                                            });
-                                        }}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                    >
-                                        {Array.from({ length: 24 }, (_, i) => (
-                                            <option key={i} value={i.toString().padStart(2, '0')}>
-                                                {i.toString().padStart(2, '0')}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex-1">
-                                    <label className="block text-xs text-gray-500 mb-1">Minute</label>
-                                    <select
-                                        value={formData.customTime ? formData.customTime.split(':')[1] || '00' : '00'}
-                                        onChange={(e) => {
-                                            const currentHour = formData.customTime ? formData.customTime.split(':')[0] || '00' : '00';
-                                            setFormData({ 
-                                                ...formData, 
-                                                customTime: `${currentHour}:${e.target.value.padStart(2, '0')}` 
-                                            });
-                                        }}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                    >
-                                        {Array.from({ length: 60 }, (_, i) => (
-                                            <option key={i} value={i.toString().padStart(2, '0')}>
-                                                {i.toString().padStart(2, '0')}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex items-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const now = new Date();
-                                            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                                            setFormData({ ...formData, customTime: timeString });
-                                        }}
-                                        className="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
-                                    >
-                                        Now
-                                    </button>
-                                </div>
-                            </div>
-                            {formData.customTime && (
-                                <div className="mt-2 text-sm text-gray-600">
-                                    Selected time: <span className="font-medium">{formData.customTime}</span>
-                                </div>
-                            )}
-                        </div>
                         </div>
 
                             {/* Additional Information for Class */}
