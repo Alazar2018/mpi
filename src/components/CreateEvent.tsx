@@ -178,6 +178,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
         date: selectedDate || '',
         time: '',
         endTime: '',
+        customTime: '', // New custom time field
         // Training specific fields
         selectedPlayers: [] as string[],
         // Class specific fields
@@ -2678,6 +2679,47 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     </div>
                                 </div>
                             )}
+                        </div>
+                        
+                        {/* Custom Time Picker */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Custom Time Selection</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={formData.customTime}
+                                    onChange={(e) => setFormData({ ...formData, customTime: e.target.value })}
+                                    onClick={() => {
+                                        // Create a time picker dialog
+                                        const timeInput = document.createElement('input');
+                                        timeInput.type = 'time';
+                                        timeInput.style.position = 'absolute';
+                                        timeInput.style.left = '-9999px';
+                                        timeInput.style.opacity = '0';
+                                        document.body.appendChild(timeInput);
+                                        
+                                        timeInput.addEventListener('change', (e) => {
+                                            const target = e.target as HTMLInputElement;
+                                            setFormData({ ...formData, customTime: target.value });
+                                            document.body.removeChild(timeInput);
+                                        });
+                                        
+                                        timeInput.addEventListener('blur', () => {
+                                            document.body.removeChild(timeInput);
+                                        });
+                                        
+                                        timeInput.click();
+                                    }}
+                                    className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                    placeholder="Click to select time"
+                                    readOnly
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
                         </div>
 
