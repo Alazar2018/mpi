@@ -3,9 +3,11 @@ import Button from "./Button";
 import icons from "@utils/icons.ts";
 import { classService } from "@/service/class.server";
 import { toast } from "react-toastify";
+import { formatAvailabilityTime } from "@/utils/utils";
 import { 
     getMyCoaches, 
     getMyChildren, 
+    getChildCoaches,
     createClassScheduleRequest, 
     createClassScheduleRequestForChild,
     type User as ClassScheduleUser 
@@ -332,12 +334,26 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
     // Fetch coaches and children when component mounts or when needed for class schedule requests
     useEffect(() => {
         if (isOpen && formData.type === 'classScheduleRequest') {
-            fetchCoaches();
             if (userRole === 'parent') {
                 fetchChildren();
+            } else {
+                fetchCoaches();
             }
         }
     }, [isOpen, formData.type, userRole]);
+
+    // Fetch coaches for selected child when child selection changes
+    useEffect(() => {
+        if (formData.type === 'classScheduleRequest' && userRole === 'parent') {
+            if (selectedChild) {
+                fetchCoaches(selectedChild);
+            } else {
+                // Clear coaches when no child is selected
+                setCoaches([]);
+                setSelectedCoach('');
+            }
+        }
+    }, [selectedChild, formData.type, userRole]);
 
     // Fetch coach availability when coach or date changes
     useEffect(() => {
@@ -419,10 +435,19 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
     };
 
     // Function to fetch coaches for class schedule requests
-    const fetchCoaches = async () => {
+    const fetchCoaches = async (childId?: string) => {
         try {
             setIsLoadingCoaches(true);
-            const response = await getMyCoaches(1, 100);
+            let response;
+            
+            if (userRole === 'parent' && childId) {
+                // Fetch coaches for specific child
+                response = await getChildCoaches(childId, 1, 100);
+            } else {
+                // Fetch all coaches for regular users
+                response = await getMyCoaches(1, 100);
+            }
+            
             if (response.success) {
                 setCoaches(response.data);
             }
@@ -1466,10 +1491,10 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
             
             {/* Modal Content */}
-            <div className="relative w-full max-w-6xl mx-4 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-[95vh] overflow-y-auto">
+            <div className="relative w-full max-w-6xl mx-4 bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] max-h-[95vh] overflow-y-auto">
                 {/* Header */}
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-2xl font-bold text-gray-900">
+                <div className="flex justify-between items-center p-6 border-b border-[var(--border-primary)]">
+                    <h2 className="text-2xl font-bold text-[var(--text-primary)]">
                         {formData.type === 'reminder' ? 'Create Reminder' : 
                          formData.type === 'training' ? 'Schedule Training' : 
                          formData.type === 'class' ? 'Schedule a Class' : 
@@ -1477,7 +1502,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                     </h2>
                         <button
                             onClick={handleClose}
-                        className="text-red-500 hover:text-red-700 p-2 transition-colors rounded-full hover:bg-red-50"
+                        className="text-red-500 hover:text-red-700 p-2 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1489,22 +1514,22 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                     {/* Event Type Selection - Only show if user can create different types */}
                     {availableEventTypes.length > 1 && (
                         <div className="mb-8">
-                            <label className="block text-sm font-medium text-gray-700 mb-3">Event Type</label>
+                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-3">Event Type</label>
                             <div className="grid grid-cols-3 gap-4">
                                 {availableEventTypes.map(type => (
-                                    <label key={type.value} className="flex items-center space-x-3 cursor-pointer p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all">
+                                    <label key={type.value} className="flex items-center space-x-3 cursor-pointer p-4 border-2 border-[var(--border-primary)] rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all">
                                         <input
                                             type="radio"
                                             name="eventType"
                                             value={type.value}
                                             checked={formData.type === type.value}
                                             onChange={(e) => handleEventTypeChange(e.target.value)}
-                                            className="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            className="rounded-full border-[var(--border-primary)] text-blue-600 focus:ring-blue-500"
                                             required
                                         />
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-semibold text-gray-700">{type.label}</span>
-                                            <span className="text-xs text-gray-500">
+                                            <span className="text-sm font-semibold text-[var(--text-primary)]">{type.label}</span>
+                                            <span className="text-xs text-[var(--text-secondary)]">
                                                 {type.allowedRoles.includes('player') ? 'All users' : 'Coaches only'}
                                             </span>
                                         </div>
@@ -1518,7 +1543,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* Left Column - Event Details */}
                         <div className="space-y-6">
-                            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-2">
                                 {formData.type === 'reminder' ? 'Reminder Details' : 
                                  formData.type === 'training' ? 'Training Details' : 
                                  formData.type === 'class' ? 'Class Details' : 
@@ -1528,11 +1553,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             {/* Session Type */}
                         {formData.type === 'class' && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Session Type *</label>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Session Type *</label>
                                         <select
                                             value={formData.sessionType}
                                             onChange={(e) => handleSessionTypeChange(e.target.value)}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'none'
@@ -1550,11 +1575,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             {/* Level Plan */}
                             {formData.type === 'class' && (
                                     <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Level Plan Description *</label>
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Level Plan Description *</label>
                                         <select
                                             value={formData.levelPlan}
                                             onChange={(e) => setFormData({ ...formData, levelPlan: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'none'
@@ -1572,14 +1597,14 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 {/* Goal field - required for private sessions */}
                             {formData.type === 'class' && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                         Session Goal {formData.sessionType === 'individual' && <span className="text-red-500">*</span>}
                                     </label>
                                     {formData.sessionType === 'individual' ? (
                                         <select
                                             value={formData.goal}
                                             onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'none'
@@ -1603,7 +1628,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             type="text"
                                             value={formData.goal}
                                             onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'textfield'
@@ -1618,11 +1643,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             {formData.type === 'class' && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Objective *</label>
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Objective *</label>
                                     <select
                                         value={formData.objective}
                                         onChange={(e) => handleObjectiveChange(e.target.value as 'physical' | 'technical' | 'tactics' | 'mental' | 'recovery' | '')}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                         style={{ 
                                             WebkitAppearance: 'none',
                                             MozAppearance: 'none'
@@ -1640,11 +1665,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 
                                 {formData.objective && (
                                     <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Sub Objective *</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Sub Objective *</label>
                                         <select
                                             value={formData.subObjective}
                                             onChange={(e) => handleSubObjectiveChange(e.target.value)}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'none'
@@ -1664,11 +1689,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             {/* Nested Sub-Objective */}
                             {formData.type === 'class' && shouldShowNestedSubObjective() && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Nested Sub-Objective *</label>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Nested Sub-Objective *</label>
                                         <select
                                             value={formData.nestedSubObjective}
                                             onChange={(e) => setFormData({ ...formData, nestedSubObjective: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'none'
@@ -1688,11 +1713,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     <>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Technical Stroke *</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Technical Stroke *</label>
                                             <select
                                                 value={formData.technicalStroke}
                                                 onChange={(e) => setFormData({ ...formData, technicalStroke: e.target.value })}
-                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                                className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                                 style={{ 
                                                     WebkitAppearance: 'none',
                                                     MozAppearance: 'none'
@@ -1706,12 +1731,12 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Technical Problem *</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Technical Problem *</label>
                                             <input
                                                 type="text"
                                                 value={formData.technicalProblem}
                                                 onChange={(e) => setFormData({ ...formData, technicalProblem: e.target.value })}
-                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                 style={{ 
                                                     WebkitAppearance: 'none',
                                                     MozAppearance: 'textfield'
@@ -1722,12 +1747,12 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Video URL *</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Video URL *</label>
                                             <input
                                                 type="url"
                                                 value={formData.videoUrl}
                                                 onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                             placeholder="https://www.youtube.com"
                                                 required
                                             />
@@ -1738,11 +1763,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                         {/* Tactics Type */}
                             {formData.type === 'class' && shouldShowTacticsType() && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tactics Type *</label>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Tactics Type *</label>
                                         <select
                                             value={formData.tacticsType}
                                             onChange={(e) => handleTacticsTypeChange(e.target.value)}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'none'
@@ -1759,8 +1784,8 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                             {/* Conditional Follow-up Questions for Placement Tactics */}
                             {formData.type === 'class' && formData.objective === 'tactics' && formData.subObjective === 'placement' && formData.tacticsType && (
-                                <div className="space-y-6 p-6 bg-gray-50 rounded-xl border border-gray-200">
-                                    <h4 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                                <div className="space-y-6 p-6 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-primary)]">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-2">
                                         {formData.tacticsType === 'dropShorts' ? 'Drop Short Expectations' :
                                          formData.tacticsType === 'shortAngle' ? 'Short Angle Expectations' :
                                          formData.tacticsType === 'downTheMiddle' ? 'Down The Middle Expectations' :
@@ -1777,48 +1802,48 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Drop-Shorts Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Drop-Shorts Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.dropShortsForehand}
                                                         onChange={(e) => updatePlacementDetails('dropShortsForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Drop-shorts Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Drop-shorts Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.dropShortsBackhand}
                                                         onChange={(e) => updatePlacementDetails('dropShortsBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Disguising Drop Shots Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Disguising Drop Shots Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.disguisingDropShotsForehand}
                                                         onChange={(e) => updatePlacementDetails('disguisingDropShotsForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Disguising Drop Shots Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Disguising Drop Shots Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.disguisingDropShotsBackhand}
                                                         onChange={(e) => updatePlacementDetails('disguisingDropShotsBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
@@ -1830,24 +1855,24 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     {formData.tacticsType === 'shortAngle' && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Short Angle Forehand</label>
+                                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Short Angle Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                     value={formData.placementDetails.shortAngleForehand}
                                                     onChange={(e) => updatePlacementDetails('shortAngleForehand', parseInt(e.target.value) || 0)}
-                                                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                     placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Short Angle Backhand</label>
+                                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Short Angle Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                     value={formData.placementDetails.shortAngleBackhand}
                                                     onChange={(e) => updatePlacementDetails('shortAngleBackhand', parseInt(e.target.value) || 0)}
-                                                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                     placeholder="0"
                                                         />
                                                     </div>
@@ -1859,90 +1884,90 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Volley Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Volley Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleVolleyForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleVolleyForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Volley Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Volley Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleVolleyBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleVolleyBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Lob Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Lob Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleLobForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleLobForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Lob Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Lob Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleLobBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleLobBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Topspin Lob Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Topspin Lob Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleTopspinLobForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleTopspinLobForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Middle Topspin Lob Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Middle Topspin Lob Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheMiddleTopspinLobBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheMiddleTopspinLobBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
@@ -1955,112 +1980,112 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtForehand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtBackhand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Volley Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Volley Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtVolleyForehand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtVolleyForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Volley Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Volley Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtVolleyBackhand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtVolleyBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Slice Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Slice Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtSliceForehand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtSliceForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Slice Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Slice Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtSliceBackhand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtSliceBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Lob Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Lob Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtLobForehand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtLobForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Lob Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Lob Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtLobBackhand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtLobBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Topspin Lob Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Topspin Lob Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtTopspinLobForehand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtTopspinLobForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cross Court Topspin Lob Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Cross Court Topspin Lob Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.crossCourtTopspinLobBackhand}
                                                         onChange={(e) => updatePlacementDetails('crossCourtTopspinLobBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
@@ -2073,112 +2098,112 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Volley Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Volley Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineVolleyForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineVolleyForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Volley Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Volley Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineVolleyBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineVolleyBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Slice Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Slice Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineSliceForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineSliceForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Slice Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Slice Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineSliceBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineSliceBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Lob Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Lob Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineLobForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineLobForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Lob Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Lob Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineLobBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineLobBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Topspin Lob Forehand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Topspin Lob Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineTopspinLobForehand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineTopspinLobForehand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Down The Line Topspin Lob Backhand</label>
+                                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Down The Line Topspin Lob Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                         value={formData.placementDetails.downTheLineTopspinLobBackhand}
                                                         onChange={(e) => updatePlacementDetails('downTheLineTopspinLobBackhand', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                         placeholder="0"
                                                         />
                                                     </div>
@@ -2189,13 +2214,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     {/* Inside Out/In Specific Fields */}
                                             {formData.tacticsType === 'insideOut' && (
                                                     <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Inside Out Forehand</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Inside Out Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             value={formData.placementDetails.insideOutForehand}
                                                 onChange={(e) => updatePlacementDetails('insideOutForehand', parseInt(e.target.value) || 0)}
-                                                className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                 placeholder="0"
                                                         />
                                                     </div>
@@ -2203,13 +2228,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                                             {formData.tacticsType === 'insideIn' && (
                                                     <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Inside In Forehand</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Inside In Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             value={formData.placementDetails.insideInForehand}
                                                 onChange={(e) => updatePlacementDetails('insideInForehand', parseInt(e.target.value) || 0)}
-                                                className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                 placeholder="0"
                                                         />
                                                     </div>
@@ -2219,24 +2244,24 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             {formData.tacticsType === 'halfVolley' && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Half Volley Forehand</label>
+                                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Half Volley Forehand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             value={formData.placementDetails.halfVolleyForehand}
                                                     onChange={(e) => updatePlacementDetails('halfVolleyForehand', parseInt(e.target.value) || 0)}
-                                                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                     placeholder="0"
                                                         />
                                                     </div>
                                                     <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Half Volley Backhand</label>
+                                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Half Volley Backhand</label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             value={formData.placementDetails.halfVolleyBackhand}
                                                     onChange={(e) => updatePlacementDetails('halfVolleyBackhand', parseInt(e.target.value) || 0)}
-                                                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                     placeholder="0"
                                                         />
                                                     </div>
@@ -2244,14 +2269,14 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     )}
 
                                     {/* Total Field - Always shown */}
-                                    <div className="pt-4 border-t border-gray-200">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Out of</label>
+                                    <div className="pt-4 border-t border-[var(--border-primary)]">
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Out of</label>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value={formData.placementDetails.total}
                                             onChange={(e) => updatePlacementDetails('total', parseInt(e.target.value) || 0)}
-                                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                             placeholder="0"
                                                 required
                                             />
@@ -2261,19 +2286,19 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                             {/* Conditional Follow-up Questions for Consistency Tactics */}
                             {formData.type === 'class' && formData.objective === 'tactics' && formData.subObjective === 'consistency' && formData.tacticsType && (
-                                <div className="space-y-6 p-6 bg-gray-50 rounded-xl border border-gray-200">
-                                    <h4 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Consistency Expectations</h4>
+                                <div className="space-y-6 p-6 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-primary)]">
+                                    <h4 className="text-lg font-semibold text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-2">Consistency Expectations</h4>
                                     
                                     <div className="space-y-4">
                                             {formData.tacticsType === 'rallyLength1-4' && (
                                                 <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Rally Length 1-4</label>
+                                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Rally Length 1-4</label>
                                                     <input
                                                         type="number"
                                                         min="0"
                                                         value={formData.consistencyResult.rallyLength1to4}
                                                     onChange={(e) => updateConsistencyResult('rallyLength1to4', parseInt(e.target.value) || 0)}
-                                                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                     placeholder="0"
                                                         required
                                                     />
@@ -2281,13 +2306,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             )}
                                             {formData.tacticsType === 'rallyLength5-8' && (
                                                 <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Rally Length 5-8</label>
+                                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Rally Length 5-8</label>
                                                     <input
                                                         type="number"
                                                         min="0"
                                                         value={formData.consistencyResult.rallyLength5to8}
                                                     onChange={(e) => updateConsistencyResult('rallyLength5to8', parseInt(e.target.value) || 0)}
-                                                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                     placeholder="0"
                                                         required
                                                     />
@@ -2295,13 +2320,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             )}
                                             {formData.tacticsType === 'rallyLength9+' && (
                                                 <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Rally Length 9+</label>
+                                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Rally Length 9+</label>
                                                     <input
                                                         type="number"
                                                         min="0"
                                                         value={formData.consistencyResult.rallyLength9Plus}
                                                     onChange={(e) => updateConsistencyResult('rallyLength9Plus', parseInt(e.target.value) || 0)}
-                                                    className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                                     placeholder="0"
                                                         required
                                                     />
@@ -2310,14 +2335,14 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         </div>
                                     
                                     {/* Total Field - Always shown */}
-                                    <div className="pt-4 border-t border-gray-200">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Out of</label>
+                                    <div className="pt-4 border-t border-[var(--border-primary)]">
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Out of</label>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value={formData.consistencyResult.total}
                                             onChange={(e) => updateConsistencyResult('total', parseInt(e.target.value) || 0)}
-                                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                             placeholder="0"
                                                 required
                                             />
@@ -2329,12 +2354,12 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             {formData.type === 'reminder' && (
                                                 <>
                                 <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Title *</label>
                                                         <input
                                             type="text"
                                             value={formData.title}
                                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'textfield'
@@ -2344,11 +2369,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                         />
                                                     </div>
                                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Description</label>
                                     <textarea
                                             value={formData.description}
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                                         rows={3}
                                             placeholder="Enter reminder description..."
                                     />
@@ -2362,11 +2387,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     {/* Child Selection for Parents */}
                                     {userRole === 'parent' && (
                                 <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Select Child *</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Select Child *</label>
                                             <select
                                                 value={selectedChild}
                                                 onChange={(e) => setSelectedChild(e.target.value)}
-                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                                className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                                 style={{ 
                                                     WebkitAppearance: 'none',
                                                     MozAppearance: 'none'
@@ -2386,19 +2411,19 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                                     {/* Coach Selection */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Select Coach *</label>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Select Coach *</label>
                                         <select
                                             value={selectedCoach}
                                             onChange={(e) => setSelectedCoach(e.target.value)}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'none'
                                             }}
                                             required
-                                            disabled={isLoadingCoaches}
+                                            disabled={isLoadingCoaches || (userRole === 'parent' && !selectedChild)}
                                         >
-                                            <option value="">{isLoadingCoaches ? 'Loading coaches...' : 'Choose a coach'}</option>
+                                            <option value="">{isLoadingCoaches ? 'Loading coaches...' : (userRole === 'parent' && !selectedChild ? 'Select a child first' : 'Choose a coach')}</option>
                                             {coaches.map((coach) => (
                                                 <option key={coach._id} value={coach._id}>
                                                     {coach.firstName} {coach.lastName}
@@ -2481,12 +2506,12 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                                 className={`p-3 rounded-lg text-center text-sm font-medium cursor-pointer transition-all duration-200 ${
                                                                     slot.available
                                                                         ? selectedTime === slot.time
-                                                                            ? 'bg-blue-100 text-blue-800 border-2 border-blue-400 shadow-md transform scale-105'
-                                                                            : 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200 hover:border-green-300'
-                                                                        : 'bg-red-100 text-red-800 border border-red-200 cursor-not-allowed'
+                                                                            ? 'bg-blue-500 text-white border-2 border-blue-600 shadow-md transform scale-105 dark:bg-blue-600 dark:border-blue-500'
+                                                                            : 'bg-green-500 text-white border border-green-600 hover:bg-green-600 hover:border-green-700 dark:bg-green-600 dark:border-green-500 dark:hover:bg-green-700'
+                                                                        : 'bg-red-500 text-white border border-red-600 cursor-not-allowed dark:bg-red-600 dark:border-red-500'
                                                                 }`}
                                                             >
-                                                                {slot.time}
+                                                                {formatAvailabilityTime(slot.time)}
                                                                 <div className="text-xs mt-1">
                                                                     {slot.available 
                                                                         ? selectedTime === slot.time 
@@ -2508,13 +2533,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     )}
                                     {/* Note Field */}
                                     <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Note (Optional)</label>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Note (Optional)</label>
                                     <textarea
                                             value={playerNote}
                                             onChange={(e) => setPlayerNote(e.target.value)}
                                             placeholder="Any specific notes about the class, skills you want to work on, or special requests..."
                                             rows={4}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                                                         />
                                                     </div>
                                 </>
@@ -2524,15 +2549,15 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                         {/* Right Column - Player and Time Details */}
                         <div className="space-y-6">
-                            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Player & Time Details</h3>
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-2">Player & Time Details</h3>
                             
                             {/* Player Selection */}
                             {formData.type === 'class' && (
                                                     <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Players</label>
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Select Players</label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="h-5 w-5 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                             </svg>
                                                     </div>
@@ -2540,7 +2565,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                 type="text"
                                             value={formData.type === 'class' ? classSearchTerm : searchTerm}
                                             onChange={(e) => formData.type === 'class' ? setClassSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
-                                            className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className="w-full p-3 pl-10 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                             style={{ 
                                                 WebkitAppearance: 'none',
                                                 MozAppearance: 'textfield'
@@ -2551,11 +2576,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     
                                     {/* Search Results */}
                                     {classSearchTerm && (
-                                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                                <div className="absolute z-50 w-full mt-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
                                             {filteredClassPlayers.map(player => (
                                                         <div
                                                             key={player._id}
-                                                            className={`p-3 cursor-pointer hover:bg-gray-100 ${
+                                                            className={`p-3 cursor-pointer hover:bg-[var(--bg-tertiary)] ${
                                                         tempSelectedClassPlayers.includes(player._id) ? 'bg-blue-50' : ''
                                                             }`}
                                                     onClick={() => togglePlayer(player._id, true)}
@@ -2585,26 +2610,26 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     {/* Players Added */}
                                     {formData.selectedClassPlayers.length > 0 && (
                                         <div className="mt-4">
-                                            <p className="text-sm text-gray-600 mb-2">
+                                            <p className="text-sm text-[var(--text-secondary)] mb-2">
                                                 {formData.selectedClassPlayers.length} Players added
                                             </p>
                                             <div className="space-y-2">
                                                 {formData.selectedClassPlayers.map(playerId => {
                                                     const player = players.find(p => p._id === playerId);
                                                     return player ? (
-                                                        <div key={playerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                        <div key={playerId} className="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-lg">
                                                             <div className="flex items-center space-x-3">
                                                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                                                     <span className="text-sm font-medium text-blue-600">
                                                                         {player.firstName.charAt(0)}{player.lastName.charAt(0)}
                                                         </span>
                                             </div>
-                                                                <span className="font-medium text-gray-900">{`${player.firstName} ${player.lastName}`}</span>
+                                                                <span className="font-medium text-[var(--text-primary)]">{`${player.firstName} ${player.lastName}`}</span>
                                         </div>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => removePlayer(playerId, true)}
-                                                                className="text-gray-400 hover:text-red-500 transition-colors"
+                                                                className="text-[var(--text-tertiary)] hover:text-red-500 transition-colors"
                                                             >
                                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2619,13 +2644,12 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 </div>
                         )}
 
-                            {/* Date and Time */}
-                            <div className="space-y-4">
+                            {/* Date Only - No Time Picker for Class Schedule Requests */}
                             <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Date</label>
                                 <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="h-5 w-5 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                             </svg>
                                                     </div>
@@ -2633,7 +2657,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         type="date"
                                         value={formData.date}
                                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                        className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                        className="w-full p-3 pl-10 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                         style={{ 
                                             WebkitAppearance: 'none',
                                             MozAppearance: 'textfield'
@@ -2644,39 +2668,109 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 </div>
                             </div>
                                 
-                                <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
-                                <div className="relative">
-                                    {!isSafari ? (
-                                        <input
-                                            type="time"
-                                            value={formData.time}
-                                            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
-                                            style={{ 
-                                                WebkitAppearance: 'textfield',
-                                                MozAppearance: 'textfield'
-                                            }}
-                                            placeholder="HH:MM"
-                                            required
-                                        />
-                                    ) : (
-                                        <div>
-                                            <div className="flex gap-2 mb-2">
-                                                <div className="flex-1">
-                                                    <label className="block text-xs text-gray-500 mb-1">Hour</label>
-                                                    <select
-                                                        value={formData.time ? formData.time.split(':')[0] || '12' : '12'}
-                                                        onChange={(e) => {
-                                                            const currentMinute = formData.time ? formData.time.split(':')[1] || '00' : '00';
-                                                            const currentAmPm = formData.time ? formData.time.split(':')[2] || 'AM' : 'AM';
-                                                            setFormData({ 
+                                    {/* Coach Availability Display */}
+                                    {selectedCoach && (
+                                        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+                                            <div className="flex items-center space-x-3 mb-4">
+                                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <h4 className="text-lg font-semibold text-blue-900">Coach Availability</h4>
+                                            </div>
+                                            
+                                            {!formData.date ? (
+                                                <div className="text-center py-4">
+                                                    <div className="inline-flex items-center space-x-2">
+                                                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                        </svg>
+                                                        <span className="text-blue-700">Select a date to see coach availability</span>
+                                                    </div>
+                                                </div>
+                                            ) : availabilityLoading ? (
+                                                <div className="text-center py-4">
+                                                    <div className="inline-flex items-center space-x-2">
+                                                        <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        <span className="text-blue-700">Loading availability...</span>
+                                                    </div>
+                                                </div>
+                                            ) : coachAvailability.length > 0 ? (
+                                                <div>
+                                                    {selectedTime && (
+                                                        <div className="mb-4 p-3 bg-blue-100 rounded-lg border border-blue-300">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center space-x-2">
+                                                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                    </svg>
+                                                                    <span className="text-blue-800 font-medium">Selected Time: {selectedTime}</span>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setSelectedTime('');
+                                                                        // Reset the date field to just the date without time
+                                                                        if (formData.date) {
+                                                                            const dateObj = new Date(formData.date);
+                                                                            const dateOnly = dateObj.toISOString().split('T')[0];
+                                                                            setFormData(prev => ({ ...prev, date: dateOnly }));
+                                                                        }
+                                                                    }}
+                                                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                                >
+                                                                    Clear
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <p className="text-sm text-blue-700 mb-3">
+                                                        Available time slots for {new Date(formData.date).toLocaleDateString()}:
+                                                    </p>
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        {coachAvailability.map((slot, index) => (
+                                                            <div
+                                                                key={index}
+                                                                onClick={() => slot.available && handleTimeSelection(slot.time)}
+                                                                className={`p-3 rounded-lg text-center text-sm font-medium cursor-pointer transition-all duration-200 ${
+                                                                    slot.available
+                                                                        ? selectedTime === slot.time
+                                                                            ? 'bg-blue-500 text-white border-2 border-blue-600 shadow-md transform scale-105 dark:bg-blue-600 dark:border-blue-500'
+                                                                            : 'bg-green-500 text-white border border-green-600 hover:bg-green-600 hover:border-green-700 dark:bg-green-600 dark:border-green-500 dark:hover:bg-green-700'
+                                                                        : 'bg-red-500 text-white border border-red-600 cursor-not-allowed dark:bg-red-600 dark:border-red-500'
+                                                                }`}
+                                                            >
+                                                                {formatAvailabilityTime(slot.time)}
+                                                                <div className="text-xs mt-1">
+                                                                    {slot.available 
+                                                                        ? selectedTime === slot.time 
+                                                                            ? 'Selected' 
+                                                                            : 'Click to select'
+                                                                        : 'Busy'
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-4">
+                                                    <p className="text-blue-700">No availability data for this date.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {/* Note Field */}
                                                                 ...formData, 
                                                                 time: `${e.target.value.padStart(2, '0')}:${currentMinute}:${currentAmPm}` 
                                                             });
                                                         }}
-                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                                         style={{ 
                                                             WebkitAppearance: 'menulist',
                                                             MozAppearance: 'menulist'
@@ -2690,7 +2784,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                     </select>
                                                 </div>
                                                 <div className="flex-1">
-                                                    <label className="block text-xs text-gray-500 mb-1">Minute</label>
+                                                    <label className="block text-xs text-[var(--text-secondary)] mb-1">Minute</label>
                                                     <select
                                                         value={formData.time ? formData.time.split(':')[1] || '00' : '00'}
                                                         onChange={(e) => {
@@ -2701,7 +2795,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                                 time: `${currentHour}:${e.target.value.padStart(2, '0')}:${currentAmPm}` 
                                                             });
                                                         }}
-                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                                         style={{ 
                                                             WebkitAppearance: 'menulist',
                                                             MozAppearance: 'menulist'
@@ -2715,7 +2809,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                     </select>
                                                 </div>
                                                 <div className="flex-1">
-                                                    <label className="block text-xs text-gray-500 mb-1">AM/PM</label>
+                                                    <label className="block text-xs text-[var(--text-secondary)] mb-1">AM/PM</label>
                                                     <select
                                                         value={formData.time ? formData.time.split(':')[2] || 'AM' : 'AM'}
                                                         onChange={(e) => {
@@ -2726,7 +2820,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                                 time: `${currentHour}:${currentMinute}:${e.target.value}` 
                                                             });
                                                         }}
-                                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                                         style={{ 
                                                             WebkitAppearance: 'menulist',
                                                             MozAppearance: 'menulist'
@@ -2754,7 +2848,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                     Now
                                                 </button>
                                                 {formData.time && (
-                                                    <div className="flex items-center px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700">
+                                                    <div className="flex items-center px-3 py-2 bg-[var(--bg-tertiary)] rounded-lg text-sm text-[var(--text-primary)]">
                                                         <span className="font-medium">
                                                             {(() => {
                                                                 const parts = formData.time.split(':');
@@ -2774,14 +2868,14 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                     
                             {formData.type === 'class' && (
                                 <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">To</label>
                                     <div className="relative">
                                         {!isSafari ? (
                                             <input
                                                 type="time"
                                                 value={formData.endTime}
                                                 onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                                                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                                 style={{ 
                                                     WebkitAppearance: 'textfield',
                                                     MozAppearance: 'textfield'
@@ -2793,7 +2887,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                             <div>
                                                 <div className="flex gap-2 mb-2">
                                                     <div className="flex-1">
-                                                        <label className="block text-xs text-gray-500 mb-1">Hour</label>
+                                                        <label className="block text-xs text-[var(--text-secondary)] mb-1">Hour</label>
                                                         <select
                                                             value={formData.endTime ? formData.endTime.split(':')[0] || '12' : '12'}
                                                             onChange={(e) => {
@@ -2804,7 +2898,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                                     endTime: `${e.target.value.padStart(2, '0')}:${currentMinute}:${currentAmPm}` 
                                                                 });
                                                             }}
-                                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                                             style={{ 
                                                                 WebkitAppearance: 'menulist',
                                                                 MozAppearance: 'menulist'
@@ -2818,7 +2912,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                         </select>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <label className="block text-xs text-gray-500 mb-1">Minute</label>
+                                                        <label className="block text-xs text-[var(--text-secondary)] mb-1">Minute</label>
                                                         <select
                                                             value={formData.endTime ? formData.endTime.split(':')[1] || '00' : '00'}
                                                             onChange={(e) => {
@@ -2829,7 +2923,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                                     endTime: `${currentHour}:${e.target.value.padStart(2, '0')}:${currentAmPm}` 
                                                                 });
                                                             }}
-                                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                                             style={{ 
                                                                 WebkitAppearance: 'menulist',
                                                                 MozAppearance: 'menulist'
@@ -2843,7 +2937,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                         </select>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <label className="block text-xs text-gray-500 mb-1">AM/PM</label>
+                                                        <label className="block text-xs text-[var(--text-secondary)] mb-1">AM/PM</label>
                                                         <select
                                                             value={formData.endTime ? formData.endTime.split(':')[2] || 'AM' : 'AM'}
                                                             onChange={(e) => {
@@ -2854,7 +2948,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                                     endTime: `${currentHour}:${currentMinute}:${e.target.value}` 
                                                                 });
                                                             }}
-                                                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                                             style={{ 
                                                                 WebkitAppearance: 'menulist',
                                                                 MozAppearance: 'menulist'
@@ -2882,7 +2976,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                         Now
                                                     </button>
                                                     {formData.endTime && (
-                                                        <div className="flex items-center px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700">
+                                                        <div className="flex items-center px-3 py-2 bg-[var(--bg-tertiary)] rounded-lg text-sm text-[var(--text-primary)]">
                                                             <span className="font-medium">
                                                                 {(() => {
                                                                     const parts = formData.endTime.split(':');
@@ -2907,11 +3001,11 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             {/* Additional Information for Class */}
                             {formData.type === 'class' && (
                                                     <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Additional Information</label>
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Additional Information</label>
                                     <textarea
                                         value={formData.additionalInfo}
                                         onChange={(e) => setFormData({ ...formData, additionalInfo: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                                        className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                                         rows={3}
                                         placeholder="Enter any additional information about the class..."
                                                         />
@@ -2922,13 +3016,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                     {/* Advanced Fields - Full Width Below */}
                     {(formData.type === 'class' && (shouldShowPlacementDetails() || shouldShowConsistencyResult())) && (
-                        <div className="mt-8 pt-8 border-t border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-6">Advanced Configuration</h3>
+                        <div className="mt-8 pt-8 border-t border-[var(--border-primary)]">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-6">Advanced Configuration</h3>
                             
                             {shouldShowPlacementDetails() && (
                                 <div className="space-y-4">
-                                    <label className="block text-sm font-medium text-gray-700">Placement Details *</label>
-                                    <p className="text-xs text-gray-500 mb-3">
+                                    <label className="block text-sm font-medium text-[var(--text-primary)]">Placement Details *</label>
+                                    <p className="text-xs text-[var(--text-secondary)] mb-3">
                                         Enter the number of successful attempts for each shot type. The total will be calculated automatically.
                                     </p>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2936,13 +3030,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         {/* ... existing placement detail fields ... */}
                                         </div>
                                         <div>
-                                            <label className="block text-sm text-gray-600 mb-1">Total</label>
+                                            <label className="block text-sm text-[var(--text-secondary)] mb-1">Total</label>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value={formData.placementDetails.total}
                                                 onChange={(e) => updatePlacementDetails('total', parseInt(e.target.value))}
-                                                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                                className="w-full p-2 border border-[var(--border-primary)] rounded focus:ring-2 focus:ring-blue-500"
                                                 required
                                             />
                                         </div>
@@ -2951,8 +3045,8 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                                 {shouldShowConsistencyResult() && (
                                     <div className="space-y-4">
-                                        <label className="block text-sm font-medium text-gray-700">Consistency Result *</label>
-                                        <p className="text-xs text-gray-500 mb-3">
+                                        <label className="block text-sm font-medium text-[var(--text-primary)]">Consistency Result *</label>
+                                        <p className="text-xs text-[var(--text-secondary)] mb-3">
                                             Enter the number of successful rallies for the selected length. The total will be calculated automatically.
                                         </p>
                                         <div className="grid grid-cols-2 gap-4">
@@ -2960,13 +3054,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                         {/* ... existing consistency result fields ... */}
                                         </div>
                                         <div>
-                                            <label className="block text-sm text-gray-600 mb-1">Total</label>
+                                            <label className="block text-sm text-[var(--text-secondary)] mb-1">Total</label>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value={formData.consistencyResult.total}
                                                 onChange={(e) => updateConsistencyResult('total', parseInt(e.target.value))}
-                                                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                                className="w-full p-2 border border-[var(--border-primary)] rounded focus:ring-2 focus:ring-blue-500"
                                                 required
                                             />
                                         </div>
@@ -2976,7 +3070,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                     )}
 
                     {/* Submit Button */}
-                    <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="mt-8 pt-6 border-t border-[var(--border-primary)]">
                                                             <button
                             type="submit"
                                 disabled={isSubmitting}

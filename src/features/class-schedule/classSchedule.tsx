@@ -5,6 +5,7 @@ import type { ClassScheduleRequest, User, AvailabilitySlot } from '@/service/cla
 import Button from '@/components/Button';
 import SimpleModal from '@/components/SimpleModal';
 import { toast } from 'react-toastify';
+import { formatAvailabilityTime } from '@/utils/utils';
 
 export default function ClassSchedule() {
   const {
@@ -1192,12 +1193,12 @@ export default function ClassSchedule() {
                         className={`p-3 rounded-lg text-center text-sm font-medium cursor-pointer transition-all duration-200 ${
                           slot.available
                             ? selectedTime === slot.time
-                                      ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border-2 border-[var(--border-primary)] shadow-md'
-        : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--border-secondary)]'
-        : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)] cursor-not-allowed'
+                              ? 'bg-blue-500 text-white border-2 border-blue-600 shadow-md dark:bg-blue-600 dark:border-blue-500'
+                              : 'bg-green-500 text-white border border-green-600 hover:bg-green-600 hover:border-green-700 dark:bg-green-600 dark:border-green-500 dark:hover:bg-green-700'
+                            : 'bg-red-500 text-white border border-red-600 cursor-not-allowed dark:bg-red-600 dark:border-red-500'
                         }`}
                       >
-                        {slot.time}
+                        {formatAvailabilityTime(slot.time)}
                         <div className="text-xs mt-1">
                           {slot.available 
                             ? selectedTime === slot.time 

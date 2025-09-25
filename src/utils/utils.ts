@@ -341,6 +341,21 @@ export function formatTime(dateString: string): string {
     return "";
   }
 }
+
+export function formatAvailabilityTime(isoTimeString: string): string {
+  if (!isoTimeString) return "";
+  try {
+    const date = new Date(isoTimeString);
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  } catch (err) {
+    console.error('Error formatting availability time:', err);
+    return isoTimeString; // Return original if formatting fails
+  }
+}
 export function toast(
   type: "s" | "e" | "w",
   successMsg?: string,
