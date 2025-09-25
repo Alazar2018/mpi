@@ -2644,7 +2644,8 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 </div>
                         )}
 
-                            {/* Date Only - No Time Picker for Class Schedule Requests */}
+                            {/* Date and Time */}
+                            <div className="space-y-4">
                             <div>
                                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Date</label>
                                 <div className="relative">
@@ -2668,104 +2669,34 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 </div>
                             </div>
                                 
-                                    {/* Coach Availability Display */}
-                                    {selectedCoach && (
-                                        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-                                            <div className="flex items-center space-x-3 mb-4">
-                                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </div>
-                                                <h4 className="text-lg font-semibold text-blue-900">Coach Availability</h4>
-                                            </div>
-                                            
-                                            {!formData.date ? (
-                                                <div className="text-center py-4">
-                                                    <div className="inline-flex items-center space-x-2">
-                                                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                        </svg>
-                                                        <span className="text-blue-700">Select a date to see coach availability</span>
-                                                    </div>
-                                                </div>
-                                            ) : availabilityLoading ? (
-                                                <div className="text-center py-4">
-                                                    <div className="inline-flex items-center space-x-2">
-                                                        <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
-                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                        <span className="text-blue-700">Loading availability...</span>
-                                                    </div>
-                                                </div>
-                                            ) : coachAvailability.length > 0 ? (
-                                                <div>
-                                                    {selectedTime && (
-                                                        <div className="mb-4 p-3 bg-blue-100 rounded-lg border border-blue-300">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center space-x-2">
-                                                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                    </svg>
-                                                                    <span className="text-blue-800 font-medium">Selected Time: {selectedTime}</span>
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setSelectedTime('');
-                                                                        // Reset the date field to just the date without time
-                                                                        if (formData.date) {
-                                                                            const dateObj = new Date(formData.date);
-                                                                            const dateOnly = dateObj.toISOString().split('T')[0];
-                                                                            setFormData(prev => ({ ...prev, date: dateOnly }));
-                                                                        }
-                                                                    }}
-                                                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                                                >
-                                                                    Clear
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    
-                                                    <p className="text-sm text-blue-700 mb-3">
-                                                        Available time slots for {new Date(formData.date).toLocaleDateString()}:
-                                                    </p>
-                                                    <div className="grid grid-cols-1 gap-2">
-                                                        {coachAvailability.map((slot, index) => (
-                                                            <div
-                                                                key={index}
-                                                                onClick={() => slot.available && handleTimeSelection(slot.time)}
-                                                                className={`p-3 rounded-lg text-center text-sm font-medium cursor-pointer transition-all duration-200 ${
-                                                                    slot.available
-                                                                        ? selectedTime === slot.time
-                                                                            ? 'bg-blue-500 text-white border-2 border-blue-600 shadow-md transform scale-105 dark:bg-blue-600 dark:border-blue-500'
-                                                                            : 'bg-green-500 text-white border border-green-600 hover:bg-green-600 hover:border-green-700 dark:bg-green-600 dark:border-green-500 dark:hover:bg-green-700'
-                                                                        : 'bg-red-500 text-white border border-red-600 cursor-not-allowed dark:bg-red-600 dark:border-red-500'
-                                                                }`}
-                                                            >
-                                                                {formatAvailabilityTime(slot.time)}
-                                                                <div className="text-xs mt-1">
-                                                                    {slot.available 
-                                                                        ? selectedTime === slot.time 
-                                                                            ? 'Selected' 
-                                                                            : 'Click to select'
-                                                                        : 'Busy'
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-4">
-                                                    <p className="text-blue-700">No availability data for this date.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {/* Note Field */}
+                                <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">From</label>
+                                <div className="relative">
+                                    {!isSafari ? (
+                                        <input
+                                            type="time"
+                                            value={formData.time}
+                                            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                                            className="w-full p-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                            style={{ 
+                                                WebkitAppearance: 'textfield',
+                                                MozAppearance: 'textfield'
+                                            }}
+                                            placeholder="HH:MM"
+                                            required
+                                        />
+                                    ) : (
+                                        <div>
+                                            <div className="flex gap-2 mb-2">
+                                                <div className="flex-1">
+                                                    <label className="block text-xs text-[var(--text-secondary)] mb-1">Hour</label>
+                                                    <select
+                                                        value={formData.time ? formData.time.split(':')[0] || '12' : '12'}
+                                                        onChange={(e) => {
+                                                            const currentMinute = formData.time ? formData.time.split(':')[1] || '00' : '00';
+                                                            const currentAmPm = formData.time ? formData.time.split(':')[2] || 'AM' : 'AM';
+                                                            setFormData({ 
                                                                 ...formData, 
                                                                 time: `${e.target.value.padStart(2, '0')}:${currentMinute}:${currentAmPm}` 
                                                             });
