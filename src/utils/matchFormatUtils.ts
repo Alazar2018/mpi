@@ -110,7 +110,7 @@ const MATCH_FORMATS: Record<MatchFormat, MatchFormatConfig> = {
     gamesPerSet: 0, // No games, just tiebreak
     tiebreakAt: 0,
     defaultTiebreakRule: 7,
-    noAdScoring: false,
+    noAdScoring: true, // No-ad scoring enabled by default for tiebreak formats
     trackingLevels: ['level1', 'level2', 'level3']
   },
   tiebreak10: {
@@ -121,7 +121,7 @@ const MATCH_FORMATS: Record<MatchFormat, MatchFormatConfig> = {
     gamesPerSet: 0, // No games, just tiebreak
     tiebreakAt: 0,
     defaultTiebreakRule: 10,
-    noAdScoring: false,
+    noAdScoring: true, // No-ad scoring enabled by default for tiebreak formats
     trackingLevels: ['level1', 'level2', 'level3']
   },
   tiebreak21: {
@@ -132,7 +132,7 @@ const MATCH_FORMATS: Record<MatchFormat, MatchFormatConfig> = {
     gamesPerSet: 0, // No games, just tiebreak
     tiebreakAt: 0,
     defaultTiebreakRule: 21,
-    noAdScoring: false,
+    noAdScoring: true, // No-ad scoring enabled by default for tiebreak formats
     trackingLevels: ['level1', 'level2', 'level3']
   }
 };
@@ -408,11 +408,11 @@ export function isFormatCompatibleWithVariation(
     oneSet: ['standard', 'oneSetTiebreak10'], // One set can have 10-point tiebreak
     bestOfThree: ['standard', 'finalSetTiebreak10'], // 2 out of 3 can have final set 10-point tiebreak
     bestOfFive: ['standard', 'finalSetTiebreak10'], // 3 out of 5 can have final set 10-point tiebreak
-    shortSets: ['standard'], // Short sets only use standard scoring
-    proSet8: ['standard'], // Pro set only uses standard scoring
-    tiebreak7: ['standard'], // Tiebreak-only formats only use standard scoring
-    tiebreak10: ['standard'],
-    tiebreak21: ['standard']
+    shortSets: ['standard', 'finalSetTiebreak10'], // Short sets can have final set 10-point tiebreak
+    proSet8: ['standard', 'finalSetTiebreak10'], // Pro set can have final set 10-point tiebreak
+    tiebreak7: [], // Tiebreak-only formats have no scoring variation options
+    tiebreak10: [], // Tiebreak-only formats have no scoring variation options
+    tiebreak21: [] // Tiebreak-only formats have no scoring variation options
   };
   
   return compatibility[format]?.includes(variation) || false;

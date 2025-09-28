@@ -19,6 +19,7 @@ interface CreateEventProps {
     onSubmit: (eventData: any) => void;
     selectedDate?: string;
     userRole?: 'player' | 'coach' | 'admin' | 'parent';
+    defaultEventType?: 'reminder' | 'class' | 'classScheduleRequest';
 }
 
 interface Player {
@@ -33,7 +34,7 @@ interface Player {
 const eventTypes = [
     { value: 'reminder', label: 'Reminder', allowedRoles: ['player', 'coach', 'admin', 'parent'] },
     { value: 'class', label: 'Class', allowedRoles: ['coach', 'admin'] },
-    { value: 'classScheduleRequest', label: 'Class Schedule Request', allowedRoles: ['player', 'coach', 'admin', 'parent'] }
+    { value: 'classScheduleRequest', label: 'Class Schedule Request', allowedRoles: ['player', 'admin', 'parent'] }
 ];
 
 // Function to get dynamic button text based on event type
@@ -172,7 +173,7 @@ const tacticsTypeOptions = {
     ]
 };
 
-export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, userRole = 'player' }: CreateEventProps) {
+export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, userRole = 'player', defaultEventType }: CreateEventProps) {
     // Detect Safari browser
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     
@@ -304,14 +305,18 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
     // Set default event type based on user role when component mounts
     useEffect(() => {
         if (isOpen && availableEventTypes.length > 0) {
-            console.log('CreateEvent - Setting default type:', { userRole, availableEventTypes });
+            console.log('CreateEvent - Setting default type:', { userRole, availableEventTypes, defaultEventType });
             
-            // Set default type based on user role
-            let defaultType = 'reminder';
-            if (userRole === 'coach' || userRole === 'admin') {
-                defaultType = 'class'; // Coaches default to class
-            } else if (userRole === 'player' || userRole === 'parent') {
-                defaultType = 'reminder'; // Players and parents default to reminder
+            // Use provided defaultEventType if available, otherwise set based on user role
+            let defaultType = defaultEventType || 'reminder';
+            
+            if (!defaultEventType) {
+                // Set default type based on user role only if no defaultEventType is provided
+                if (userRole === 'coach' || userRole === 'admin') {
+                    defaultType = 'class'; // Coaches default to class
+                } else if (userRole === 'player' || userRole === 'parent') {
+                    defaultType = 'reminder'; // Players and parents default to reminder
+                }
             }
             
             // Make sure the default type is available for the user
@@ -322,7 +327,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                 setFormData(prev => ({ ...prev, type: availableEventTypes[0].value }));
             }
         }
-    }, [isOpen, userRole, availableEventTypes]); // Add availableEventTypes back to dependencies
+    }, [isOpen, userRole, availableEventTypes, defaultEventType]); // Add defaultEventType to dependencies
 
     // Fetch players when component mounts or when needed for class
     useEffect(() => {
@@ -1540,7 +1545,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                     )}
 
                     {/* Main Content - Two Column Layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className={`grid gap-8 ${formData.type === 'classScheduleRequest' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
                         {/* Left Column - Event Details */}
                         <div className="space-y-6">
                             <h3 className="text-lg font-semibold text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-2">
@@ -2436,7 +2441,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
 
                                     {/* Coach Availability Display */}
                                     {selectedCoach && (
-                                        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+                                        <div className="w-full bg-blue-50 rounded-xl border border-blue-200 p-6">
                                             <div className="flex items-center space-x-3 mb-4">
                                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2468,13 +2473,13 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                 <div>
                                                     {/* Selected Time Display */}
                                                     {selectedTime && (
-                                                        <div className="mb-4 p-3 bg-blue-100 rounded-lg border border-blue-300">
+                                                        <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700">
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center space-x-2">
-                                                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                     </svg>
-                                                                    <span className="text-blue-800 font-medium">Selected Time: {selectedTime}</span>
+                                                                    <span className="text-blue-800 dark:text-blue-200 font-medium">Selected Time: {selectedTime}</span>
                                                                 </div>
                                                                 <button
                                                                     type="button"
@@ -2487,7 +2492,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                                             setFormData(prev => ({ ...prev, date: dateOnly }));
                                                                         }
                                                                     }}
-                                                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium"
                                                                 >
                                                                     Clear
                                                                 </button>
@@ -2495,15 +2500,15 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                         </div>
                                                     )}
                                                     
-                                                    <p className="text-sm text-blue-700 mb-3">
+                                                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
                                                         Available time slots for {new Date(formData.date).toLocaleDateString()}:
                                                     </p>
-                                                    <div className="grid grid-cols-3 gap-2">
+                                                     <div className="w-full flex flex-col space-y-2">
                                                         {coachAvailability.map((slot, index) => (
                                                             <div
                                                                 key={index}
                                                                 onClick={() => slot.available && handleTimeSelection(slot.time)}
-                                                                className={`p-3 rounded-lg text-center text-sm font-medium cursor-pointer transition-all duration-200 ${
+                                                                className={`w-full p-3 rounded-lg text-center text-sm font-medium cursor-pointer transition-all duration-200 ${
                                                                     slot.available
                                                                         ? selectedTime === slot.time
                                                                             ? 'bg-blue-500 text-white border-2 border-blue-600 shadow-md transform scale-105 dark:bg-blue-600 dark:border-blue-500'
@@ -2555,39 +2560,39 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             {formData.type === 'class' && (
                                                     <div>
                                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Select Players</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <svg className="h-5 w-5 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                            </div>
                                             <input
                                                 type="text"
-                                            value={formData.type === 'class' ? classSearchTerm : searchTerm}
-                                            onChange={(e) => formData.type === 'class' ? setClassSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
-                                            className="w-full p-3 pl-10 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                            style={{ 
-                                                WebkitAppearance: 'none',
-                                                MozAppearance: 'textfield'
-                                            }}
-                                            placeholder="Search player"
-                                                        />
-                                                    </div>
-                                    
-                                    {/* Search Results */}
-                                    {classSearchTerm && (
+                                                value={formData.type === 'class' ? classSearchTerm : searchTerm}
+                                                onChange={(e) => formData.type === 'class' ? setClassSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
+                                                className="w-full p-3 pl-10 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                style={{ 
+                                                    WebkitAppearance: 'none',
+                                                    MozAppearance: 'textfield'
+                                                }}
+                                                placeholder="Search player"
+                                            />
+                                            
+                                            {/* Search Results */}
+                                            {classSearchTerm && (
                                                 <div className="absolute z-50 w-full mt-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                            {filteredClassPlayers.map(player => (
+                                                    {filteredClassPlayers.map(player => (
                                                         <div
                                                             key={player._id}
                                                             className={`p-3 cursor-pointer hover:bg-[var(--bg-tertiary)] ${
-                                                        tempSelectedClassPlayers.includes(player._id) ? 'bg-blue-50' : ''
+                                                                tempSelectedClassPlayers.includes(player._id) ? 'bg-blue-50' : ''
                                                             }`}
-                                                    onClick={() => togglePlayer(player._id, true)}
+                                                            onClick={() => togglePlayer(player._id, true)}
                                                         >
                                                             <div className="flex items-center justify-between">
                                                                 <span className="font-medium">{`${player.firstName} ${player.lastName}`}</span>
-                                                        {tempSelectedClassPlayers.includes(player._id) && (
+                                                                {tempSelectedClassPlayers.includes(player._id) && (
                                                                     <span className="text-blue-600">✓</span>
                                                                 )}
                                                             </div>
@@ -2595,17 +2600,19 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                                     ))}
                                                 </div>
                                             )}
-                                    
-                                    {/* Add Selected Button */}
-                                    {tempSelectedClassPlayers.length > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => addSelectedPlayers(true)}
-                                            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                                        >
-                                            Add Selected ({tempSelectedClassPlayers.length})
-                                        </button>
-                                    )}
+                                        </div>
+                                        
+                                        {/* Add Selected Button */}
+                                        {tempSelectedClassPlayers.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => addSelectedPlayers(true)}
+                                                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+                                            >
+                                                Add Selected ({tempSelectedClassPlayers.length})
+                                            </button>
+                                        )}
+                                    </div>
                                     
                                     {/* Players Added */}
                                     {formData.selectedClassPlayers.length > 0 && (
@@ -2669,6 +2676,8 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                                 </div>
                             </div>
                                 
+                                {/* Time picker only for non-class schedule requests */}
+                                {formData.type !== 'classScheduleRequest' && (
                                 <div className="grid grid-cols-2 gap-4">
                             <div>
                                         <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">From</label>
@@ -2927,6 +2936,7 @@ export default function CreateEvent({ isOpen, onClose, onSubmit, selectedDate, u
                             )}
                         </div>
                         
+                        )}
                         </div>
 
                             {/* Additional Information for Class */}

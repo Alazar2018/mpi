@@ -712,42 +712,7 @@ const CoachDashboard: React.FC = () => {
           </div>
         </div>
       )}
-
-
-      {/* Upcoming Classes */}
-      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Upcoming Classes</h2>
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Schedule Class
-          </button>
-        </div>
-        <div className="space-y-4">
-          {upcomingClasses.map((classItem) => (
-            <div key={classItem.id} className="flex items-center justify-between p-4 bg-[var(--bg-secondary)] rounded-lg transition-colors duration-300">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[var(--text-primary)]">{classItem.name}</h3>
-                  <p className="text-sm text-[var(--text-secondary)]">{classItem.time} • {classItem.players}/{classItem.maxPlayers} players</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button className="p-2 text-[var(--text-secondary)] hover:text-blue-600 transition-colors">
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button className="p-2 text-[var(--text-secondary)] hover:text-green-600 transition-colors">
-                  <Edit className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
+      
      
       
     </div>
@@ -805,21 +770,19 @@ const ParentDashboard: React.FC = () => {
           return;
         }
 
-        // For parents, we should fetch their actual children
-        // For now, we'll use the players API to get sample data
+        // For parents, fetch their actual children using the children service
         if (userRole === 'parent') {
-          // Try to fetch real player data for parents
           try {
-            const { playersService } = await import('@/service/players.server');
-            const response = await playersService.getPlayers(1, 10);
+            const { childrenService } = await import('@/service/children.server');
+            const response = await childrenService.getChildren({ page: 1, limit: 10 });
             
-            if (response.players) {
-              const childrenData = response.players.slice(0, 3).map((player) => {
-                // Calculate goals statistics
-                const totalGoals = player.coachGoals?.reduce((total, coachGoal) => 
+            if (response.children) {
+              const childrenData = response.children.map((child) => {
+                // Calculate goals statistics from coachGoals
+                const totalGoals = child.coachGoals?.reduce((total, coachGoal) => 
                   total + (coachGoal.goals?.length || 0), 0) || 0;
                 
-                const completedGoals = player.coachGoals?.reduce((total, coachGoal) => {
+                const completedGoals = child.coachGoals?.reduce((total, coachGoal) => {
                   const completed = coachGoal.goals?.filter(goal => 
                     goal.progress?.some((prog: any) => prog.isDone === true)
                   ).length || 0;
@@ -827,14 +790,14 @@ const ParentDashboard: React.FC = () => {
                 }, 0) || 0;
                 
                 return {
-                  id: player._id,
-                  name: `${player.firstName} ${player.lastName}`,
-                  age: Math.floor(Math.random() * 10) + 8, // Mock age for now
-                  level: ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)],
+                  id: child._id,
+                  name: `${child.firstName} ${child.lastName}`,
+                  age: Math.floor(Math.random() * 10) + 8, // Default age since not available in API
+                  level: ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)], // Default level
                   progress: totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0,
-                  email: player.emailAddress.email,
-                  lastOnline: player.lastOnline,
-                  avatar: player.avatar,
+                  email: child.emailAddress?.email || 'No email',
+                  lastOnline: child.lastOnline,
+                  avatar: child.avatar,
                   goals: totalGoals,
                   completedGoals: completedGoals
                 };
@@ -852,40 +815,32 @@ const ParentDashboard: React.FC = () => {
                 { id: '2', name: 'Parent-Child Match', date: 'Dec 20', time: '2:00 PM', location: 'Academy' },
                 { id: '3', name: 'Progress Review', date: 'Dec 25', time: '10:00 AM', location: 'Academy' },
               ]);
+            } else {
+              // No children found
+              setChildren([]);
+              setStats({ sessionsThisMonth: 0, matchesWon: 0, avgPerformance: 0 });
+              setUpcomingEvents([]);
             }
           } catch (error) {
-          
-            // Fallback to mock data
-            const mockChildren = [
-              { id: '1', name: 'Emma Wilson', age: 12, level: 'Intermediate', progress: 75, email: 'emma@example.com', lastOnline: new Date().toISOString(), avatar: undefined, goals: 5, completedGoals: 3 },
-              { id: '2', name: 'Lucas Wilson', age: 14, level: 'Advanced', progress: 88, email: 'lucas@example.com', lastOnline: new Date().toISOString(), avatar: undefined, goals: 8, completedGoals: 6 },
-            ];
-            
-            setChildren(mockChildren);
-            setStats({
-              sessionsThisMonth: 8,
-              matchesWon: 12,
-              avgPerformance: 85
-            });
-            
-            setUpcomingEvents([
-              { id: '1', name: 'Tennis Tournament', date: 'Dec 15', time: '9:00 AM', location: 'City Courts' },
-              { id: '2', name: 'Parent-Child Match', date: 'Dec 20', time: '2:00 PM', location: 'Academy' },
-              { id: '3', name: 'Progress Review', date: 'Dec 25', time: '10:00 AM', location: 'Academy' },
-            ]);
+            console.error('Error fetching children:', error);
+            setError('Failed to load children data. Please try again.');
+            setChildren([]);
+            setStats({ sessionsThisMonth: 0, matchesWon: 0, avgPerformance: 0 });
+            setUpcomingEvents([]);
           }
         } else if (userRole === 'admin') {
-          // Admins can see a sample of children data
-          const { playersService } = await import('@/service/players.server');
-          const response = await playersService.getPlayers(1, 10);
-          
-          if (response.players) {
-            const childrenData = response.players.slice(0, 5).map((player) => {
-              // Calculate goals statistics
-              const totalGoals = player.coachGoals?.reduce((total, coachGoal) => 
+          // Admins can see children data using the children service
+          try {
+            const { childrenService } = await import('@/service/children.server');
+            const response = await childrenService.getChildren({ page: 1, limit: 10 });
+            
+            if (response.children) {
+              const childrenData = response.children.map((child) => {
+                // Calculate goals statistics from coachGoals
+                const totalGoals = child.coachGoals?.reduce((total, coachGoal) => 
                 total + (coachGoal.goals?.length || 0), 0) || 0;
               
-              const completedGoals = player.coachGoals?.reduce((total, coachGoal) => {
+                const completedGoals = child.coachGoals?.reduce((total, coachGoal) => {
                 const completed = coachGoal.goals?.filter(goal => 
                   goal.progress?.some((prog: any) => prog.isDone === true)
                 ).length || 0;
@@ -893,14 +848,14 @@ const ParentDashboard: React.FC = () => {
               }, 0) || 0;
               
               return {
-                id: player._id,
-                name: `${player.firstName} ${player.lastName}`,
-                age: Math.floor(Math.random() * 10) + 8, // Mock age for now
-                level: ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)],
+                  id: child._id,
+                  name: `${child.firstName} ${child.lastName}`,
+                  age: Math.floor(Math.random() * 10) + 8, // Default age since not available in API
+                  level: ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)], // Default level
                 progress: totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0,
-                email: player.emailAddress.email,
-                lastOnline: player.lastOnline,
-                avatar: player.avatar,
+                  email: child.emailAddress?.email || 'No email',
+                  lastOnline: child.lastOnline,
+                  avatar: child.avatar,
                 goals: totalGoals,
                 completedGoals: completedGoals
               };
@@ -918,6 +873,18 @@ const ParentDashboard: React.FC = () => {
               { id: '2', name: 'Parent-Child Match', date: 'Dec 20', time: '2:00 PM', location: 'Academy' },
               { id: '3', name: 'Progress Review', date: 'Dec 25', time: '10:00 AM', location: 'Academy' },
             ]);
+            } else {
+              // No children found
+              setChildren([]);
+              setStats({ sessionsThisMonth: 0, matchesWon: 0, avgPerformance: 0 });
+              setUpcomingEvents([]);
+            }
+          } catch (error) {
+            console.error('Error fetching children for admin:', error);
+            setError('Failed to load children data. Please try again.');
+            setChildren([]);
+            setStats({ sessionsThisMonth: 0, matchesWon: 0, avgPerformance: 0 });
+            setUpcomingEvents([]);
           }
         }
       } catch (error) {
@@ -1171,91 +1138,7 @@ const ParentDashboard: React.FC = () => {
       )}
 
       {/* Children Overview - Show when not in general mode */}
-      {!loading && !error && dashboardType !== 'general' && (
-        <>
-          {loading ? (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <LoadingSpinner size="md" text="Loading children data..." />
-            </div>
-          ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <span className="text-red-600 text-lg">🚫</span>
-                </div>
-                <div>
-                  <p className="text-red-800 font-medium">Access Denied</p>
-                  <p className="text-red-600 text-sm">{error}</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {children.map((child) => (
-                <div key={child.id} className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    {child.avatar ? (
-                      <img src={child.avatar} alt={child.name} className="w-16 h-16 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-semibold text-2xl">
-                          {child.name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900">{child.name}</h3>
-                      <p className="text-gray-600">{child.age} years old • {child.level}</p>
-                      <p className="text-xs text-gray-500">{child.email}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {/* Goals Information */}
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-blue-50 p-2 rounded">
-                        <p className="text-lg font-bold text-blue-600">{child.goals}</p>
-                        <p className="text-xs text-blue-800">Goals</p>
-                      </div>
-                      <div className="bg-green-50 p-2 rounded">
-                        <p className="text-lg font-bold text-green-600">{child.completedGoals}</p>
-                        <p className="text-xs text-green-800">Completed</p>
-                      </div>
-                      <div className="bg-purple-50 p-2 rounded">
-                        <p className="text-lg font-bold text-purple-600">
-                          {child.goals > 0 ? Math.round((child.completedGoals / child.goals) * 100) : 0}%
-                        </p>
-                        <p className="text-xs text-purple-800">Success</p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Progress</span>
-                        <span>{child.progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${child.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                        View Progress
-                      </button>
-                      <button className="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-                        Schedule Session
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+     
 
         {/* Child-Specific Dashboard */}
         {dashboardType === 'child' && selectedChildData && (
@@ -1371,31 +1254,7 @@ const ParentDashboard: React.FC = () => {
                   )}
 
                   {/* Recent Matches - Only show if we have child-specific data */}
-                  {selectedChildData && selectedChildData.recentMatches && selectedChildData.recentMatches.length > 0 && (
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Matches</h4>
-                      <div className="space-y-3">
-                        {selectedChildData.recentMatches.slice(0, 5).map((match: any, index: number) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-3 h-3 rounded-full ${
-                                match.result === 'won' ? 'bg-green-500' : 
-                                match.result === 'lost' ? 'bg-red-500' : 'bg-gray-400'
-                              }`}></div>
-                              <div>
-                                <p className="font-medium text-gray-900">vs {match.opponent}</p>
-                                <p className="text-sm text-gray-600">{new Date(match.date).toLocaleDateString()} • {match.score}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-gray-900">{match.score}</p>
-                              <p className="text-sm text-gray-600 capitalize">{match.result}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  
 
                   {/* Upcoming Matches - Only show if we have child-specific data */}
                   {selectedChildData && selectedChildData.upcomingMatches && selectedChildData.upcomingMatches.length > 0 && (
@@ -1468,38 +1327,7 @@ const ParentDashboard: React.FC = () => {
        </div>
 
       {/* Upcoming Events */}
-      <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Upcoming Events</h2>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add Event
-          </button>
-        </div>
-        <div className="space-y-4">
-          {upcomingEvents.map((event) => (
-            <div key={event.id} className="flex items-center justify-between p-4 bg-[var(--bg-secondary)] rounded-lg transition-colors duration-300">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[var(--text-primary)]">{event.name}</h3>
-                  <p className="text-sm text-[var(--text-secondary)]">{event.date} at {event.time} • {event.location}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button className="p-2 text-[var(--text-secondary)] hover:text-blue-600 transition-colors">
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button className="p-2 text-[var(--text-secondary)] hover:text-green-600 transition-colors">
-                  <Edit className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      
 
       {/* Communication Center */}
       <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-6 transition-colors duration-300">

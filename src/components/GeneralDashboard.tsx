@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, Calendar, Trophy, Target, Activity, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import { Users, TrendingUp, Calendar, Trophy, Target, Activity, Clock, MapPin, CheckCircle2, Plus, User } from 'lucide-react';
 import { CalendarService, type CalendarEvent } from '@/service/calendar.server';
 import TodoSection from './TodoSection';
 import { useCoachParentDashboard } from '@/hooks/useCoachParentDashboard';
+import { useChildren } from '@/hooks/useChildren';
+import CreateEvent from './CreateEvent';
+import PlayerAnalytics from './PlayerAnalytics';
 
 interface GeneralDashboardProps {
   userRole: 'player' | 'coach' | 'parent';
@@ -21,70 +24,21 @@ const GeneralDashboard: React.FC<GeneralDashboardProps> = ({ userRole, userName,
   const [upcomingClasses, setUpcomingClasses] = useState<CalendarEvent[]>([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
   
+  // Create Event Modal state
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+  const [defaultEventType, setDefaultEventType] = useState<'class' | 'classScheduleRequest'>('class');
+  
+  // Children data for parents
+  const { children, loading: childrenLoading, error: childrenError, fetchChildren } = useChildren({ limit: 10 });
+  const [selectedChild, setSelectedChild] = useState<string>('');
+  const [selectedChildData, setSelectedChildData] = useState<any>(null);
+  const [showChildAnalytics, setShowChildAnalytics] = useState(false);
+  
   // Todo dashboard data for coach and parent roles
   const todoDashboardData = useCoachParentDashboard();
 
-  // Fetch calendar data
+  // Fetch calendar data on component mount
   useEffect(() => {
-    const fetchCalendarData = async () => {
-      try {
-        setLoadingCalendar(true);
-        
-        // Get current week's events
-        const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
-        
-        // Get upcoming classes (next 7 days)
-        const upcomingStart = new Date(now);
-        const upcomingEnd = new Date(now);
-        upcomingEnd.setDate(now.getDate() + 7);
-        
-        try {
-          const [weeklyResponse, upcomingResponse] = await Promise.all([
-            CalendarService.getEvents({
-              startDate: startOfWeek.toISOString(),
-              endDate: endOfWeek.toISOString(),
-              view: 'week'
-            }),
-            CalendarService.getUpcomingEvents(5)
-          ]);
-          
-          if (weeklyResponse.success && weeklyResponse.data?.events) {
-       
-            setWeeklyEvents(weeklyResponse.data.events);
-          } else {
-           
-          }
-          
-          if (upcomingResponse.success && upcomingResponse.data?.events) {
-            
-            setUpcomingClasses(upcomingResponse.data.events);
-          } else {
-            
-          }
-        } catch (error) {
-         
-          // Fallback to mock data
-          setWeeklyEvents([
-            { id: '1', title: 'Training Session', type: 'training', startTime: new Date().toISOString(), endTime: new Date().toISOString(), status: 'scheduled', location: 'Court 1', notes: '', color: '#3B82F6', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' },
-            { id: '2', title: 'Practice Match', type: 'practice', startTime: new Date().toISOString(), endTime: new Date().toISOString(), status: 'scheduled', location: 'Court 2', notes: '', color: '#10B981', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' }
-          ]);
-          
-          setUpcomingClasses([
-            { id: '1', title: 'Advanced Training', type: 'training', startTime: new Date(Date.now() + 86400000).toISOString(), endTime: new Date(Date.now() + 86400000).toISOString(), status: 'scheduled', location: 'Court 1', notes: '', color: '#3B82F6', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' },
-            { id: '2', title: 'Tournament Prep', type: 'coaching', startTime: new Date(Date.now() + 172800000).toISOString(), endTime: new Date(Date.now() + 172800000).toISOString(), status: 'scheduled', location: 'Court 3', notes: '', color: '#8B5CF6', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' }
-          ]);
-        }
-      } catch (error) {
-        console.error('Error fetching calendar data:', error);
-      } finally {
-        setLoadingCalendar(false);
-      }
-    };
-    
     fetchCalendarData();
   }, []);
 
@@ -184,7 +138,7 @@ const GeneralDashboard: React.FC<GeneralDashboardProps> = ({ userRole, userName,
           kpis: [
             {
               icon: <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />,
-              value: dashboardData?.childrenCount || 0,
+              value: children?.length || 0,
               label: 'Children',
               bgColor: 'bg-purple-100 dark:bg-purple-900/20',
               textColor: 'text-purple-600 dark:text-purple-400'
@@ -235,6 +189,150 @@ const GeneralDashboard: React.FC<GeneralDashboardProps> = ({ userRole, userName,
   };
 
   const content = getRoleSpecificContent();
+
+  // Handle Create Event Modal
+  const handleCreateEvent = (eventData: any) => {
+    console.log('Event created:', eventData);
+    // Refresh calendar data after creating event
+    fetchCalendarData();
+    setShowCreateEventModal(false);
+  };
+
+  const handleCloseCreateEventModal = () => {
+    setShowCreateEventModal(false);
+  };
+
+  const handleOpenCreateEventModal = () => {
+    // Set the appropriate default event type based on user role
+    if (userRole === 'coach') {
+      setDefaultEventType('class');
+    } else if (userRole === 'player' || userRole === 'parent') {
+      setDefaultEventType('classScheduleRequest');
+    }
+    setShowCreateEventModal(true);
+  };
+
+  // Handle child selection for parents
+  const handleChildSelection = async (childId: string) => {
+    if (childId === selectedChild) {
+      // If clicking the same child, toggle analytics view
+      setShowChildAnalytics(!showChildAnalytics);
+      return;
+    }
+
+    setSelectedChild(childId);
+    setShowChildAnalytics(true);
+
+    try {
+      // Fetch child's match data similar to how coaches fetch player data
+      const { matchesService } = await import('@/service/matchs.server');
+      const matchesResponse = await matchesService.getMatches({ limit: 100 });
+      
+      if (matchesResponse.matches) {
+        // Filter matches for the selected child
+        const childMatches = matchesResponse.matches.filter(match => {
+          return (typeof match.p1 === 'object' && match.p1?._id === childId) || 
+                 (typeof match.p2 === 'object' && match.p2?._id === childId);
+        });
+
+        // Transform the data for the dashboard
+        const childDashboardData = {
+          matches: childMatches,
+          totalMatches: childMatches.length,
+          completedMatches: childMatches.filter(m => m.status === 'completed').length,
+          pendingMatches: childMatches.filter(m => m.status === 'pending').length,
+          winRate: calculateWinRate(childMatches, childId),
+          recentMatches: childMatches.slice(0, 5), // Last 5 matches
+          stats: aggregatePlayerStats(childMatches, childId)
+        };
+
+        setSelectedChildData(childDashboardData);
+      }
+    } catch (error) {
+      console.error('Error fetching child details:', error);
+    }
+  };
+
+  // Helper function to calculate win rate
+  const calculateWinRate = (matches: any[], playerId: string): number => {
+    const completedMatches = matches.filter(match => match.status === 'completed');
+    if (completedMatches.length === 0) return 0;
+
+    const wins = completedMatches.filter(match => {
+      if (typeof match.p1 === 'object' && match.p1?._id === playerId) {
+        return match.result === 'won';
+      } else if (typeof match.p2 === 'object' && match.p2?._id === playerId) {
+        return match.result === 'won';
+      }
+      return false;
+    }).length;
+
+    return Math.round((wins / completedMatches.length) * 100);
+  };
+
+  // Helper function to aggregate player stats
+  const aggregatePlayerStats = (matches: any[], playerId: string): any => {
+    // This is a simplified version - you can expand this based on your match data structure
+    return {
+      totalPoints: matches.reduce((sum, match) => sum + (match.totalPoints || 0), 0),
+      pointsWon: matches.reduce((sum, match) => sum + (match.pointsWon || 0), 0),
+      pointsLost: matches.reduce((sum, match) => sum + (match.pointsLost || 0), 0),
+      totalSessions: matches.length
+    };
+  };
+
+  // Refresh calendar data function
+  const fetchCalendarData = async () => {
+    try {
+      setLoadingCalendar(true);
+      
+      // Get current week's events
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+      
+      // Get upcoming classes (next 7 days)
+      const upcomingStart = new Date(now);
+      const upcomingEnd = new Date(now);
+      upcomingEnd.setDate(now.getDate() + 7);
+      
+      try {
+        const [weeklyResponse, upcomingResponse] = await Promise.all([
+          CalendarService.getEvents({
+            startDate: startOfWeek.toISOString(),
+            endDate: endOfWeek.toISOString(),
+            view: 'week'
+          }),
+          CalendarService.getUpcomingEvents(5)
+        ]);
+        
+        if (weeklyResponse.success && weeklyResponse.data?.events) {
+          setWeeklyEvents(weeklyResponse.data.events);
+        }
+        
+        if (upcomingResponse.success && upcomingResponse.data?.events) {
+          setUpcomingClasses(upcomingResponse.data.events);
+        }
+      } catch (error) {
+        // Fallback to mock data
+        setWeeklyEvents([
+          { id: '1', title: 'Training Session', type: 'training', startTime: new Date().toISOString(), endTime: new Date().toISOString(), status: 'scheduled', location: 'Court 1', notes: '', color: '#3B82F6', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' },
+          { id: '2', title: 'Practice Match', type: 'practice', startTime: new Date().toISOString(), endTime: new Date().toISOString(), status: 'scheduled', location: 'Court 2', notes: '', color: '#10B981', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' }
+        ]);
+        
+        setUpcomingClasses([
+          { id: '1', title: 'Advanced Training', type: 'training', startTime: new Date(Date.now() + 86400000).toISOString(), endTime: new Date(Date.now() + 86400000).toISOString(), status: 'scheduled', location: 'Court 1', notes: '', color: '#3B82F6', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' },
+          { id: '2', title: 'Tournament Prep', type: 'coaching', startTime: new Date(Date.now() + 172800000).toISOString(), endTime: new Date(Date.now() + 172800000).toISOString(), status: 'scheduled', location: 'Court 3', notes: '', color: '#8B5CF6', isAllDay: false, participants: [], sourceType: '', sourceId: '', description: '' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching calendar data:', error);
+    } finally {
+      setLoadingCalendar(false);
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -425,7 +523,18 @@ const GeneralDashboard: React.FC<GeneralDashboardProps> = ({ userRole, userName,
 
       {/* Upcoming Classes - Show for all users */}
       <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 transition-colors duration-300 w-full">
-        <h2 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)] mb-4">Upcoming Classes</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)]">Upcoming Classes</h2>
+          {(userRole === 'coach' || userRole === 'player' || userRole === 'parent') && (
+            <button
+              onClick={handleOpenCreateEventModal}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              {userRole === 'coach' ? 'Add Class' : 'Request Class'}
+            </button>
+          )}
+        </div>
         {loadingCalendar ? (
           <div className="flex items-center justify-center py-6 sm:py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -478,14 +587,115 @@ const GeneralDashboard: React.FC<GeneralDashboardProps> = ({ userRole, userName,
         )}
       </div>
 
+      {/* Children Section - Show for parents */}
+      {userRole === 'parent' && (
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 transition-colors duration-300 w-full">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)]">Your Children</h2>
+            <button
+              onClick={() => fetchChildren()}
+              className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200"
+              disabled={childrenLoading}
+            >
+              {childrenLoading ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
+          
+          {childrenError && (
+            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-sm">
+              {childrenError}
+            </div>
+          )}
+          
+          {childrenLoading ? (
+            <div className="flex items-center justify-center py-6 sm:py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-sm sm:text-base text-[var(--text-secondary)]">Loading children...</span>
+            </div>
+          ) : children.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {children.map((child) => (
+                <button
+                  key={child._id}
+                  onClick={() => handleChildSelection(child._id)}
+                  className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
+                    selectedChild === child._id
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+                      : 'border-[var(--border-primary)] hover:border-blue-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                      {child.firstName?.charAt(0)?.toUpperCase() || 'C'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[var(--text-primary)] text-sm sm:text-base truncate">
+                        {child.firstName} {child.lastName}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-[var(--text-secondary)] truncate">
+                        {child.emailAddress?.email || 'No email'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">
+                          Active
+                        </span>
+                        {child.lastOnline && (
+                          <span className="text-xs text-[var(--text-tertiary)]">
+                            Last seen {new Date(child.lastOnline).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <User className="w-5 h-5 text-[var(--text-secondary)]" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 sm:py-8 text-[var(--text-secondary)]">
+              <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-[var(--text-tertiary)]" />
+              <p className="text-sm">No children found</p>
+              <p className="text-xs text-[var(--text-tertiary)]">Add children to your account to get started</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Child Analytics - Show when a child is selected */}
+      {userRole === 'parent' && selectedChild && showChildAnalytics && selectedChildData && (
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-[var(--shadow-primary)] p-4 sm:p-6 transition-colors duration-300 w-full">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
+              {children.find(c => c._id === selectedChild)?.firstName}'s Analytics
+            </h2>
+            <button
+              onClick={() => setShowChildAnalytics(false)}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200"
+            >
+              Close
+            </button>
+          </div>
+          
+          <PlayerAnalytics
+            userName={children.find(c => c._id === selectedChild)?.firstName || 'Child'}
+            playerData={selectedChildData}
+          />
+        </div>
+      )}
+
       {/* Todo Section - Show for coaches and parents */}
       {(userRole === 'coach' || userRole === 'parent') && (
         <TodoSection userRole={userRole} />
       )}
 
-      
-
-      
+      {/* Create Event Modal */}
+      <CreateEvent
+        isOpen={showCreateEventModal}
+        onClose={handleCloseCreateEventModal}
+        onSubmit={handleCreateEvent}
+        userRole={userRole}
+        defaultEventType={defaultEventType}
+      />
     </div>
   );
 };

@@ -544,13 +544,11 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                     className="text-green-500"
                   />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-3xl font-bold text-gray-900">
-                      {filteredStats?.totalPoints || 0}
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-600">Points</p>
-                  </div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
+                    {filteredStats?.totalPoints || 0}
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">Points</p>
                 </div>
               </div>
               <div className="mt-4 space-y-2">
@@ -674,13 +672,11 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                        strokeDashoffset={`-${Math.floor((filteredStats?.totalWinners || 0) * 0.84)}`}
                      />
                    </svg>
-                   <div className="absolute inset-0 flex items-center justify-center">
-                     <div className="text-center">
-                       <p className="text-lg sm:text-xl font-bold text-gray-900">
-                         {filteredStats?.totalWinners || 0}
-                       </p>
-                       <p className="text-xs text-gray-600">Total</p>
-                     </div>
+                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                     <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">
+                       {filteredStats?.totalWinners || 0}
+                     </p>
+                     <p className="text-xs text-gray-600 mt-1">Total</p>
                    </div>
                  </div>
                </div>
@@ -1018,13 +1014,11 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                         className="text-blue-500"
                       />
                     </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-                        <p className="text-3xl font-bold text-gray-900">
-                          {filteredStats?.totalServes ? Math.round((filteredStats.totalServes / (filteredStats.totalServes + (filteredStats.totalErrors || 0))) * 100) : 0}%
-                        </p>
-                        <p className="text-sm text-gray-600">Accuracy</p>
-                      </div>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                      <p className="text-3xl font-bold text-gray-900 leading-none">
+                        {filteredStats?.totalServes ? Math.round((filteredStats.totalServes / (filteredStats.totalServes + (filteredStats.totalErrors || 0))) * 100) : 0}%
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">Accuracy</p>
                     </div>
                   </div>
                 </div>
@@ -1138,13 +1132,11 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                         className="text-green-500"
                       />
                     </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-3xl font-bold text-gray-900">
-                          {filteredStats?.totalPoints || 0}
-                        </p>
-                        <p className="text-sm text-gray-600">Total</p>
-                      </div>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                      <p className="text-3xl font-bold text-gray-900 leading-none">
+                        {filteredStats?.totalPoints || 0}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">Total</p>
                     </div>
             </div>
                   </div>

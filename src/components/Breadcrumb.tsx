@@ -11,7 +11,6 @@ const pathConfig = {
     journals: { name: "Journals", icon: icons.journals },
     connect: { name: "Connect", icon: icons.connect },
     profile: { name: "Profile", icon: icons.users },
-    detail: { name: "Detail", icon: icons.book },
     matches: { name: "Matches", icon: icons.matchs },
     goals: { name: "Goals", icon: icons.trophy },
     classes: { name: "Classes", icon: icons.book },
@@ -46,7 +45,7 @@ export default function Breadcrumb() {
                 
                 if (isPlayerRoute) {
                     items.push({
-                        name: "Player Details",
+                        name: "Player Detail",
                         icon: icons.players,
                         path: currentPath,
                         isActive: isLast
@@ -81,6 +80,11 @@ export default function Breadcrumb() {
                     path: currentPath,
                     isActive: isLast
                 });
+                return;
+            }
+
+            // Skip "detail" segment for player/child/match routes as it's handled by ID processing
+            if (segment === 'detail' && (pathSegments.includes('players') || pathSegments.includes('children') || pathSegments.includes('matchs'))) {
                 return;
             }
 

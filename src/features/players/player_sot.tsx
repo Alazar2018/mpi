@@ -1239,11 +1239,23 @@ export default function PlayerSOT() {
                          handleClosePreparationModal();
                          clearEditingState(); // Clear editing state
                        } catch (error: any) {
-                         if (error.message?.includes('already exists')) {
+                         // Extract error message from axios response
+                         const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save preparation phase';
+                         if (errorMessage.includes('already exists')) {
                            toast.error('Preparation phase already exists for this period. Please edit the existing one instead.');
                          } else {
-                           toast.error(error.message || 'Failed to save preparation phase');
+                           toast.error(errorMessage);
                          }
+                         
+                         // Clear the error state to prevent error screen from showing
+                         clearError();
+                         
+                         // Close modal and clear state even on error
+                         handleClosePreparationModal();
+                         clearEditingState();
+                         
+                         // Refresh data to ensure UI is in sync
+                         fetchPeriodizations();
                        }
                      } else {
                        toast.warning('Please add at least one objective');
@@ -1483,11 +1495,23 @@ export default function PlayerSOT() {
                          
                          handleCloseCompetitionModal();
                        } catch (error: any) {
-                         if (error.message?.includes('already exists')) {
+                         // Extract error message from axios response
+                         const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save competition phase';
+                         if (errorMessage.includes('already exists')) {
                            toast.error('Competition phase already exists for this period. Please edit the existing one instead.');
                          } else {
-                           toast.error(error.message || 'Failed to save competition phase');
+                           toast.error(errorMessage);
                          }
+                         
+                         // Clear the error state to prevent error screen from showing
+                         clearError();
+                         
+                         // Close modal and clear state even on error
+                         handleCloseCompetitionModal();
+                         clearEditingState();
+                         
+                         // Refresh data to ensure UI is in sync
+                         fetchPeriodizations();
                        }
                      } else {
                        toast.warning('Please add at least one pre-competition or tournament activity');
@@ -1664,11 +1688,23 @@ export default function PlayerSOT() {
                          
                          handleCloseTransitionModal();
                        } catch (error: any) {
-                         if (error.message?.includes('already exists')) {
+                         // Extract error message from axios response
+                         const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save transition phase';
+                         if (errorMessage.includes('already exists')) {
                            toast.error('Transition phase already exists for this period. Please edit the existing one instead.');
                          } else {
-                           toast.error(error.message || 'Failed to save transition phase');
+                           toast.error(errorMessage);
                          }
+                         
+                         // Clear the error state to prevent error screen from showing
+                         clearError();
+                         
+                         // Close modal and clear state even on error
+                         handleCloseTransitionModal();
+                         clearEditingState();
+                         
+                         // Refresh data to ensure UI is in sync
+                         fetchPeriodizations();
                        }
                      } else {
                        toast.warning('Please add at least one active rest instruction');

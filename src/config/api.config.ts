@@ -16,6 +16,7 @@ export const API_CONFIG = {
     USER: {
       PROFILE: "/user/profile",
       UPDATE: "/user/update",
+      INITIAL_ASSESSMENT: "/api/v1/users/profile/assessment/initial",
     },
     MATCHES: {
       LIST: "/matches",

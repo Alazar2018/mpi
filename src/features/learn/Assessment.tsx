@@ -16,7 +16,7 @@ interface Question {
 interface AssessmentProps {
     questions?: Question[];
     onProgress?: (percent: number) => void;
-    onSubmit?: () => void;
+    onSubmit?: (answers?: Record<string, string>, score?: number) => void;
 }
 
 export default function Assessment({ questions = [], onProgress, onSubmit }: AssessmentProps) {
@@ -48,7 +48,8 @@ export default function Assessment({ questions = [], onProgress, onSubmit }: Ass
     const handleSubmit = () => {
         setSubmitted(true);
         setShowResults(true);
-        if (onSubmit) onSubmit();
+        const finalScore = calculateScore();
+        if (onSubmit) onSubmit(answers, finalScore);
     };
 
     const handleNext = () => {
@@ -111,6 +112,27 @@ export default function Assessment({ questions = [], onProgress, onSubmit }: Ass
     const progress = useCallback(() => {
         return Math.round((Object.keys(answers).length / questions.length) * 100);
     }, [answers, questions.length]);
+    // Safety check for questions array
+    if (!questions || questions.length === 0) {
+        return (
+            <div className="h-full w-full flex flex-col justify-center items-center bg-[var(--bg-card)] rounded-2xl p-4 sm:p-6 transition-colors duration-300">
+                <div className="text-center">
+                    <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4">No Assessment Questions Available</h3>
+                    <p className="text-[var(--text-secondary)] mb-6">
+                        There are currently no questions available for this assessment.
+                    </p>
+                    <Button
+                        type="action"
+                        onClick={() => onSubmit && onSubmit()}
+                        className="min-w-[120px]"
+                    >
+                        Continue
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     const q = questions[current];
     const currentQuestionId = q._id || q.id || `question_${current}`;
 

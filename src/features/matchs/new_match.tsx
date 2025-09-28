@@ -33,8 +33,8 @@ const TOURNAMENT_LEVELS = {
 // Enhanced Match Format Options based on tennis rules
 const MATCH_FORMAT_OPTIONS = [
   { value: 'oneSet', label: 'One Set', description: 'One set with 7-point tiebreak at 6-6' },
-  { value: 'bestOfThree', label: 'Best of 3 Sets', description: '2 out of 3 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
-  { value: 'bestOfFive', label: 'Best of 5 Sets', description: '3 out of 5 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
+  { value: 'bestOfThree', label: '2/3 Sets', description: '2 out of 3 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
+  { value: 'bestOfFive', label: '3/5 Sets', description: '3 out of 5 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
   { value: 'shortSets', label: 'Short Sets (4/7)', description: '4 out of 7 sets (no-ad scoring and 7-point tiebreak at 3-3)' },
   { value: 'proSet8', label: '8-Game Pro Set', description: '8-game pro set with 7-point tiebreak at 8-8' },
   { value: 'tiebreak7', label: '7-Point Tiebreak Only', description: 'Single 7-point tiebreaker' },
@@ -394,8 +394,45 @@ export default function ScheduleMatch() {
                                 if (currentScoringVariation && !isFormatCompatibleWithVariation(currentMatchFormat, currentScoringVariation)) {
                                     setValue('scoringVariation', 'standard');
                                 }
+                                
+                                // Set default values based on match format
+                                if (currentMatchFormat === 'oneSet') {
+                                    setValue('tieBreakRule', 7);
+                                    setValue('scoringVariation', 'standard');
+                                } else if (currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive') {
+                                    setValue('tieBreakRule', 7);
+                                    setValue('scoringVariation', 'standard');
+                                } else if (currentMatchFormat === 'shortSets') {
+                                    setValue('tieBreakRule', 7);
+                                    setValue('scoringVariation', 'standard');
+                                    setValue('noAdScoring', true);
+                                } else if (currentMatchFormat === 'proSet8') {
+                                    setValue('tieBreakRule', 7);
+                                    setValue('scoringVariation', 'standard');
+                                } else if (currentMatchFormat.startsWith('tiebreak')) {
+                                    setValue('scoringVariation', 'standard');
+                                    setValue('noAdScoring', true);
+                                    if (currentMatchFormat === 'tiebreak7') {
+                                        setValue('tieBreakRule', 7);
+                                    } else if (currentMatchFormat === 'tiebreak10') {
+                                        setValue('tieBreakRule', 10);
+                                    } else if (currentMatchFormat === 'tiebreak21') {
+                                        setValue('tieBreakRule', 21);
+                                    }
+                                }
                             }
                         }, [currentMatchFormat, watch, setValue]);
+
+                        // Set default scoring variation to 'standard' when format changes and scoring variation is available
+                        useEffect(() => {
+                            if (currentMatchFormat && !currentMatchFormat.startsWith('tiebreak')) {
+                                const hasScoringVariation = isFormatCompatibleWithVariation(currentMatchFormat, 'standard');
+                                if (hasScoringVariation) {
+                                    // Always set to standard when format changes
+                                    setValue('scoringVariation', 'standard');
+                                }
+                            }
+                        }, [currentMatchFormat, setValue]);
 
                         // Calculate scoring variation options based on selected match format
                         const scoringVariationOptions = availableVariations
@@ -407,6 +444,33 @@ export default function ScheduleMatch() {
                                 value: variation.value,
                                 label: variation.label
                             }));
+
+                        // Calculate tie break options based on selected match format
+                        const getTieBreakOptions = () => {
+                            if (!currentMatchFormat) return tieBreakOptions;
+                            
+                            if (currentMatchFormat === 'oneSet') {
+                                return [
+                                    { value: 7, label: '7 points' },
+                                    { value: 10, label: '10 points' }
+                                ];
+                            } else if (currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive') {
+                                return [
+                                    { value: 7, label: '7 points' }
+                                ];
+                            } else if (currentMatchFormat === 'shortSets' || currentMatchFormat === 'proSet8') {
+                                return [
+                                    { value: 7, label: '7 points' }
+                                ];
+                            } else if (currentMatchFormat.startsWith('tiebreak')) {
+                                // For tiebreak-only formats, tie break rule is determined by the format
+                                return [];
+                            }
+                            
+                            return tieBreakOptions;
+                        };
+
+                        const currentTieBreakOptions = getTieBreakOptions();
 
                     return (
                             <div className=" w-full">
@@ -582,26 +646,44 @@ export default function ScheduleMatch() {
                                             />
                                         </div>
                                         
-                                        <div className="space-y-3">
-                                <Select
-                                                options={scoringVariationOptions}
-                                                label="Scoring Variation"
-                                                validation={{ required: required }}
-                                                name="scoringVariation"
-                                            />
-                                            {/* Help text for scoring variations */}
-                                            {currentMatchFormat && (
-                                                <div className="text-xs text-gray-600 mt-1">
-                                                    {currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive' ? (
-                                                        <span>✅ Final set can use 10-point tiebreak</span>
-                                                    ) : currentMatchFormat === 'oneSet' ? (
-                                                        <span>✅ Can use 10-point tiebreak</span>
-                                                    ) : (
-                                                        <span>ℹ️ Only standard scoring available for this format</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* Tie Break - Hidden for tiebreak-only formats */}
+                                        {!currentMatchFormat?.startsWith('tiebreak') && currentTieBreakOptions.length > 0 && (
+                                            <div className="space-y-3">
+                                                <Select
+                                                    options={currentTieBreakOptions}
+                                                    label="Tie Break"
+                                                    validation={{ required: required }}
+                                                    name="tieBreakRule"
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        {/* Scoring Variation - Hidden for tiebreak-only formats */}
+                                        {!currentMatchFormat?.startsWith('tiebreak') && (
+                                            <div className="space-y-3">
+                                                <Select
+                                                    options={scoringVariationOptions}
+                                                    label="Scoring Variation"
+                                                    validation={{ required: required }}
+                                                    name="scoringVariation"
+                                                    value={watch('scoringVariation') || 'standard'}
+                                                />
+                                                {/* Help text for scoring variations */}
+                                                {currentMatchFormat && (
+                                                    <div className="text-xs text-gray-600 mt-1">
+                                                        {currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive' ? (
+                                                            <span>✅ Final set can use 10-point tiebreak</span>
+                                                        ) : currentMatchFormat === 'oneSet' ? (
+                                                            <span>✅ Can use 10-point tiebreak</span>
+                                                        ) : currentMatchFormat === 'shortSets' || currentMatchFormat === 'proSet8' ? (
+                                                            <span>✅ Final set 10-point tiebreak available</span>
+                                                        ) : (
+                                                            <span>ℹ️ Only standard scoring available for this format</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                         
                                         <div className="space-y-3">
                                 <Select
@@ -609,15 +691,6 @@ export default function ScheduleMatch() {
                                                 label="Tracking Level"
                                                 validation={{ required: required }}
                                                 name="trackingLevel"
-                                            />
-                                        </div>
-                                        
-                                        <div className="space-y-3">
-                                <Select
-                                                options={tieBreakOptions}
-                                                label="Points to Break Ties"
-                                                validation={{ required: required }}
-                                                name="tieBreakRule"
                                             />
                                         </div>
                                         

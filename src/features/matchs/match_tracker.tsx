@@ -543,7 +543,7 @@ const MatchTracker: React.FC = () => {
           currentSet: 0,
           sets: Array.from({ length: rules.maxSets }, () => ({ player1: 0, player2: 0 })),
           games: [{ player1: 0, player2: 0, scores: [] }],
-          isTieBreak: false,
+          isTieBreak: rules.isTiebreakOnly, // Start in tiebreak mode for tiebreak-only formats
           isDeuce: false,
           hasAdvantage: null,
           server: tempServer || 1
@@ -1147,15 +1147,38 @@ const MatchTracker: React.FC = () => {
   };
 
   const checkSetWinner = (p1Games: number, p2Games: number) => {
+    const rules = getMatchRules(
+      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
+    
     if (match.isTieBreak) {
-      const winner = (p1Games >= 7 && p1Games - p2Games >= 2) ? 1 : 
-             (p2Games >= 7 && p2Games - p1Games >= 2) ? 2 : null;
+      // For tiebreak-only formats, the tiebreak itself determines the winner
+      if (rules.isTiebreakOnly) {
+        return null; // Tiebreak winner is handled separately
+      }
+      
+      // Regular tiebreak within a set
+      const tiebreakRule = getTiebreakRuleForSet(match.currentSet + 1, rules, match.matchFormat || 'bestOfThree');
+      const winner = (p1Games >= tiebreakRule && p1Games - p2Games >= 2) ? 1 : 
+             (p2Games >= tiebreakRule && p2Games - p1Games >= 2) ? 2 : null;
       return winner;
     }
     
-    const winner = (p1Games >= 6 && p1Games - p2Games >= 2) ? 1 : 
-           (p2Games >= 6 && p2Games - p1Games >= 2) ? 2 : null;
-    return winner;
+    // Check set completion based on format rules
+    if (rules.isProSet) {
+      // Pro set: first to 8 games with 2 game lead
+      const winner = (p1Games >= 8 && p1Games - p2Games >= 2) ? 1 : 
+             (p2Games >= 8 && p2Games - p1Games >= 2) ? 2 : null;
+      return winner;
+    } else {
+      // Use gamesPerSet from rules (6 for standard, 4 for short sets)
+      const winner = (p1Games >= rules.gamesPerSet && p1Games - p2Games >= 2) ? 1 : 
+             (p2Games >= rules.gamesPerSet && p2Games - p1Games >= 2) ? 2 : null;
+      return winner;
+    }
   };
 
   const checkMatchWinner = (p1Sets: number, p2Sets: number) => {

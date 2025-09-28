@@ -32,8 +32,10 @@ export const useSOT = () => {
       // Set current periodization to the first active one, or the first one if none are active
       const activePeriodization = response.periodizations.find(p => p.status === 'active');
       setCurrentPeriodization(activePeriodization || response.periodizations[0] || null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch periodizations');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to fetch periodizations';
+      setError(errorMessage);
       console.error('Error fetching periodizations:', err);
     } finally {
       setIsLoading(false);
@@ -51,8 +53,10 @@ export const useSOT = () => {
       const response = await SOTService.getPeriodizationDetail(playerId, periodizationId);
       // Update the current periodization with detailed data
       setCurrentPeriodization(response as Periodization);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch periodization detail');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to fetch periodization detail';
+      setError(errorMessage);
       console.error('Error fetching periodization detail:', err);
     } finally {
       setIsLoading(false);
@@ -76,8 +80,10 @@ export const useSOT = () => {
       }
       
       return newPeriodizations;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create periodization');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to create periodization';
+      setError(errorMessage);
       console.error('Error creating periodization:', err);
       throw err;
     } finally {
@@ -106,8 +112,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update periodization');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to update periodization';
+      setError(errorMessage);
       console.error('Error updating periodization:', err);
       throw err;
     } finally {
@@ -136,8 +144,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update periodization status');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to update periodization status';
+      setError(errorMessage);
       console.error('Error updating periodization status:', err);
       throw err;
     } finally {
@@ -162,8 +172,10 @@ export const useSOT = () => {
       }
       
       return remainingPeriodizations;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete periodization');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to delete periodization';
+      setError(errorMessage);
       console.error('Error deleting periodization:', err);
       throw err;
     } finally {
@@ -192,8 +204,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add preparation phase');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to add preparation phase';
+      setError(errorMessage);
       console.error('Error adding preparation phase:', err);
       throw err;
     } finally {
@@ -222,8 +236,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add competition phase');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to add competition phase';
+      setError(errorMessage);
       console.error('Error adding competition phase:', err);
       throw err;
     } finally {
@@ -252,8 +268,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add transition phase');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to add transition phase';
+      setError(errorMessage);
       console.error('Error adding transition phase:', err);
       throw err;
     } finally {
@@ -282,8 +300,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update preparation phase');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to update preparation phase';
+      setError(errorMessage);
       console.error('Error updating preparation phase:', err);
       throw err;
     } finally {
@@ -312,8 +332,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update competition phase');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to update competition phase';
+      setError(errorMessage);
       console.error('Error updating competition phase:', err);
       throw err;
     } finally {
@@ -342,8 +364,10 @@ export const useSOT = () => {
       }
       
       return updatedPeriodization;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update transition phase');
+    } catch (err: any) {
+      // Extract error message from axios response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to update transition phase';
+      setError(errorMessage);
       console.error('Error updating transition phase:', err);
       throw err;
     } finally {
