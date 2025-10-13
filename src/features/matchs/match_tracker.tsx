@@ -4646,20 +4646,20 @@ const MatchTracker: React.FC = () => {
 
      {/* Level 2 Point Outcome Modal */}
 {showPointOutcomeModal && (
-  <div className="fixed inset-0 z-50 flex items-start justify-center bg-transparent backdrop-blur-sm overflow-y-auto py-8">
-    <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-6xl mx-4 my-8 overflow-hidden border border-[var(--border-primary)]">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+    <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden border border-[var(--border-primary)]">
              {/* Header */}
-       <div className={`p-6 text-white ${
+       <div className={`p-3 md:p-6 text-white ${
          lastPointWinner === 1 
            ? 'bg-gradient-to-r from-[#D4FF5A] to-[#9ACD32]' 
            : 'bg-gradient-to-r from-[#4C6BFF] to-[#3B5BDB]'
        }`}>
          <div className="flex items-center justify-between">
            <div>
-             <h2 className="text-2xl font-bold text-gray-800">
+             <h2 className="text-lg md:text-2xl font-bold text-gray-800">
                Point Outcome Analysis
              </h2>
-             <p className={`opacity-90 ${
+             <p className={`text-sm md:text-base opacity-90 ${
                lastPointWinner === 1 ? 'text-gray-700' : 'text-blue-100'
              }`}>
                {lastPointWinner === 1 ? player1.name : player2.name} won this point
@@ -4674,7 +4674,7 @@ const MatchTracker: React.FC = () => {
              }`}
              aria-label="Close modal"
            >
-             <svg className={`w-6 h-6 ${
+             <svg className={`w-5 h-5 md:w-6 md:h-6 ${
                lastPointWinner === 1 ? 'text-gray-800' : 'text-white'
              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -4683,10 +4683,10 @@ const MatchTracker: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-6 space-y-8">
+      <div className="p-4 md:p-6 space-y-6 md:space-y-8 overflow-y-auto flex-1">
         {/* Point Outcome Selection */}
         <section className="space-y-4">
-          <h3 className="flex items-center text-xl font-semibold text-gray-800">
+          <h3 className="flex items-center text-lg md:text-xl font-semibold text-gray-800">
             <svg className="w-6 h-6 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
@@ -4819,27 +4819,27 @@ const MatchTracker: React.FC = () => {
         <>
           {/* Point Outcome Modal (First Image) */}
           {level3ModalType === 'point_outcome' && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 text-white">
+                <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-3 md:p-6 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <button 
                         onClick={() => setShowLevel3Modal(false)}
-                        className="mr-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+                        className="mr-2 md:mr-4 p-2 rounded-full hover:bg-white/10 transition-colors"
                       >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <h2 className="text-2xl font-bold">Select Result</h2>
+                      <h2 className="text-lg md:text-2xl font-bold">Select Result</h2>
                     </div>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-8">
+                {/* Content - Scrollable */}
+                <div className="p-4 md:p-8 overflow-y-auto flex-1">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Left Column - Ball In Court */}
                     <div className="md:col-span-1">
@@ -4894,10 +4894,10 @@ const MatchTracker: React.FC = () => {
 
           {/* Shot Details Modal (Second Image) - For Return Winner - Only show for Level 2+ */}
           {level3ModalType === 'shot_details' && match.level > 1 && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className={`p-6 text-white ${
+                <div className={`p-3 md:p-6 text-white ${
                   lastPointWinner === 1 
                     ? 'bg-gradient-to-r from-[#D4FF5A] to-[#9ACD32]' 
                     : 'bg-gradient-to-r from-[#4C6BFF] to-[#3B5BDB]'
@@ -4906,27 +4906,27 @@ const MatchTracker: React.FC = () => {
                     <div className="flex items-center">
                       <button 
                         onClick={() => setShowLevel3Modal(false)}
-                        className={`mr-4 p-2 rounded-full transition-colors ${
+                        className={`mr-2 md:mr-4 p-2 rounded-full transition-colors ${
                           lastPointWinner === 1 
                             ? 'hover:bg-gray-800/20' 
                             : 'hover:bg-white/20'
                         }`}
                       >
-                        <svg className={`w-6 h-6 ${
+                        <svg className={`w-5 h-5 md:w-6 md:h-6 ${
                           lastPointWinner === 1 ? 'text-gray-800' : 'text-white'
                         }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <h2 className={`text-2xl font-bold ${
+                      <h2 className={`text-lg md:text-2xl font-bold ${
                         lastPointWinner === 1 ? 'text-gray-800' : 'text-white'
                       }`}>Return Winner - {lastPointWinner === 1 ? player1.name : player2.name}</h2>
                     </div>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-8 space-y-8">
+                {/* Content - Scrollable */}
+                <div className="p-4 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1">
                   {/* Shot Placement */}
                   <section className="space-y-4">
                     <h3 className="text-xl font-semibold text-gray-800">Shot Placement</h3>
@@ -5000,10 +5000,10 @@ const MatchTracker: React.FC = () => {
 
           {/* Ball In Court Modal */}
           {level3ModalType === 'ball_in_court' && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className={`p-6 text-white ${
+                <div className={`p-3 md:p-6 text-white ${
                   lastPointWinner === 1 
                     ? 'bg-gradient-to-r from-[#D4FF5A] to-[#9ACD32]' 
                     : lastPointWinner === 2
@@ -5014,7 +5014,7 @@ const MatchTracker: React.FC = () => {
                     <div className="flex items-center">
                       <button 
                         onClick={() => setShowLevel3Modal(false)}
-                        className={`mr-4 p-2 rounded-full transition-colors ${
+                        className={`mr-2 md:mr-4 p-2 rounded-full transition-colors ${
                           lastPointWinner === 1 
                             ? 'hover:bg-gray-800/20' 
                             : lastPointWinner === 2
@@ -5022,13 +5022,13 @@ const MatchTracker: React.FC = () => {
                             : 'hover:bg-white/20'
                         }`}
                       >
-                        <svg className={`w-6 h-6 ${
+                        <svg className={`w-5 h-5 md:w-6 md:h-6 ${
                           lastPointWinner === 1 ? 'text-gray-800' : 'text-white'
                         }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <h2 className={`text-2xl font-bold ${
+                      <h2 className={`text-lg md:text-2xl font-bold ${
                         lastPointWinner === 1 ? 'text-gray-800' : 'text-white'
                       }`}>
                         {lastPointWinner 
@@ -5040,8 +5040,8 @@ const MatchTracker: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-8">
+                {/* Content - Scrollable */}
+                <div className="p-4 md:p-8 overflow-y-auto flex-1">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Left Column - Winner Selection (Only show when coming from outfield) */}
                     {sessionStorage.getItem('cameFromOutfield') === 'true' && (
@@ -5373,10 +5373,10 @@ const MatchTracker: React.FC = () => {
 
           {/* Reaction Modal - Only show for Level 2+ */}
           {level3ModalType === 'reaction' && match.level > 1 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
             {/* Header */}
-                <div className={`p-6 text-white ${
+                <div className={`p-4 md:p-6 text-white ${
                   lastPointWinner === 1 
                     ? 'bg-gradient-to-r from-[#D4FF5A] to-[#9ACD32]' 
                     : 'bg-gradient-to-r from-[#4C6BFF] to-[#3B5BDB]'
@@ -5385,27 +5385,27 @@ const MatchTracker: React.FC = () => {
                     <div className="flex items-center">
               <button
                         onClick={() => setShowLevel3Modal(false)}
-                        className={`mr-4 p-2 rounded-full transition-colors ${
+                        className={`mr-2 md:mr-4 p-2 rounded-full transition-colors ${
                           lastPointWinner === 1 
                             ? 'hover:bg-gray-800/20' 
                             : 'hover:bg-white/20'
                         }`}
                       >
-                        <svg className={`w-6 h-6 ${
+                        <svg className={`w-5 h-5 md:w-6 md:h-6 ${
                           lastPointWinner === 1 ? 'text-gray-800' : 'text-white'
                         }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-                      <h2 className={`text-2xl font-bold ${
+                      <h2 className={`text-lg md:text-2xl font-bold ${
                         lastPointWinner === 1 ? 'text-gray-800' : 'text-white'
                       }`}>Player Reactions - {lastPointWinner === 1 ? player1.name : player2.name} Wins</h2>
             </div>
                 </div>
               </div>
 
-            {/* Content */}
-                <div className="p-8 space-y-8">
+            {/* Content - Scrollable */}
+                <div className="p-4 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1">
                   {/* Player Reactions */}
                   <section className="space-y-8">
                     <h3 className="text-xl font-semibold text-gray-800 flex items-center">
@@ -5530,27 +5530,27 @@ const MatchTracker: React.FC = () => {
 
           {/* Return Error Choice Modal */}
           {level3ModalType === 'return_error_choice' && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-2xl mx-4 overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+              <div className="bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 p-3 md:p-6 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <button 
                         onClick={() => setShowLevel3Modal(false)}
-                        className="mr-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+                        className="mr-2 md:mr-4 p-2 rounded-full hover:bg-white/10 transition-colors"
                       >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <h2 className="text-2xl font-bold">Return Error Type</h2>
+                      <h2 className="text-lg md:text-2xl font-bold">Return Error Type</h2>
                     </div>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-8">
+                {/* Content - Scrollable */}
+                <div className="p-4 md:p-8 overflow-y-auto flex-1">
                   <div className="text-center mb-6">
                     <div className="text-4xl mb-4">❌</div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">What type of return error?</h3>
@@ -5589,13 +5589,13 @@ const MatchTracker: React.FC = () => {
 
       {/* Match Info Modal */}
       {showInfoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-          <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-3xl mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+          <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border-primary)] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 text-white">
+            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-3 md:p-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <h2 className="text-xl font-bold">Match Information</h2>
+                  <h2 className="text-lg md:text-xl font-bold">Match Information</h2>
                 </div>
                 <button 
                   onClick={() => setShowInfoModal(false)}
@@ -5609,8 +5609,8 @@ const MatchTracker: React.FC = () => {
               </div>
             </div>
 
-            {/* Content */}
-            <div className="p-6 space-y-6">
+            {/* Content - Scrollable */}
+            <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto flex-1">
               {/* Compact Match Format Details */}
               <section>
                 <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
