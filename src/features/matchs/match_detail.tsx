@@ -314,10 +314,10 @@ export default function MatchDetail() {
 					<Button 
 						onClick={() => setShowLevelSelection(true)}
 						type="secondary" 
-						className="text-sm px-2"
+						className="text-sm px-3"
 						title="Select different tracking level"
 					>
-						⚙️
+						Select different tracking level
 					</Button>
 				</div>
 			);

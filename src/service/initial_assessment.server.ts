@@ -16,12 +16,16 @@ export interface InitialAssessmentSubmission {
         options: string[];
         correctAnswers: string[];
         explanation: string;
+        type?: string;
     }>;
     answers: MindsetAssessmentAnswer[];
     score: number;
     timeSpent: number; // in seconds
     completedAt: string;
     assessmentType: 'mindset';
+    // Structured data for backend processing
+    competitiveStateAnxietyInventory?: Record<string, number>;
+    mindfulnessQuestionnaire?: Record<string, number>;
 }
 
 export interface InitialAssessmentResponse {
@@ -208,13 +212,37 @@ class InitialAssessmentService {
             };
         });
 
+        // Create structured data for Illinois Competition Test (questions 1-27)
+        const competitiveStateAnxietyInventory: Record<string, number> = {};
+        const illinoisQuestions = questions.filter(q => q.type === 'illinois');
+        
+        illinoisQuestions.forEach((question, index) => {
+            const answer = answers[question._id];
+            const answerIndex = question.options.indexOf(answer);
+            // Convert 0-based index to 1-based score
+            competitiveStateAnxietyInventory[`q${index + 1}`] = answerIndex + 1;
+        });
+
+        // Create structured data for FFMQ (questions 28-66)
+        const mindfulnessQuestionnaire: Record<string, number> = {};
+        const ffmqQuestions = questions.filter(q => q.type === 'ffmq');
+        
+        ffmqQuestions.forEach((question, index) => {
+            const answer = answers[question._id];
+            const answerIndex = question.options.indexOf(answer);
+            // Convert 0-based index to 1-based score
+            mindfulnessQuestionnaire[`ffqm${index + 1}`] = answerIndex + 1;
+        });
+
         return {
             questions,
             answers: formattedAnswers,
-            score: 100, // Since all answers are considered correct for mindset assessment
+            score: 100, // Since all answers are considered valid for assessment
             timeSpent,
             completedAt: new Date().toISOString(),
-            assessmentType: 'mindset'
+            assessmentType: 'mindset',
+            competitiveStateAnxietyInventory,
+            mindfulnessQuestionnaire
         };
     }
 }

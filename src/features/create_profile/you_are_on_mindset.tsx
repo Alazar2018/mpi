@@ -14,68 +14,116 @@ import { initialAssessmentService } from "@/service/initial_assessment.server";
 // Define Role type locally
 type Role = "player" | "coach" | "parent" | "admin";
 
-// Default mindset assessment questions
+// Illinois Competition Test questions (27 questions)
+const ILLINOIS_QUESTIONS = [
+    "I am concerned about this competition.",
+    "I feel nervous.",
+    "I feel at ease.",
+    "I have self-doubts.",
+    "I feel jittery.",
+    "I feel comfortable.",
+    "I am concerned I may not do as well in this competition as I could.",
+    "My body feels tense.",
+    "I feel self-confident.",
+    "I am concerned about losing.",
+    "I feel tense in my stomach.",
+    "I feel secure.",
+    "My body feels relaxed.",
+    "I'm confident I can meet the challenge.",
+    "I'm concerned about performing poorly.",
+    "My heart is racing.",
+    "I'm confident about performing well.",
+    "I'm worried about reaching my goal.",
+    "I feel my stomach sinking.",
+    "I feel mentally relaxed.",
+    "I'm concerned that others will be disappointed with my performance.",
+    "My hands are clammy.",
+    "I'm confident because I mentally picture myself reaching my goal.",
+    "I'm concerned I won't be able to concentrate.",
+    "My body feels tight.",
+    "I'm confident of coming through under pressure."
+];
+
+// Five Facet Mindfulness Questionnaire (FFMQ) questions (39 questions)
+const FFMQ_QUESTIONS = [
+    "When I'm walking, I deliberately notice the sensations of my body moving.",
+    "I'm good at finding words to describe my feelings.",
+    "I criticize myself for having irrational or inappropriate emotions.",
+    "I perceive my feelings and emotions without having to react to them.",
+    "When I do things, my mind wanders off and I'm easily distracted.",
+    "When I take a shower or bath, I stay alert to the sensations of water on my body.",
+    "I can easily put my beliefs, opinions, and expectations into words.",
+    "I don't pay attention to what I'm doing because I'm daydreaming, worrying, or otherwise distracted.",
+    "I watch my feelings without getting lost in them.",
+    "I tell myself I shouldn't be feeling the way I'm feeling.",
+    "I notice how foods and drinks affect my thoughts, bodily sensations, and emotions.",
+    "It's hard for me to find the words to describe what I'm thinking.",
+    "I am easily distracted.",
+    "I believe some of my thoughts are abnormal or bad and I shouldn't think that way.",
+    "I pay attention to sensations, such as the wind in my hair or sun on my face.",
+    "I have trouble thinking of the right words to express how I feel about things.",
+    "I make judgments about whether my thoughts are good or bad.",
+    "I find it difficult to stay focused on what's happening in the present.",
+    "When I have distressing thoughts or images, I \"step back\" and am aware of the thought or image without getting taken over by it.",
+    "I pay attention to sounds, such as clocks ticking, birds chirping, or cars passing.",
+    "In difficult situations, I can pause without immediately reacting.",
+    "When I have a sensation in my body, it's difficult for me to describe it because I can't find the right words.",
+    "It seems I am \"running on automatic\" without much awareness of what I'm doing.",
+    "When I have distressing thoughts or images, I feel calm soon after.",
+    "I tell myself that I shouldn't be thinking the way I'm thinking.",
+    "I notice the smells and aromas of things.",
+    "Even when I'm feeling terribly upset, I can find a way to put it into words.",
+    "I rush through activities without being really attentive to them.",
+    "When I have distressing thoughts or images, I am able just to notice them without reacting.",
+    "I think some of my emotions are bad or inappropriate and I shouldn't feel them.",
+    "I notice visual elements in art or nature, such as colors, shapes, textures, or patterns of light and shadow.",
+    "My natural tendency is to put my experiences into words.",
+    "When I have distressing thoughts or images, I just notice them and let them go.",
+    "I do jobs or tasks automatically without being aware of what I'm doing.",
+    "When I have distressing thoughts or images, I judge myself as good or bad depending what the thought or image is about.",
+    "I pay attention to how my emotions affect my thoughts and behavior.",
+    "I can usually describe how I feel at the moment in considerable detail.",
+    "I find myself doing things without paying attention.",
+    "I disapprove of myself when I have irrational ideas."
+];
+
+// Illinois Competition Test options
+const ILLINOIS_OPTIONS = [
+    "Not at all",
+    "Somewhat", 
+    "Moderately so",
+    "Very much so"
+];
+
+// FFMQ options
+const FFMQ_OPTIONS = [
+    "Never or very rarely",
+    "Rarely",
+    "Sometimes", 
+    "Often",
+    "Very often or always"
+];
+
+// Combine all questions for the assessment
 const DEFAULT_MINDSET_QUESTIONS = [
-    {
-        _id: "mindset_1",
-        question: "How would you describe your primary motivation for playing tennis?",
-        options: [
-            "To compete and win tournaments",
-            "To stay physically fit and healthy",
-            "To have fun and socialize",
-            "To develop mental toughness and discipline"
-        ],
-        correctAnswers: ["To compete and win tournaments", "To stay physically fit and healthy", "To have fun and socialize", "To develop mental toughness and discipline"],
-        explanation: "All answers are valid - this helps us understand your mindset and goals."
-    },
-    {
-        _id: "mindset_2", 
-        question: "When facing a challenging opponent, what's your typical approach?",
-        options: [
-            "Analyze their weaknesses and exploit them",
-            "Focus on my own game and stay consistent",
-            "Try different strategies until something works",
-            "Stay calm and trust my training"
-        ],
-        correctAnswers: ["Analyze their weaknesses and exploit them", "Focus on my own game and stay consistent", "Try different strategies until something works", "Stay calm and trust my training"],
-        explanation: "There's no wrong answer - different approaches work for different players."
-    },
-    {
-        _id: "mindset_3",
-        question: "How do you typically handle pressure situations in matches?",
-        options: [
-            "I thrive under pressure and perform better",
-            "I feel nervous but try to stay focused",
-            "I sometimes make mistakes under pressure",
-            "I use breathing techniques to stay calm"
-        ],
-        correctAnswers: ["I thrive under pressure and perform better", "I feel nervous but try to stay focused", "I sometimes make mistakes under pressure", "I use breathing techniques to stay calm"],
-        explanation: "Understanding your pressure response helps us tailor your training."
-    },
-    {
-        _id: "mindset_4",
-        question: "What's most important to you in your tennis development?",
-        options: [
-            "Technical skill improvement",
-            "Physical fitness and conditioning",
-            "Mental game and strategy",
-            "Match experience and competition"
-        ],
-        correctAnswers: ["Technical skill improvement", "Physical fitness and conditioning", "Mental game and strategy", "Match experience and competition"],
-        explanation: "All aspects are important - this helps us prioritize your training focus."
-    },
-    {
-        _id: "mindset_5",
-        question: "How do you prefer to receive feedback on your game?",
-        options: [
-            "Direct and honest feedback",
-            "Encouraging and positive reinforcement",
-            "Detailed technical analysis",
-            "Video review with explanations"
-        ],
-        correctAnswers: ["Direct and honest feedback", "Encouraging and positive reinforcement", "Detailed technical analysis", "Video review with explanations"],
-        explanation: "Understanding your learning style helps us communicate more effectively."
-    }
+    // Illinois Competition Test questions (1-27)
+    ...ILLINOIS_QUESTIONS.map((question, index) => ({
+        _id: `illinois_${index + 1}`,
+        question: `${index + 1}. ${question}`,
+        options: ILLINOIS_OPTIONS,
+        correctAnswers: ILLINOIS_OPTIONS, // All answers are valid
+        explanation: "Rate how you feel right now during a competitive situation.",
+        type: "illinois"
+    })),
+    // FFMQ questions (28-66)
+    ...FFMQ_QUESTIONS.map((question, index) => ({
+        _id: `ffmq_${index + 1}`,
+        question: `${index + 28}. ${question}`,
+        options: FFMQ_OPTIONS,
+        correctAnswers: FFMQ_OPTIONS, // All answers are valid
+        explanation: "Rate what is generally true for you.",
+        type: "ffmq"
+    }))
 ];
 
 export default function YouAreOnMindset() {
@@ -340,8 +388,8 @@ export default function YouAreOnMindset() {
         return (
             <FormParent className="w-full max-w-4xl mx-auto">
                 <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-800">Mindset Assessment</h2>
-                    <p className="text-gray-600 mt-2">Complete the assessment to personalize your experience</p>
+                    <h2 className="text-2xl font-bold text-gray-800">Psychological Assessment</h2>
+                    <p className="text-gray-600 mt-2">Complete the Illinois Competition Test and Five Facet Mindfulness Questionnaire</p>
                 </div>
                 <Assessment 
                     questions={DEFAULT_MINDSET_QUESTIONS}
@@ -353,13 +401,13 @@ export default function YouAreOnMindset() {
     }
 
     return (
-        <FormParent className="w-full max-w-2xl mx-auto">
+            <FormParent className="w-full max-w-2xl mx-auto">
             <LogoHeaderWithTitle
-                title={isFromLogin ? "Complete Your Assessment" : "You're on Mindset!"}
+                title={isFromLogin ? "Complete Your Assessment" : "Psychological Assessment"}
                 description={
                     isFromLogin 
                         ? "You're almost there! Complete this assessment to finish your profile setup."
-                        : "We've put together a quick assessment to help you kick things off right where you fit in."
+                        : "Complete this psychological assessment to help us understand your competitive mindset and mindfulness levels."
                 }
             />
             <hr className="border-gray-6" />

@@ -11,6 +11,7 @@ interface Question {
     answer?: string;
     correct_answer?: string;
     explanation?: string;
+    type?: string;
 }
 
 interface AssessmentProps {
@@ -26,20 +27,12 @@ export default function Assessment({ questions = [], onProgress, onSubmit }: Ass
     const [showResults, setShowResults] = useState(false);
     const prevScoreRef = useRef<number>(0);
 
-    // Debug: Log questions when component mounts or questions change
-    useEffect(() => {
-        console.log('Assessment component received questions:', questions);
-        if (questions.length > 0) {
-            console.log('First question structure:', questions[0]);
-        }
-    }, [questions]);
+
 
     const handleSelect = (qid: string, option: string) => {
         if (!submitted) {
-            console.log('Setting answer for question', qid, 'to', option);
             setAnswers((prev) => {
                 const newAnswers = { ...prev, [qid]: option };
-                console.log('New answers state:', newAnswers);
                 return newAnswers;
             });
         }
@@ -68,8 +61,6 @@ export default function Assessment({ questions = [], onProgress, onSubmit }: Ass
     const calculateScore = useCallback(() => {
         if (questions.length === 0) return 0;
         
-        console.log('Calculating score for questions:', questions);
-        console.log('Current answers:', answers);
         
         let correctCount = 0;
         questions.forEach((question, index) => {
@@ -87,23 +78,13 @@ export default function Assessment({ questions = [], onProgress, onSubmit }: Ass
                 const correctAnswer = question.correctAnswer || question.answer || question.correct_answer;
                 isCorrect = answers[questionId] === correctAnswer;
             }
-            
-            console.log(`Question ${questionId}:`, {
-                question: question.question,
-                userAnswer: answers[questionId],
-                correctAnswers: question.correctAnswers,
-                correctAnswer: question.correctAnswer || question.answer || question.correct_answer,
-                availableFields: Object.keys(question),
-                isCorrect: isCorrect
-            });
-            
+         
             if (isCorrect) {
                 correctCount++;
             }
         });
         
         const score = Math.round((correctCount / questions.length) * 100);
-        console.log(`Score calculation: ${correctCount}/${questions.length} = ${score}%`);
         
         return score;
     }, [questions, answers]);
@@ -137,20 +118,12 @@ export default function Assessment({ questions = [], onProgress, onSubmit }: Ass
     const currentQuestionId = q._id || q.id || `question_${current}`;
 
     useEffect(() => {
-        console.log('useEffect triggered with:', {
-            onProgress: !!onProgress,
-            questionsLength: questions.length,
-            answersCount: Object.keys(answers).length,
-            currentScore: score,
-            prevScore: prevScoreRef.current
-        });
+      
         
         if (onProgress && questions.length > 0 && Object.keys(answers).length > 0) {
             // Only call onProgress if score actually changed to prevent infinite loops
             if (score !== prevScoreRef.current) {
-                console.log('Score changed from', prevScoreRef.current, 'to', score);
                 prevScoreRef.current = score;
-                console.log('Calling onProgress with score:', score);
                 onProgress(score);
             } else {
                 console.log('Score unchanged, not calling onProgress');
@@ -158,47 +131,124 @@ export default function Assessment({ questions = [], onProgress, onSubmit }: Ass
         } else {
             console.log('Conditions not met for onProgress call');
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps 
     }, [answers, onProgress, questions.length]);
 
     return (
         <div className="h-full w-full flex flex-col justify-center items-center bg-[var(--bg-card)] rounded-2xl p-4 sm:p-6 transition-colors duration-300">
             <div className="w-full max-w-xl flex flex-col items-center justify-center flex-1 mx-auto py-4 sm:py-8">
                 {/* Assessment Title */}
-                <h2 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] text-center mb-4 sm:mb-6">
-                    Question {current + 1} of {questions.length}
-                </h2>
+                <div className="text-center mb-4 sm:mb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] mb-2">
+                        Question {current + 1} of {questions.length}
+                    </h2>
+                    {q.type === 'illinois' && (
+                        <div className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                            <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                            Illinois Competition Test
+                        </div>
+                    )}
+                    {q.type === 'ffmq' && (
+                        <div className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                            <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                            Five Facet Mindfulness Questionnaire
+                        </div>
+                    )}
+                </div>
 
                 {/* Divider */}
                 <div className="w-full border-t border-[var(--border-primary)] mb-4 sm:mb-6"></div>
 
                 {/* Question */}
                 <div className="w-full flex flex-col items-center mb-4 sm:mb-6">
-                    <div className="text-base sm:text-lg text-[var(--text-primary)] text-center px-2">
+                    <div className="text-base sm:text-lg text-[var(--text-primary)] text-center px-2 mb-3">
                         {q.question}
                     </div>
+                    {(q.type === 'illinois' || q.type === 'ffmq') && (
+                        <div className="text-sm text-gray-600 text-center px-4 max-w-md">
+                            {q.type === 'illinois' 
+                                ? "Rate how you feel right now during a competitive situation."
+                                : "Rate what is generally true for you."
+                            }
+                        </div>
+                    )}
                 </div>
 
                 {/* Divider */}
                 <div className="w-full border-t border-[var(--border-primary)] mb-4 sm:mb-8"></div>
 
                 {/* Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-6 sm:mb-12">
-                    {q.options.map((opt) => (
-                        <button
-                            key={opt}
-                            className={`w-full px-4 py-3 rounded-lg text-sm sm:text-base font-medium border transition-all duration-150 focus:outline-none
-                                 ${answers[currentQuestionId] === opt
-                                 ? "bg-blue-600 text-white border-blue-600 shadow"
-                                 : "bg-[var(--bg-secondary)] text-[var(--text-primary)] dark:text-white border-blue-100 hover:bg-[var(--bg-tertiary)]"}
-                ${submitted ? "opacity-60 cursor-not-allowed" : ""}
-              `}
-                            onClick={() => handleSelect(currentQuestionId, opt)}
-                            disabled={submitted}
-                        >
-                            {opt}
-                        </button>
-                    ))}
+                <div className="w-full mb-6 sm:mb-12">
+                    {q.type === 'illinois' || q.type === 'ffmq' ? (
+                        // Rating buttons for Illinois and FFMQ questions
+                        <div className="space-y-6">
+                            {/* Rating Scale */}
+                            <div className="flex justify-center">
+                                <div className="flex space-x-2 sm:space-x-4">
+                                    {q.options.map((option, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => handleSelect(currentQuestionId, option)}
+                                            disabled={submitted}
+                                            className={`flex flex-col items-center p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                                ${answers[currentQuestionId] === option
+                                                    ? "bg-blue-600 text-white border-blue-600 shadow-lg scale-105"
+                                                    : "bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md"}
+                                                ${submitted ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+                                            `}
+                                        >
+                                            {/* Rating Number */}
+                                            <div className={`text-lg sm:text-xl font-bold mb-1
+                                                ${answers[currentQuestionId] === option ? "text-white" : "text-blue-600"}
+                                            `}>
+                                                {index + 1}
+                                            </div>
+                                            {/* Option Text */}
+                                            <div className="text-xs sm:text-sm text-center leading-tight max-w-[80px] sm:max-w-[100px]">
+                                                {option}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Selected Value Display */}
+                            {answers[currentQuestionId] && (
+                                <div className="text-center">
+                                    <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                        <span className="mr-2">Selected:</span>
+                                        <span className="font-semibold">{answers[currentQuestionId]}</span>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Scale Legend */}
+                            <div className="flex justify-between text-xs text-gray-500 px-4">
+                                <span className="text-left">Low</span>
+                                <span className="text-center">← Rating Scale →</span>
+                                <span className="text-right">High</span>
+                            </div>
+                        </div>
+                    ) : (
+                        // Multiple choice buttons for other question types
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                            {q.options.map((opt) => (
+                                <button
+                                    key={opt}
+                                    className={`w-full px-4 py-3 rounded-lg text-sm sm:text-base font-medium border transition-all duration-150 focus:outline-none
+                                         ${answers[currentQuestionId] === opt
+                                         ? "bg-blue-600 text-white border-blue-600 shadow"
+                                         : "bg-[var(--bg-secondary)] text-[var(--text-primary)] dark:text-white border-blue-100 hover:bg-[var(--bg-tertiary)]"}
+                        ${submitted ? "opacity-60 cursor-not-allowed" : ""}
+                      `}
+                                    onClick={() => handleSelect(currentQuestionId, opt)}
+                                    disabled={submitted}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Progress Bar */}

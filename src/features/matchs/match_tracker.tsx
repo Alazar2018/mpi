@@ -318,12 +318,28 @@ const WinnersModal = ({
                 return (
                   <div className="space-y-1">
                     <div>{getMatchProgressDescription(matchData.match.sets, rules)}</div>
-                    <div className="flex items-center space-x-4">
-                      <span>P1 Sets: {p1Sets}/{rules.setsToWin}</span>
-                      <span>P2 Sets: {p2Sets}/{rules.setsToWin}</span>
-                      <span>Total Sets: {totalSets}</span>
-                    </div>
-                    {!isMatchComplete() && (
+                    {!rules.isTiebreakOnly && (
+                      <div className="flex items-center space-x-4">
+                        <span>P1 Sets: {p1Sets}/{rules.setsToWin}</span>
+                        <span>P2 Sets: {p2Sets}/{rules.setsToWin}</span>
+                        <span>Total Sets: {totalSets}</span>
+                      </div>
+                    )}
+                    {rules.isTiebreakOnly && (
+                      <div className="font-medium">
+                        Final Score: {(() => {
+                          console.log('🎯 [Winner Modal] Final Score Debug:', {
+                            player1Points: matchData.player1.points,
+                            player2Points: matchData.player2.points,
+                            player1Name: matchData.player1.name,
+                            player2Name: matchData.player2.name,
+                            matchDataKeys: Object.keys(matchData)
+                          });
+                          return `${matchData.player1.points} - ${matchData.player2.points}`;
+                        })()}
+                      </div>
+                    )}
+                    {!isMatchComplete() && !rules.isTiebreakOnly && (
                       <div className="text-yellow-600 font-medium">
                         ⚠️ Match cannot be submitted until a player wins {rules.setsToWin} sets
                       </div>
@@ -335,45 +351,74 @@ const WinnersModal = ({
           </div>
           
           <div className="bg-gray-50 rounded-xl p-6">
-            <div className="grid grid-cols-4 gap-4 text-center">
-              {/* Headers */}
-              <div className="text-sm font-medium text-gray-600">Player</div>
-              <div className="text-sm font-medium text-gray-600">Sets</div>
-              <div className="text-sm font-medium text-gray-600">Games</div>
-              <div className="text-sm font-medium text-gray-600">Points</div>
-              
-              {/* Winner Row */}
-              <div className={`p-3 rounded-lg font-medium ${
-                winner === 1 ? 'bg-[#D4FF5A]' : 'bg-[#EEF0FF]'
-              } text-gray-800`}>
-                {winnerPlayer.name.split(' ')[0]} {winnerPlayer.name.split(' ')[1]?.charAt(0) || '.'}
-              </div>
-              <div className="text-2xl font-bold text-gray-800">
-                {matchData.match.sets.reduce((sum, set) => sum + (winner === 1 ? set.player1 : set.player2), 0)}
-              </div>
-              <div className="text-2xl font-bold text-gray-800">
-                {matchData.match.games[matchData.match.currentSet]?.[winner === 1 ? 'player1' : 'player2'] || 0}
-              </div>
-              <div className="text-2xl font-bold text-gray-800">
-                0
-              </div>
-              
-              {/* Loser Row */}
-              <div className={`p-3 rounded-lg font-medium ${
-                winner === 2 ? 'bg-[#D4FF5A]' : 'bg-[#EEF0FF]'
-              } text-gray-800`}>
-                {loserPlayer.name.split(' ')[0]} {loserPlayer.name.split(' ')[1]?.charAt(0) || '.'}
-              </div>
-              <div className="text-2xl font-bold text-gray-800">
-                {matchData.match.sets.reduce((sum, set) => sum + (winner === 2 ? set.player1 : set.player2), 0)}
-              </div>
-              <div className="text-2xl font-bold text-gray-800">
-                {matchData.match.games[matchData.match.currentSet]?.[winner === 2 ? 'player1' : 'player2'] || 0}
-              </div>
-              <div className="text-2xl font-bold text-gray-800">
-                0
-              </div>
-            </div>
+            {(() => {
+              const matchFormat = matchData.match.matchFormat || convertLegacyMatchType(matchData.match.bestOf === 1 ? 'one' : matchData.match.bestOf === 3 ? 'three' : 'five');
+              const rules = getMatchRules(
+                matchFormat,
+                matchData.match.scoringVariation,
+                matchData.match.customTiebreakRules,
+                matchData.match.noAdScoring
+              );
+              const isTiebreakOnly = rules.isTiebreakOnly;
+
+              return (
+                <div className={`grid ${isTiebreakOnly ? 'grid-cols-2' : 'grid-cols-4'} gap-4 text-center`}>
+                  {/* Headers */}
+                  <div className="text-sm font-medium text-gray-600">Player</div>
+                  {!isTiebreakOnly && <div className="text-sm font-medium text-gray-600">Sets</div>}
+                  {!isTiebreakOnly && <div className="text-sm font-medium text-gray-600">Games</div>}
+                  <div className="text-sm font-medium text-gray-600">Points</div>
+                  
+                  {/* Winner Row */}
+                  <div className={`p-3 rounded-lg font-medium ${
+                    winner === 1 ? 'bg-[#D4FF5A]' : 'bg-[#EEF0FF]'
+                  } text-gray-800`}>
+                    {winnerPlayer.name.split(' ')[0]} {winnerPlayer.name.split(' ')[1]?.charAt(0) || '.'}
+                  </div>
+                  {!isTiebreakOnly && (
+                    <div className="text-2xl font-bold text-gray-800">
+                      {matchData.match.sets.reduce((sum, set) => sum + (winner === 1 ? set.player1 : set.player2), 0)}
+                    </div>
+                  )}
+                  {!isTiebreakOnly && (
+                    <div className="text-2xl font-bold text-gray-800">
+                      {matchData.match.games[matchData.match.currentSet]?.[winner === 1 ? 'player1' : 'player2'] || 0}
+                    </div>
+                  )}
+                  <div className="text-2xl font-bold text-gray-800">
+                    {isTiebreakOnly ? (() => {
+                      const points = winner === 1 ? matchData.player1.points : matchData.player2.points;
+                      console.log('🎯 [Winner Modal] Winner points:', { winner, points, player1Points: matchData.player1.points, player2Points: matchData.player2.points });
+                      return points;
+                    })() : 0}
+                  </div>
+                  
+                  {/* Loser Row */}
+                  <div className={`p-3 rounded-lg font-medium ${
+                    winner === 2 ? 'bg-[#D4FF5A]' : 'bg-[#EEF0FF]'
+                  } text-gray-800`}>
+                    {loserPlayer.name.split(' ')[0]} {loserPlayer.name.split(' ')[1]?.charAt(0) || '.'}
+                  </div>
+                  {!isTiebreakOnly && (
+                    <div className="text-2xl font-bold text-gray-800">
+                      {matchData.match.sets.reduce((sum, set) => sum + (winner === 2 ? set.player1 : set.player2), 0)}
+                    </div>
+                  )}
+                  {!isTiebreakOnly && (
+                    <div className="text-2xl font-bold text-gray-800">
+                      {matchData.match.games[matchData.match.currentSet]?.[winner === 2 ? 'player1' : 'player2'] || 0}
+                    </div>
+                  )}
+                  <div className="text-2xl font-bold text-gray-800">
+                    {isTiebreakOnly ? (() => {
+                      const points = winner === 2 ? matchData.player1.points : matchData.player2.points;
+                      console.log('🎯 [Winner Modal] Loser points:', { winner, points, player1Points: matchData.player1.points, player2Points: matchData.player2.points });
+                      return points;
+                    })() : 0}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -462,7 +507,7 @@ const MatchTracker: React.FC = () => {
       setPlayer1(prev => ({
         ...prev,
         name: matchData.p1IsObject && typeof matchData.p1 !== 'string' && matchData.p1
-          ? `${matchData.p1?.firstName} ${matchData.p1?.lastName}`
+          ? `${matchData.p1?.firstName || ''} ${matchData.p1?.lastName || ''}`.trim() || "Player 1"
           : matchData?.p1Name || "Player 1",
         image: typeof matchData?.p1 !== 'string' && matchData.p1?.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
         usdta: 19,
@@ -478,7 +523,7 @@ const MatchTracker: React.FC = () => {
       setPlayer2(prev => ({
         ...prev,
         name: matchData.p2IsObject && typeof matchData.p2 !== 'string' && matchData.p2
-          ? `${matchData.p2?.firstName} ${matchData.p2?.lastName}`
+          ? `${matchData.p2?.firstName || ''} ${matchData.p2?.lastName || ''}`.trim() || "Player 2"
           : matchData?.p2Name || "Player 2",
         image: typeof matchData?.p2 !== 'string' && matchData.p2?.avatar || "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
         usdta: 19,
@@ -537,6 +582,14 @@ const MatchTracker: React.FC = () => {
           matchData.customTiebreakRules,
           matchData.noAdScoring
         );
+        
+        console.log('🎯 [Match Init] Format detection:', {
+          matchFormat,
+          matchType: matchData.matchType,
+          isTiebreakOnly: rules.isTiebreakOnly,
+          tiebreakRule: rules.tiebreakRule,
+          noAdScoring: rules.noAdScoring
+        });
         
         setMatch(prev => ({
           ...prev,
@@ -827,6 +880,21 @@ const MatchTracker: React.FC = () => {
 
   // Get tennis score after a specific point is won
   const getCurrentGameScoreAfterPoint = (p1Points: number, p2Points: number): { p1Score: string; p2Score: string } => {
+    const rules = getMatchRules(
+      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
+    
+    // For tiebreak-only formats, use numeric scoring
+    if (rules.isTiebreakOnly || match.isTieBreak) {
+      return {
+        p1Score: p1Points.toString(),
+        p2Score: p2Points.toString()
+      };
+    }
+    
     // If either player has 4+ points and leads by 2, game is over
     if ((p1Points >= 4 && p1Points > p2Points + 1) || (p2Points >= 4 && p2Points > p1Points + 1)) {
       return { p1Score: "0", p2Score: "0" }; // Game over, scores reset
@@ -1102,22 +1170,6 @@ const MatchTracker: React.FC = () => {
   ];
 
   const checkGameWinner = (p1Points: number, p2Points: number) => {
-    if (match.isTieBreak) {
-      // Get the correct tiebreak rule for current set
-      const rules = getMatchRules(
-        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
-        match.scoringVariation,
-        match.customTiebreakRules,
-        match.noAdScoring
-      );
-      const tiebreakRule = getTiebreakRuleForSet(match.currentSet + 1, rules, match.matchFormat || 'bestOfThree');
-      
-      const winner = (p1Points >= tiebreakRule && p1Points - p2Points >= 2) ? 1 : 
-             (p2Points >= tiebreakRule && p2Points - p1Points >= 2) ? 2 : null;
-      return winner;
-    }
-    
-    // Check for game win based on no-ad scoring rules
     const rules = getMatchRules(
       match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
       match.scoringVariation,
@@ -1125,6 +1177,33 @@ const MatchTracker: React.FC = () => {
       match.noAdScoring
     );
     
+    console.log('🎯 [checkGameWinner] Debug:', {
+      p1Points,
+      p2Points,
+      isTieBreak: match.isTieBreak,
+      isTiebreakOnly: rules.isTiebreakOnly,
+      tiebreakRule: rules.tiebreakRule,
+      matchFormat: match.matchFormat
+    });
+    
+    if (match.isTieBreak) {
+      // Get the correct tiebreak rule for current set
+      const tiebreakRule = getTiebreakRuleForSet(match.currentSet + 1, rules, match.matchFormat || 'bestOfThree');
+      
+      const winner = (p1Points >= tiebreakRule && p1Points - p2Points >= 2) ? 1 : 
+             (p2Points >= tiebreakRule && p2Points - p1Points >= 2) ? 2 : null;
+      
+      console.log('🎯 [checkGameWinner] Tiebreak check:', {
+        tiebreakRule,
+        winner,
+        p1Points,
+        p2Points
+      });
+      
+      return winner;
+    }
+    
+    // Check for game win based on no-ad scoring rules
     if (rules.noAdScoring) {
       // No-ad scoring: first to 4 points wins (no advantage)
       if (p1Points >= 4 && p1Points > p2Points) {
@@ -1155,9 +1234,11 @@ const MatchTracker: React.FC = () => {
     );
     
     if (match.isTieBreak) {
-      // For tiebreak-only formats, the tiebreak itself determines the winner
+      // For tiebreak-only formats, winning the tiebreak means winning the set (and match)
       if (rules.isTiebreakOnly) {
-        return null; // Tiebreak winner is handled separately
+        // The game winner has already been determined by checkGameWinner
+        // When handleGameWin increments the games count, the winner will have 1 game
+        return p1Games > p2Games ? 1 : p2Games > p1Games ? 2 : null;
       }
       
       // Regular tiebreak within a set
@@ -1277,6 +1358,7 @@ const MatchTracker: React.FC = () => {
   // Winners modal state
   const [showWinnersModal, setShowWinnersModal] = useState(false);
   const [matchWinner, setMatchWinner] = useState<1 | 2 | null>(null);
+  const [finalTiebreakScores, setFinalTiebreakScores] = useState<{p1Points: number, p2Points: number} | null>(null);
 
   // Info modal state
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -1757,6 +1839,7 @@ const MatchTracker: React.FC = () => {
         setPlayer2Reaction(null);
         setShowWinnersModal(false);
         setMatchWinner(null);
+        setFinalTiebreakScores(null);
         setShowInfoModal(false);
         return true;
       } catch (error) {
@@ -1813,7 +1896,7 @@ const MatchTracker: React.FC = () => {
   useEffect(() => {
     let interval: number;
     
-    if (isGameRunning) {
+    if (isGameRunning && !isPaused) {
       interval = setInterval(() => {
         setGameTime(prev => prev + 1);
       }, 1000);
@@ -1824,13 +1907,13 @@ const MatchTracker: React.FC = () => {
         clearInterval(interval);
       }
     };
-  }, [isGameRunning]);
+  }, [isGameRunning, isPaused]);
 
   // Timer effect for in-between time (Level 3 only)
   useEffect(() => {
     let interval: number;
     
-    if (match.level === 3 && !isPointActive && isGameRunning) {
+    if (match.level === 3 && !isPointActive && isGameRunning && !isPaused) {
       interval = setInterval(() => {
         setInBetweenTime(prev => prev + 1);
         // Track in-between time for the current server
@@ -1847,7 +1930,7 @@ const MatchTracker: React.FC = () => {
         clearInterval(interval);
       }
     };
-  }, [match.level, isPointActive, player1.isServing, player2.isServing, isGameRunning]);
+  }, [match.level, isPointActive, player1.isServing, player2.isServing, isGameRunning, isPaused]);
 
   // Cleanup effect for modals
   useEffect(() => {
@@ -2374,8 +2457,8 @@ const MatchTracker: React.FC = () => {
       const gameWinner = checkGameWinner(p1Total, p2Total);
       
       if (gameWinner) {
-        // Use helper function for game win logic
-        handleGameWin(gameWinner);
+        // Use helper function for game win logic with final points
+        handleGameWin(gameWinner, p1Total, p2Total);
         // Save state after game completion
         setTimeout(() => saveMatchState(), 100);
       } else {
@@ -2426,8 +2509,19 @@ const MatchTracker: React.FC = () => {
     setTimeout(() => saveMatchState(), 100);
   };
 
+  // Pause/Resume functions
+  const handlePause = () => {
+    setIsPaused(true);
+    console.log('🎯 [Pause] Game paused');
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    console.log('🎯 [Resume] Game resumed');
+  };
+
   // Helper function to handle game win logic
-  const handleGameWin = (gameWinner: 1 | 2) => {
+  const handleGameWin = (gameWinner: 1 | 2, finalP1Points?: number, finalP2Points?: number) => {
         console.log('🎯 handleGameWin called with winner:', gameWinner);
         console.log('🎯 Current match state:', { currentSet: match.currentSet, games: match.games });
         
@@ -2486,13 +2580,25 @@ const MatchTracker: React.FC = () => {
           setCurrentGameScores([]);
           console.log('🎯 [handleGameWin] Reset currentGameScores to empty array');
           
-          // Reset player points to 0 for the new game
-          setPlayer1(prev => ({ ...prev, points: 0 }));
-          setPlayer2(prev => ({ ...prev, points: 0 }));
-          console.log('🎯 [handleGameWin] Reset player points to 0 for new game');
+          // For tiebreak-only formats, don't reset points yet - preserve them for winner modal
+          const rules = getMatchRules(
+            match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+            match.scoringVariation,
+            match.customTiebreakRules,
+            match.noAdScoring
+          );
           
-          // Start new point for next game
-          startNewPoint();
+          if (!rules.isTiebreakOnly) {
+            // Reset player points to 0 for the new game (only for non-tiebreak formats)
+            setPlayer1(prev => ({ ...prev, points: 0 }));
+            setPlayer2(prev => ({ ...prev, points: 0 }));
+            console.log('🎯 [handleGameWin] Reset player points to 0 for new game');
+            
+            // Start new point for next game
+            startNewPoint();
+          } else {
+            console.log('🎯 [handleGameWin] Preserving tiebreak points for winner modal');
+          }
         } else {
           console.warn('⚠️ [handleGameWin] No currentGameScores to save! This might indicate a problem with point tracking.');
         }
@@ -2565,8 +2671,31 @@ const MatchTracker: React.FC = () => {
           });
           
           // Show winner modal for set win
-          setMatchWinner(setWinner);
-          setShowWinnersModal(true);
+          const setWinRules = getMatchRules(
+            match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+            match.scoringVariation,
+            match.customTiebreakRules,
+            match.noAdScoring
+          );
+          console.log('🎯 [Set Win] Triggering winner modal with player points:', {
+            player1Points: player1.points,
+            player2Points: player2.points,
+            setWinner,
+            isTiebreakOnly: setWinRules.isTiebreakOnly
+          });
+          
+          // For tiebreak-only formats, capture the final points before showing modal
+          if (setWinRules.isTiebreakOnly) {
+            const capturedP1Points = finalP1Points !== undefined ? finalP1Points : player1.points;
+            const capturedP2Points = finalP2Points !== undefined ? finalP2Points : player2.points;
+            console.log('🎯 [Set Win] Capturing final tiebreak scores:', { p1Points: capturedP1Points, p2Points: capturedP2Points });
+            setFinalTiebreakScores({ p1Points: capturedP1Points, p2Points: capturedP2Points });
+            setMatchWinner(setWinner);
+            setShowWinnersModal(true);
+          } else {
+            setMatchWinner(setWinner);
+            setShowWinnersModal(true);
+          }
 
           // Check for match winner AFTER updating the state
           const totalSetsP1 = newSets.reduce((sum, set) => sum + set.player1, 0);
@@ -2593,6 +2722,27 @@ const MatchTracker: React.FC = () => {
                 
                 setGameHistory(prev => [...prev, finalGameScore]);
                 setCurrentGameScores([]);
+              }
+              
+              const matchWinRules = getMatchRules(
+                match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                match.scoringVariation,
+                match.customTiebreakRules,
+                match.noAdScoring
+              );
+              console.log('🎯 [Match Win] Triggering winner modal with player points:', {
+                player1Points: player1.points,
+                player2Points: player2.points,
+                matchWinner,
+                isTiebreakOnly: matchWinRules.isTiebreakOnly
+              });
+              
+              // For tiebreak-only formats, capture the final points before showing modal
+              if (matchWinRules.isTiebreakOnly) {
+                const capturedP1Points = finalP1Points !== undefined ? finalP1Points : player1.points;
+                const capturedP2Points = finalP2Points !== undefined ? finalP2Points : player2.points;
+                console.log('🎯 [Match Win] Capturing final tiebreak scores:', { p1Points: capturedP1Points, p2Points: capturedP2Points });
+                setFinalTiebreakScores({ p1Points: capturedP1Points, p2Points: capturedP2Points });
               }
               
               setMatchWinner(matchWinner);
@@ -3464,14 +3614,14 @@ const MatchTracker: React.FC = () => {
         winner={matchWinner}
         onClose={() => setShowWinnersModal(false)}
         matchData={{
-          player1,
-          player2,
+          player1: finalTiebreakScores ? { ...player1, points: finalTiebreakScores.p1Points } : player1,
+          player2: finalTiebreakScores ? { ...player2, points: finalTiebreakScores.p2Points } : player2,
           match,
           courtRotation
         }}
         onDone={() => {
           setShowWinnersModal(false);
-          // You can add additional logic here when the modal is closed
+          setFinalTiebreakScores(null); // Reset tiebreak scores when modal is closed
         }}
       />
 )}
@@ -4017,22 +4167,53 @@ const MatchTracker: React.FC = () => {
                   <text x="590" y="515" textAnchor="middle" transform="rotate(-90, 590, 525)">NET</text>
                 </g>
                 
-                {/* Overlay Shade for Tap-to-Score Areas */}
+                {/* Tennis Ball Icons for Tap-to-Score Areas (Background) */}
+                {isGameRunning && (
+                  <>
+                    {/* Left Court Tennis Ball */}
+                    <g transform="translate(430, 450)">
+                      <circle cx="0" cy="0" r="25" fill="#FFD700" stroke="#FFA500" strokeWidth="3" />
+                      <path d="M-20,-10 Q-15,-5 -10,-10 Q-5,-15 0,-10 Q5,-15 10,-10 Q15,-5 20,-10" stroke="#000" strokeWidth="2" fill="none" />
+                      <path d="M-20,10 Q-15,5 -10,10 Q-5,15 0,10 Q5,15 10,10 Q15,5 20,10" stroke="#000" strokeWidth="2" fill="none" />
+                      <path d="M-10,-20 Q-5,-15 -10,-10 Q-15,-5 -10,0 Q-15,5 -10,10 Q-5,15 -10,20" stroke="#000" strokeWidth="2" fill="none" />
+                      <path d="M10,-20 Q5,-15 10,-10 Q15,-5 10,0 Q15,5 10,10 Q5,15 10,20" stroke="#000" strokeWidth="2" fill="none" />
+                    </g>
+                    
+                    {/* Right Court Tennis Ball */}
+                    <g transform="translate(750, 450)">
+                      <circle cx="0" cy="0" r="25" fill="#FFD700" stroke="#FFA500" strokeWidth="3" />
+                      <path d="M-20,-10 Q-15,-5 -10,-10 Q-5,-15 0,-10 Q5,-15 10,-10 Q15,-5 20,-10" stroke="#000" strokeWidth="2" fill="none" />
+                      <path d="M-20,10 Q-15,5 -10,10 Q-5,15 0,10 Q5,15 10,10 Q15,5 20,10" stroke="#000" strokeWidth="2" fill="none" />
+                      <path d="M-10,-20 Q-5,-15 -10,-10 Q-15,-5 -10,0 Q-15,5 -10,10 Q-5,15 -10,20" stroke="#000" strokeWidth="2" fill="none" />
+                      <path d="M10,-20 Q5,-15 10,-10 Q15,-5 10,0 Q15,5 10,10 Q5,15 10,20" stroke="#000" strokeWidth="2" fill="none" />
+                    </g>
+                    
+                    {/* Tap Instructions */}
+                    <text x="430" y="500" textAnchor="middle" fontSize="16" fontWeight="bold" fill="white" stroke="black" strokeWidth="1">
+                      TAP TO SCORE
+                    </text>
+                    <text x="750" y="500" textAnchor="middle" fontSize="16" fontWeight="bold" fill="white" stroke="black" strokeWidth="1">
+                      TAP TO SCORE
+                    </text>
+                  </>
+                )}
+                
+                {/* Overlay Shade for Tap-to-Score Areas (Clickable - Foreground) */}
                 <rect 
                   x="310" y="40" width="240" height="520" 
                   fill="rgba(0, 0, 0, 0.1)" 
                   style={{ 
-                    cursor: isGameRunning ? "pointer" : "not-allowed" 
+                    cursor: (isGameRunning && !isPaused) ? "pointer" : "not-allowed" 
                   }} 
-                  onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 1 : 2)} 
+                  onClick={() => isGameRunning && !isPaused && addPoint(courtRotation === 0 ? 1 : 2)} 
                 />
                 <rect 
                   x="630" y="40" width="240" height="520" 
                   fill="rgba(0, 0, 0, 0.1)" 
                   style={{ 
-                    cursor: isGameRunning ? "pointer" : "not-allowed" 
+                    cursor: (isGameRunning && !isPaused) ? "pointer" : "not-allowed" 
                   }} 
-                  onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 2 : 1)} 
+                  onClick={() => isGameRunning && !isPaused && addPoint(courtRotation === 0 ? 2 : 1)} 
                 />
                 
                 {/* Zone Labels (Level 3 Style) */}
@@ -4063,22 +4244,44 @@ const MatchTracker: React.FC = () => {
 
                 {/* Scores for Level 1 & 2 */}
                 <text x="430" y="300" textAnchor="middle" fontSize="40" fontWeight="bold" fill="white">
-                  {match.isDeuce ? "Deuce" : 
-                   match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : 
-                   match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "40" : 
-                   pointToScore(courtRotation === 0 ? player1.points : player2.points)}
+                  {(() => {
+                    const rules = getMatchRules(
+                      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                      match.scoringVariation,
+                      match.customTiebreakRules,
+                      match.noAdScoring
+                    );
+                    if (rules.isTiebreakOnly || match.isTieBreak) {
+                      return courtRotation === 0 ? player1.points : player2.points;
+                    }
+                    return match.isDeuce ? "Deuce" : 
+                           match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : 
+                           match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "40" : 
+                           pointToScore(courtRotation === 0 ? player1.points : player2.points);
+                  })()}
                 </text>
                 <text x="430" y="340" textAnchor="middle" fontSize="14" fill="white">
-                  {isGameRunning ? "TAP TO ADD A POINT" : "START MATCH TO SCORE"}
+                  {isGameRunning ? "" : "START MATCH TO SCORE"}
                 </text>
                 <text x="750" y="300" textAnchor="middle" fontSize="40" fontWeight="bold" fill="white">
-                  {match.isDeuce ? "Deuce" : 
-                   match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : 
-                   match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "40" : 
-                   pointToScore(courtRotation === 0 ? player2.points : player1.points)}
+                  {(() => {
+                    const rules = getMatchRules(
+                      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                      match.scoringVariation,
+                      match.customTiebreakRules,
+                      match.noAdScoring
+                    );
+                    if (rules.isTiebreakOnly || match.isTieBreak) {
+                      return courtRotation === 0 ? player2.points : player1.points;
+                    }
+                    return match.isDeuce ? "Deuce" : 
+                           match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : 
+                           match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "40" : 
+                           pointToScore(courtRotation === 0 ? player2.points : player1.points);
+                  })()}
                 </text>
                 <text x="750" y="340" textAnchor="middle" fontSize="14" fill="white">
-                  {isGameRunning ? "TAP TO ADD A POINT" : "START MATCH TO SCORE"}
+                  {isGameRunning ? "" : "START MATCH TO SCORE"}
                 </text>
 
                 {/* Serving Indicators for Level 1 & 2 */}
@@ -4165,69 +4368,82 @@ const MatchTracker: React.FC = () => {
               </div>
             </div>
             
-            {/* Right: Scores Grid (3 columns: Sets | Games | Points) */}
+            {/* Right: Scores Grid (3 columns: Sets | Games | Points OR 1 column for tiebreak-only) */}
             <div className="w-1/2 bg-gray-100 p-3 md:p-4 rounded-lg ml-2">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                {/* Column Headers */}
-                <div className="text-sm text-gray-600 font-medium">Sets</div>
-                <div className="text-sm text-gray-600 font-medium">Games</div>
-                <div className="text-sm text-gray-600 font-medium">Points</div>
-                
-                {/* Left Court Player Scores (Top Row) */}
-                <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
-            {courtRotation === 0 ? match.sets.reduce((sum, set) => sum + set.player1, 0) : match.sets.reduce((sum, set) => sum + set.player2, 0)}
-          </div>
-                <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
-            {courtRotation === 0 ? (match.games[match.currentSet]?.player1 ?? 0) : (match.games[match.currentSet]?.player2 ?? 0)}
-          </div>
-                <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
-                  {match.isTieBreak ? (courtRotation === 0 ? player1.points : player2.points) : 
-                    (() => {
-                      const rules = getMatchRules(
-                        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
-                        match.scoringVariation,
-                        match.customTiebreakRules,
-                        match.noAdScoring
-                      );
-                      if (rules.noAdScoring) {
-                        return getScoreDisplay(courtRotation === 0 ? player1.points : player2.points, true);
-                      } else {
-                        return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : pointToScore(courtRotation === 0 ? player1.points : player2.points);
-                      }
-                    })()}
-          </div>
+              {(() => {
+                const rules = getMatchRules(
+                  match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                  match.scoringVariation,
+                  match.customTiebreakRules,
+                  match.noAdScoring
+                );
+                const isTiebreakOnly = rules.isTiebreakOnly;
+
+                return (
+                  <div className={`grid ${isTiebreakOnly ? 'grid-cols-1' : 'grid-cols-3'} gap-2 text-center`}>
+                    {/* Column Headers */}
+                    {!isTiebreakOnly && <div className="text-sm text-gray-600 font-medium">Sets</div>}
+                    {!isTiebreakOnly && <div className="text-sm text-gray-600 font-medium">Games</div>}
+                    <div className="text-sm text-gray-600 font-medium">Points</div>
+                    
+                    {/* Left Court Player Scores (Top Row) */}
+                    {!isTiebreakOnly && (
+                      <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
+                        {courtRotation === 0 ? match.sets.reduce((sum, set) => sum + set.player1, 0) : match.sets.reduce((sum, set) => sum + set.player2, 0)}
+                      </div>
+                    )}
+                    {!isTiebreakOnly && (
+                      <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
+                        {courtRotation === 0 ? (match.games[match.currentSet]?.player1 ?? 0) : (match.games[match.currentSet]?.player2 ?? 0)}
+                      </div>
+                    )}
+                    <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
+                      {isTiebreakOnly ? (courtRotation === 0 ? player1.points : player2.points) :
+                        match.isTieBreak ? (courtRotation === 0 ? player1.points : player2.points) : 
+                        (() => {
+                          if (rules.noAdScoring) {
+                            return getScoreDisplay(courtRotation === 0 ? player1.points : player2.points, true);
+                          } else {
+                            return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : pointToScore(courtRotation === 0 ? player1.points : player2.points);
+                          }
+                        })()}
+                    </div>
           
-                {/* Right Court Player Scores (Bottom Row) */}
-                <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
-            {courtRotation === 0 ? match.sets.reduce((sum, set) => sum + set.player2, 0) : match.sets.reduce((sum, set) => sum + set.player1, 0)}
-          </div>
-                <div className="text-3xl font-mono font-bold text-gray-800">
-            {courtRotation === 0 ? (match.games[match.currentSet]?.player2 ?? 0) : (match.games[match.currentSet]?.player1 ?? 0)}
-          </div>
-                <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
-                  {match.isTieBreak ? (courtRotation === 0 ? player2.points : player1.points) : 
-                    (() => {
-                      const rules = getMatchRules(
-                        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
-                        match.scoringVariation,
-                        match.customTiebreakRules,
-                        match.noAdScoring
-                      );
-                      if (rules.noAdScoring) {
-                        return getScoreDisplay(courtRotation === 0 ? player2.points : player1.points, true);
-                      } else {
-                        return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : pointToScore(courtRotation === 0 ? player2.points : player1.points);
-                      }
-                    })()}
-          </div>
-              </div>
+                    {/* Right Court Player Scores (Bottom Row) */}
+                    {!isTiebreakOnly && (
+                      <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
+                        {courtRotation === 0 ? match.sets.reduce((sum, set) => sum + set.player2, 0) : match.sets.reduce((sum, set) => sum + set.player1, 0)}
+                      </div>
+                    )}
+                    {!isTiebreakOnly && (
+                      <div className="text-3xl font-mono font-bold text-gray-800">
+                        {courtRotation === 0 ? (match.games[match.currentSet]?.player2 ?? 0) : (match.games[match.currentSet]?.player1 ?? 0)}
+                      </div>
+                    )}
+                    <div className="text-2xl md:text-3xl font-mono font-bold text-gray-800">
+                      {isTiebreakOnly ? (courtRotation === 0 ? player2.points : player1.points) :
+                        match.isTieBreak ? (courtRotation === 0 ? player2.points : player1.points) : 
+                        (() => {
+                          if (rules.noAdScoring) {
+                            return getScoreDisplay(courtRotation === 0 ? player2.points : player1.points, true);
+                          } else {
+                            return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : pointToScore(courtRotation === 0 ? player2.points : player1.points);
+                          }
+                        })()}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
           
           {/* Column 3: Game Time & In-Between Time */}
           <div className="flex flex-col items-center justify-center">
             <div className="text-xs text-gray-600 mb-2">Game Time</div>
-            <div className="text-2xl md:text-5xl font-mono font-bold text-gray-800">{formatTime(gameTime)}</div>
+            <div className={`text-2xl md:text-5xl font-mono font-bold ${isPaused ? 'text-yellow-600' : 'text-gray-800'}`}>
+              {formatTime(gameTime)}
+              {isPaused && <span className="text-lg ml-2">⏸️</span>}
+            </div>
             
             {/* In-Between Time (Level 3 only) - Hidden when point is active */}
             {match.level === 3 && !isPointActive && (
@@ -4235,6 +4451,33 @@ const MatchTracker: React.FC = () => {
                 <div className="text-xs text-gray-600 mt-4 mb-2">In-Between Time</div>
                 <div className="text-lg md:text-5xl font-mono font-bold text-gray-600">{formatTime(inBetweenTime)}</div>
               </>
+            )}
+            
+            {/* Pause/Resume Controls - Only shown when game is running */}
+            {isGameRunning && (
+              <div className="flex gap-2 mt-4">
+                {isPaused ? (
+                  <button
+                    onClick={handleResume}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                    </svg>
+                    Resume
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePause}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Pause
+                  </button>
+                )}
+              </div>
             )}
           </div>
           
@@ -4258,12 +4501,14 @@ const MatchTracker: React.FC = () => {
                     setIsPointActive(false);
                     setShowWinnersModal(false);
                     setMatchWinner(null);
+                    setFinalTiebreakScores(null);
                     setShowInfoModal(false);
                     // Note: player1InBetweenTime and player2InBetweenTime are NOT reset to keep records
                     // Note: notes are NOT reset to keep existing notes
                     
                     // Server is already selected, just start the match
                     setIsGameRunning(true); // Start the match
+                    setIsPaused(false); // Ensure not paused when starting
                     setMatchReadyToStart(false); // Hide the Start Match button
                     
                     // Initialize point tracking for API submission
@@ -4383,6 +4628,7 @@ const MatchTracker: React.FC = () => {
                   setIsPointActive(false);
                   setShowWinnersModal(false);
                   setMatchWinner(null);
+                  setFinalTiebreakScores(null);
                   setShowInfoModal(false);
                   // Note: player1InBetweenTime and player2InBetweenTime are NOT reset to keep records
                   // Note: notes are NOT reset to keep existing notes

@@ -19,9 +19,19 @@ const getPlayerDisplayName = (match: Match, playerKey: 'p1' | 'p2'): string => {
         return `${player.firstName} ${player.lastName}`;
     }
     
-    // Handle case where p2 is a string name
+    // Handle case where p1 is a string name (non-registered player)
+    if (playerKey === 'p1' && typeof player === 'string') {
+        return player;
+    }
+    
+    // Handle case where p2 is a string name (non-registered player)
     if (playerKey === 'p2' && typeof player === 'string') {
         return player;
+    }
+    
+    // Handle case where p1Name exists (fallback)
+    if (playerKey === 'p1' && match.p1Name) {
+        return match.p1Name;
     }
     
     // Handle case where p2Name exists (fallback)
