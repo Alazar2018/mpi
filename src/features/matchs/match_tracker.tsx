@@ -69,7 +69,7 @@ interface CourtZone {
 
 
 interface ShotPlacement {
-  type: 'net' | 'long' | 'wide';
+  type: 'net' | 'long' | 'wide' | 'crossCourt' | 'downTheLine' | 'downTheMiddle';
   label: string;
 }
 
@@ -1119,9 +1119,10 @@ const MatchTracker: React.FC = () => {
 
 
   const shotPlacements: ShotPlacement[] = [
-    { type: 'net', label: 'Net' },
-    { type: 'long', label: 'Long' },
-    { type: 'wide', label: 'Wide' }
+    { type: 'wide', label: 'Wide' },
+    { type: 'crossCourt', label: 'Cross Court' },
+    { type: 'downTheLine', label: 'Down The Line' },
+    { type: 'downTheMiddle', label: 'Down The Middle' }
   ];
 
 
@@ -1241,10 +1242,12 @@ const MatchTracker: React.FC = () => {
         return p1Games > p2Games ? 1 : p2Games > p1Games ? 2 : null;
       }
       
-      // Regular tiebreak within a set
-      const tiebreakRule = getTiebreakRuleForSet(match.currentSet + 1, rules, match.matchFormat || 'bestOfThree');
-      const winner = (p1Games >= tiebreakRule && p1Games - p2Games >= 2) ? 1 : 
-             (p2Games >= tiebreakRule && p2Games - p1Games >= 2) ? 2 : null;
+      // Regular tiebreak within a set (e.g., 6-6 scenario)
+      // After winning the tiebreak, the winner has gamesPerSet+1 games (e.g., 7-6)
+      // Just check if one player won the set after the tiebreak
+      const setScore = rules.gamesPerSet; // e.g., 6
+      const winner = (p1Games > setScore && p1Games > p2Games) ? 1 : 
+                     (p2Games > setScore && p2Games > p1Games) ? 2 : null;
       return winner;
     }
     
@@ -1362,6 +1365,13 @@ const MatchTracker: React.FC = () => {
 
   // Info modal state
   const [showInfoModal, setShowInfoModal] = useState(false);
+  
+  // Reset confirmation dialog state
+  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
+  
+  // Browser back navigation dialog state
+  const [showBackNavigationDialog, setShowBackNavigationDialog] = useState(false);
+  const [allowNavigation, setAllowNavigation] = useState(false);
 
   // Update point outcomes when serving player changes
   useEffect(() => {
@@ -1943,6 +1953,71 @@ const MatchTracker: React.FC = () => {
     };
   }, []);
 
+  // Handle browser back button
+  useEffect(() => {
+    const handleBackButton = (e: PopStateEvent) => {
+      // If navigation is explicitly allowed, don't interfere
+      if (allowNavigation) {
+        return;
+      }
+      
+      // Check if match is in progress (has game history or points scored)
+      const hasProgress = gameHistory.length > 0 || player1.points > 0 || player2.points > 0 || isGameRunning;
+      
+      if (hasProgress) {
+        // Prevent default back navigation
+        e.preventDefault();
+        window.history.pushState(null, '', window.location.pathname);
+        
+        // Show custom dialog
+        setShowBackNavigationDialog(true);
+      }
+    };
+
+    // Push initial state to enable back button detection
+    window.history.pushState(null, '', window.location.pathname);
+    
+    // Listen for popstate (back button)
+    window.addEventListener('popstate', handleBackButton);
+    
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [gameHistory.length, player1.points, player2.points, isGameRunning, allowNavigation]);
+
+  // Back navigation dialog handlers
+  const handleSaveAndQuit = () => {
+    setShowBackNavigationDialog(false);
+    setAllowNavigation(true);
+    saveMatchState();
+    toast.success('Match saved! 💾', { duration: 2000, icon: '💾' });
+    setTimeout(() => {
+      navigate('/admin/matchs');
+    }, 300);
+  };
+
+  const handleDontSaveAndQuit = () => {
+    setShowBackNavigationDialog(false);
+    setAllowNavigation(true);
+    
+    // Reset all match state before leaving
+    if (matchId) {
+      localStorage.removeItem(`tennisMatchState_${matchId}`);
+    }
+    sessionStorage.removeItem('ballInCourtChoice');
+    sessionStorage.removeItem('cameFromModal');
+    sessionStorage.removeItem('cameFromOutfield');
+    
+    toast.success('Exiting without saving...', { duration: 2000, icon: '👋' });
+    setTimeout(() => {
+      navigate('/admin/matchs');
+    }, 300);
+  };
+
+  const handleCancelBackNavigation = () => {
+    setShowBackNavigationDialog(false);
+  };
+
   // Monitor level changes
   useEffect(() => {
     console.log('🎯 [Debug] Match level changed to:', match.level);
@@ -2518,6 +2593,78 @@ const MatchTracker: React.FC = () => {
   const handleResume = () => {
     setIsPaused(false);
     console.log('🎯 [Resume] Game resumed');
+  };
+
+  // Reset function to clear all match state
+  const handleResetClick = () => {
+    setShowResetConfirmDialog(true);
+  };
+
+  const confirmReset = () => {
+    setShowResetConfirmDialog(false);
+    console.log('🔄 [Reset] Resetting match state...');
+    
+    // Clear session storage
+    sessionStorage.removeItem('ballInCourtChoice');
+    sessionStorage.removeItem('cameFromModal');
+    sessionStorage.removeItem('cameFromOutfield');
+    
+    // Clear localStorage for this match
+    if (matchId) {
+      localStorage.removeItem(`tennisMatchState_${matchId}`);
+    }
+    
+    // Reset all state
+    const matchFormat = match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five');
+    const rules = getMatchRules(
+      matchFormat,
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
+    
+    setMatch(prev => ({
+      ...prev,
+      currentSet: 0,
+      sets: Array.from({ length: rules.maxSets }, () => ({ player1: 0, player2: 0 })),
+      games: [{ player1: 0, player2: 0, scores: [] }],
+      isTieBreak: rules.isTiebreakOnly,
+      isDeuce: false,
+      hasAdvantage: null,
+      server: null
+    }));
+    
+    setPlayer1(prev => ({ ...prev, sets: 0, games: 0, points: 0, isServing: false }));
+    setPlayer2(prev => ({ ...prev, sets: 0, games: 0, points: 0, isServing: false }));
+    setGameHistory([]);
+    setRedoHistory([]);
+    setCurrentGameScores([]);
+    setPointHistory([]);
+    setGameTime(0);
+    setInBetweenTime(0);
+    setIsGameRunning(false);
+    setIsPaused(false);
+    setMatchReadyToStart(false);
+    setIsPointActive(false);
+    setShowServingModal(true);
+    setTempServer(null);
+    setShowWinnersModal(false);
+    setMatchWinner(null);
+    setFinalTiebreakScores(null);
+    setShowInfoModal(false);
+    setCourtRotation(0);
+    setServingPosition('up');
+    setSelectedOutcome(null);
+    setSelectedRallyLength(null);
+    setPlayer1Reaction(null);
+    setPlayer2Reaction(null);
+    
+    toast.success('Match reset! Select server to start fresh.', {
+      duration: 3000,
+      icon: '🔄',
+    });
+    
+    console.log('✅ [Reset] Match state reset complete');
   };
 
   // Helper function to handle game win logic
@@ -3621,6 +3768,11 @@ const MatchTracker: React.FC = () => {
         }}
         onDone={() => {
           setShowWinnersModal(false);
+         
+          
+          // Auto-submit match result when clicking Done
+          console.log('🎯 [Winner Modal] Done clicked - Auto-submitting match result...');
+          submitMatchResultToAPI();
           setFinalTiebreakScores(null); // Reset tiebreak scores when modal is closed
         }}
       />
@@ -4597,7 +4749,7 @@ const MatchTracker: React.FC = () => {
             
             {/* Control Buttons */}
             <div className="flex gap-2 w-full">
-              <button 
+              {/* <button 
                 onClick={togglePause}
                   disabled={!matchReadyToStart}
                 className={`px-2 py-1 md:px-4 md:py-1 rounded text-xs md:text-sm flex-1 transition-all duration-200 ${
@@ -4607,7 +4759,19 @@ const MatchTracker: React.FC = () => {
                 }`}
               >
                 {isPaused ? 'Resume' : 'Pause'}
-          </button>
+          </button> */}
+              
+              {/* Reset Button */}
+              <button 
+                onClick={handleResetClick}
+                className="px-3 py-2 md:px-4 md:py-2 rounded-lg text-xs md:text-sm flex-1 transition-all duration-200 bg-red-600 hover:bg-red-700 text-white font-medium flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Reset Match
+              </button>
+              
               {/* <button 
                 onClick={() => {
                   // Show confirmation toast
@@ -4930,7 +5094,7 @@ const MatchTracker: React.FC = () => {
                   {/* Shot Placement */}
                   <section className="space-y-4">
                     <h3 className="text-xl font-semibold text-gray-800">Shot Placement</h3>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {shotPlacements.map((placement) => (
                         <button
                           key={placement.type}
@@ -5876,6 +6040,98 @@ const MatchTracker: React.FC = () => {
                   className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
                 >
                   Save State
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Confirmation Dialog */}
+      {showResetConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white">
+              <div className="flex items-center justify-center">
+                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">Reset Match?</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to reset the match? All progress including scores, game history, and timers will be lost. This action cannot be undone.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowResetConfirmDialog(false)}
+                  className="flex-1 px-6 py-3 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmReset}
+                  className="flex-1 px-6 py-3 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-md hover:shadow-lg"
+                >
+                  Reset Match
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Back Navigation Confirmation Dialog */}
+      {showBackNavigationDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+              <div className="flex items-center justify-center">
+                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">Leave Match?</h3>
+              <p className="text-gray-600 mb-6">
+                You have an ongoing match. What would you like to do?
+              </p>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleSaveAndQuit}
+                  className="w-full px-6 py-3 rounded-lg text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
+                  Save and Quit
+                </button>
+                <button
+                  onClick={handleDontSaveAndQuit}
+                  className="w-full px-6 py-3 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 transition-colors border border-orange-300 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Don't Save and Quit
+                </button>
+                <button
+                  onClick={handleCancelBackNavigation}
+                  className="w-full px-6 py-3 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

@@ -201,16 +201,27 @@ export default function Matches() {
 
     // Get current matches based on active filter
     const getCurrentMatches = () => {
+        let matches: Match[] = [];
         switch (activeFilter) {
             case 'completed':
-                return completedMatches;
+                matches = [...completedMatches];
+                break;
             case 'saved':
-                return savedMatches;
+                matches = [...savedMatches];
+                break;
             case 'all':
-                return [...completedMatches, ...savedMatches];
+                matches = [...completedMatches, ...savedMatches];
+                break;
             default:
-                return [];
+                matches = [];
         }
+        
+        // Sort matches by date in descending order (latest first)
+        return matches.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return dateB - dateA;
+        });
     };
 
     const currentMatches = getCurrentMatches();

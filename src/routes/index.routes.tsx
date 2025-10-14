@@ -16,6 +16,7 @@ import LearnDetail from "../features/learn/learn_detail.tsx";
 import WeekDetail from "../features/learn/week_detail.tsx";
 import Matchs from "../features/matchs/matchs.tsx";
 import ScheduleMatch from "../features/matchs/new_match.tsx";
+import EditMatch from "../features/matchs/edit_match.tsx";
 
 import Players from "../features/players/players.tsx";
 import PlayerDetail from "../features/players/player_detail.tsx";
@@ -181,6 +182,10 @@ export const routes = createBrowserRouter([
             {
                 path: "matchs/schedule",
                 element: <ScheduleMatch />,
+            },
+            {
+                path: "matchs/edit/:matchId",
+                element: <EditMatch />
             },
             {
                 path: "matchs/detail/:matchId",

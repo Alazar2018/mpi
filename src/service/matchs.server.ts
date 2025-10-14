@@ -441,6 +441,25 @@ class MatchesService {
   }
 
   /**
+   * Update match details (before completion)
+   * PATCH /api/v1/matches/:id
+   */
+  async updateMatch(matchId: string, matchData: Partial<CreateMatchRequest>): Promise<Match> {
+    try {
+      const response = await axiosInstance.patch<Match>(`/api/v1/matches/${matchId}`, matchData);
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error in updateMatch:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a match
    * DELETE /api/v1/matches/:id
    */

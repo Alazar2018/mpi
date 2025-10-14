@@ -4,7 +4,7 @@ import icons from "@/utils/icons";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useApiRequest } from "@/hooks/useApiRequest";
 import { useEffect, useState } from "react";
-import { getMatchById } from "./api/matchs.api";
+import { getMatchById, deleteMatch } from "./api/matchs.api";
 import MatchSkeleton from "@/components/skeletons/MatchSkeleton";
 import { useAuthStore } from "@/store/auth.store";
 import Button from "@/components/Button";
@@ -13,6 +13,7 @@ import type { Match, MatchPlayer } from "@/service/matchs.server";
 import { toast } from "react-hot-toast";
 import { SetsTab, MomentumTab, ReportTab } from "./components";
 import { getMatchFormatDisplayName, getScoringVariationDisplayName, getTrackingLevelDisplayName } from "@/utils/matchFormatUtils";
+import { useDialog } from "@/components/Dialog";
 
 export default function MatchDetail() {
 	const params = useParams();
@@ -24,6 +25,8 @@ export default function MatchDetail() {
 	const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
 	const [showLevelChangeConfirmation, setShowLevelChangeConfirmation] = useState(false);
 	const [levelToChange, setLevelToChange] = useState<number | null>(null);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const { showDialog, Dialog: ConfirmDialog } = useDialog();
 	
 	const matchesReq = useApiRequest({
 		cacheKey: "match_" + params?.matchId,
@@ -230,6 +233,62 @@ export default function MatchDetail() {
 		setSelectedLevel(null);
 	};
 
+	// Handle match deletion
+	const handleDeleteMatch = async () => {
+		if (!matchData?._id) return;
+
+		showDialog({
+			title: "Delete Match",
+			message: "This action will permanently remove the match and all associated data. This cannot be undone. Are you sure you want to continue?",
+			buttons: [
+				{
+					text: "Cancel",
+					variant: "outlined",
+					onClick: () => {
+						// Dialog will close automatically
+					}
+				},
+				{
+					text: "Delete Match",
+					variant: "contained",
+					onClick: async () => {
+						await performDelete();
+					}
+				}
+			]
+		});
+	};
+
+	// Perform the actual delete operation
+	const performDelete = async () => {
+		if (!matchData?._id) return;
+
+		setIsDeleting(true);
+		
+		try {
+			const response = await deleteMatch(matchData._id);
+			if (response.success) {
+				toast.success('Match deleted successfully!');
+				// Navigate back to matches list
+				navigate('/admin/matchs');
+			} else {
+				toast.error(`Failed to delete match: ${response.error || 'Unknown error'}`);
+			}
+		} catch (error) {
+			console.error('Error deleting match:', error);
+			toast.error('Failed to delete match. Please try again.');
+		} finally {
+			setIsDeleting(false);
+		}
+	};
+
+	// Handle match edit
+	const handleEditMatch = () => {
+		if (!matchData?._id) return;
+		// Navigate to edit page (you may need to create this route)
+		navigate(`/admin/matchs/edit/${matchData._id}`);
+	};
+
 	// Check if current user is one of the players in the match
 	const isCurrentUserPlayer = () => {
 		if (!user || !matchData) return false;
@@ -307,17 +366,32 @@ export default function MatchDetail() {
 					<Button 
 						onClick={handleStartTracking}
 						type="action" 
-						className="text-sm flex-1"
+						className="text-sm"
 					>
 						Start ({defaultLevelDisplay})
 					</Button>
 					<Button 
 						onClick={() => setShowLevelSelection(true)}
 						type="secondary" 
-						className="text-sm px-3"
-						title="Select different tracking level"
+						className="text-sm"
 					>
-						Select different tracking level
+						<span dangerouslySetInnerHTML={{ __html: icons.settings || '⚙️' }} />
+						Change tracking level
+					</Button>
+					<Button 
+						onClick={handleEditMatch}
+						type="secondary" 
+						className="text-sm"
+					>
+						<span dangerouslySetInnerHTML={{ __html: icons.edit || '✏️' }} />
+					</Button>
+					<Button 
+						onClick={handleDeleteMatch}
+						type="secondary" 
+						className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
+						disabled={isDeleting}
+					>
+						<span dangerouslySetInnerHTML={{ __html: icons.trash || '🗑️' }} />
 					</Button>
 				</div>
 			);
@@ -955,6 +1029,9 @@ export default function MatchDetail() {
 					</div>
 				</div>
 			)}
+
+			{/* Confirmation Dialog */}
+			<ConfirmDialog />
 		</DefaultPage>
 	);
 }

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useState, useEffect } from "react";
 import Button from "@/components/Button";
 import DefaultPage from "@/components/DefaultPage";
@@ -8,12 +8,13 @@ import Textarea from "@/components/form/Textarea";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import icons from "@/utils/icons";
 import { required } from "@/utils/utils";
-import { createMatch, getMatchFormats, getScoringVariations } from "./api/matchs.api";
+import { updateMatch, getMatchById, getMatchFormats, getScoringVariations } from "./api/matchs.api";
 import { isFormatCompatibleWithVariation } from "@/utils/matchFormatUtils";
 import { friendsService } from "@/service/friends.server";
 import { useAuthStore } from "@/store/auth.store";
 import { toast } from "react-hot-toast";
-import type { MatchFormat, ScoringVariation, TrackingLevel, CreateMatchRequest } from "@/service/matchs.server";
+import type { MatchFormat, ScoringVariation, TrackingLevel, CreateMatchRequest, Match } from "@/service/matchs.server";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 // Tournament levels constant
 const TOURNAMENT_LEVELS = {
@@ -68,9 +69,7 @@ interface MatchFormData {
     indoor: boolean;
     note: string;
     date: string;
-    // Legacy field - deprecated but still supported
     matchType?: "one" | "three" | "five";
-    // New enhanced fields
     matchFormat: MatchFormat;
     scoringVariation: ScoringVariation;
     customTiebreakRules?: Record<string, number>;
@@ -89,11 +88,15 @@ interface PlayerOption {
     isRegistered: boolean;
 }
 
-export default function ScheduleMatch() {
+export default function EditMatch() {
     const navigate = useNavigate();
+    const { matchId } = useParams();
     const { user } = useAuthStore();
     const [players, setPlayers] = useState<PlayerOption[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingMatch, setLoadingMatch] = useState(true);
+    const [matchData, setMatchData] = useState<Match | null>(null);
+    const [formReady, setFormReady] = useState(false);
     const [p1IsObject, setP1IsObject] = useState(true);
     const [p2IsObject, setP2IsObject] = useState(true); 
     const [matchCategory, setMatchCategory] = useState<"practice" | "tournament">("practice");
@@ -102,11 +105,62 @@ export default function ScheduleMatch() {
     const [availableFormats, setAvailableFormats] = useState(MATCH_FORMAT_OPTIONS);
     const [availableVariations, setAvailableVariations] = useState(SCORING_VARIATION_OPTIONS);
     const [availableTrackingLevels, setAvailableTrackingLevels] = useState(TRACKING_LEVEL_OPTIONS);
+    const [initialFormValues, setInitialFormValues] = useState<Partial<MatchFormData>>({});
 
-    // Load available players from friends and match formats
+    // Load match data and players
     useEffect(() => {
         const loadData = async () => {
             try {
+                // Load match data
+                if (matchId) {
+                    const matchResponse = await getMatchById(matchId);
+                    if (matchResponse.success && matchResponse.data) {
+                        const match = matchResponse.data;
+                        setMatchData(match);
+                        setP1IsObject(match.p1IsObject);
+                        setP2IsObject(match.p2IsObject);
+                        setMatchCategory(match.matchCategory);
+                        
+                        // Set selected players
+                        const p1Id = match.p1IsObject && typeof match.p1 === 'object' ? match.p1._id : '';
+                        const p2Id = match.p2IsObject && typeof match.p2 === 'object' ? match.p2._id : '';
+                        
+                        if (p1Id) setSelectedP1(p1Id);
+                        if (p2Id) setSelectedP2(p2Id);
+                        
+                        // Set initial form values
+                        const formValues: Partial<MatchFormData> = {
+                            p1: p1Id,
+                            p2: p2Id,
+                            p1Name: match.p1Name || '',
+                            p2Name: match.p2Name || '',
+                            courtSurface: match.courtSurface,
+                            indoor: match.indoor || false,
+                            note: match.note || '',
+                            date: match.date ? new Date(match.date).toISOString().slice(0, 16) : '',
+                            matchFormat: match.matchFormat,
+                            scoringVariation: match.scoringVariation,
+                            noAdScoring: match.noAdScoring || false,
+                            trackingLevel: match.trackingLevel,
+                            matchCategory: match.matchCategory,
+                            tournamentType: match.tournamentType || '',
+                            tournamentLevel: match.tournamentLevel || '',
+                            tieBreakRule: match.tieBreakRule
+                        };
+                        
+                        console.log('Initial form values:', formValues);
+                        setInitialFormValues(formValues);
+                        
+                        // Small delay to ensure form is properly initialized
+                        setTimeout(() => {
+                            setFormReady(true);
+                        }, 100);
+                    } else {
+                        toast.error('Failed to load match data');
+                        navigate('/admin/matchs');
+                    }
+                }
+
                 // Load players
                 const friendsResponse = await friendsService.getFriendsList();
                 const playersList: PlayerOption[] = [];
@@ -161,12 +215,15 @@ export default function ScheduleMatch() {
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
-                toast.error('Failed to load match configuration data');
+                toast.error('Failed to load match data');
+                navigate('/admin/matchs');
+            } finally {
+                setLoadingMatch(false);
             }
         };
 
         loadData();
-    }, [user]);
+    }, [matchId, user, navigate]);
 
     // Filter players for each position to prevent duplicate selection
     const getFilteredPlayersForP1 = () => {
@@ -178,11 +235,10 @@ export default function ScheduleMatch() {
     };
 
     const handleSubmit = async (formData: MatchFormData) => {
+        if (!matchId) return;
+        
         setLoading(true);
         try {
-            // Debug: Log form data to see what's being received
-            console.log('Form data received:', formData);
-            
             // Validate required fields based on player type
             if (p1IsObject && !formData.p1) {
                 toast.error('Please select Player 1');
@@ -207,62 +263,8 @@ export default function ScheduleMatch() {
                 return;
             }
 
-            // Validate date field
-            if (!formData.date) {
-                toast.error('Please select a match date');
-                return;
-            }
-
-            // Validate other required fields
-            if (!formData.courtSurface) {
-                toast.error('Please select a court surface');
-                return;
-            }
-            if (!formData.matchFormat) {
-                toast.error('Please select match format');
-                return;
-            }
-            if (!formData.scoringVariation) {
-                toast.error('Please select scoring variation');
-                return;
-            }
-            if (!formData.trackingLevel) {
-                toast.error('Please select tracking level');
-                return;
-            }
-            if (!formData.matchCategory) {
-                toast.error('Please select match category');
-                return;
-            }
-            if (!formData.tieBreakRule) {
-                toast.error('Please select tie break rule');
-                return;
-            }
-
-            // Validate tournament fields if category is tournament
-            if (formData.matchCategory === 'tournament') {
-                if (!formData.tournamentType) {
-                    toast.error('Tournament type is required for tournament matches');
-                    return;
-                }
-                if (!formData.tournamentLevel) {
-                    toast.error('Tournament level is required for tournament matches');
-                    return;
-                }
-                            // Additional validation to ensure the selected level exists for the selected type
-            const selectedType = formData.tournamentType as keyof typeof TOURNAMENT_LEVELS;
-            const selectedLevel = formData.tournamentLevel;
-            if (!TOURNAMENT_LEVELS[selectedType]?.includes(selectedLevel)) {
-                toast.error(`Invalid tournament level "${selectedLevel}" for the selected tournament type "${selectedType}"`);
-                return;
-            }
-            
-            // Log successful validation
-            console.log(`Tournament validation passed: ${selectedType} - ${selectedLevel}`);
-            }
-
             // Prepare the match data with enhanced API format
-            const matchData: CreateMatchRequest = {
+            const updateData: Partial<CreateMatchRequest> = {
                 p1: p1IsObject ? formData.p1 : undefined,
                 p2: p2IsObject ? formData.p2 : undefined,
                 p1IsObject: p1IsObject,
@@ -273,9 +275,6 @@ export default function ScheduleMatch() {
                 indoor: formData.indoor,
                 note: formData.note,
                 date: formData.date,
-                // Legacy field - deprecated but still supported
-                matchType: formData.matchType,
-                // New enhanced fields
                 matchFormat: formData.matchFormat,
                 scoringVariation: formData.scoringVariation,
                 customTiebreakRules: formData.customTiebreakRules,
@@ -287,26 +286,19 @@ export default function ScheduleMatch() {
                 tieBreakRule: formData.tieBreakRule,
             };
 
-            console.log('Match data prepared:', matchData);
-
-            const response = await createMatch(matchData);
+            const response = await updateMatch(matchId, updateData);
             
             if (response.success) {
-                toast.success('Match scheduled successfully!');
-                // Reset selected players
-                setSelectedP1("");
-                setSelectedP2("");
-                
-                // Add a small delay to ensure toast is visible before navigation
+                toast.success('Match updated successfully!');
                 setTimeout(() => {
-                    navigate('/admin/matchs');
+                    navigate(`/admin/matchs/detail/${matchId}`);
                 }, 1000);
             } else {
-                toast.error(response.error || 'Failed to schedule match. Please try again.');
+                toast.error(response.error || 'Failed to update match. Please try again.');
             }
         } catch (error) {
-            console.error('Error creating match:', error);
-            toast.error('Failed to schedule match. Please try again.');
+            console.error('Error updating match:', error);
+            toast.error('Failed to update match. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -320,22 +312,11 @@ export default function ScheduleMatch() {
         { value: 'other', label: 'Other' }
     ];
 
-    // Legacy match type options (deprecated)
-    const matchTypeOptions = [
-        { value: 'one', label: 'Best of 1' },
-        { value: 'three', label: 'Best of 3' },
-        { value: 'five', label: 'Best of 5' }
-    ];
-
-    // Enhanced match format options
     const matchFormatOptions = availableFormats.map(format => ({
         value: format.value,
         label: format.label
     }));
 
-    // Scoring variation options will be calculated inside the form component
-
-    // Tracking level options
     const trackingLevelOptions = availableTrackingLevels.map(level => ({
         value: level.value,
         label: level.label
@@ -351,43 +332,100 @@ export default function ScheduleMatch() {
         { value: 10, label: '10 points' }
     ];
 
-    // TODO: Uncomment when API supports tracking level
-    // const trackingLevelOptions = [
-    //     { value: 'basic', label: 'Basic' },
-    //     { value: 'detailed', label: 'Detailed' },
-    //     { value: 'comprehensive', label: 'Comprehensive' }
-    // ];
+    // Get initial form values from match data
+    const getInitialValues = () => {
+        if (!matchData) {
+            console.log('getInitialValues: no matchData');
+            return {};
+        }
+        
+        const p1Id = typeof matchData.p1 === 'object' ? matchData.p1._id : '';
+        const p2Id = typeof matchData.p2 === 'object' ? matchData.p2._id : '';
+        
+        const initialValues = {
+            p1: p1Id,
+            p2: p2Id,
+            p1Name: matchData.p1Name || '',
+            p2Name: matchData.p2Name || '',
+            courtSurface: matchData.courtSurface,
+            indoor: matchData.indoor || false,
+            note: matchData.note || '',
+            date: matchData.date ? new Date(matchData.date).toISOString().slice(0, 16) : '',
+            matchFormat: matchData.matchFormat,
+            scoringVariation: matchData.scoringVariation,
+            noAdScoring: matchData.noAdScoring || false,
+            trackingLevel: matchData.trackingLevel,
+            matchCategory: matchData.matchCategory,
+            tournamentType: matchData.tournamentType || '',
+            tournamentLevel: matchData.tournamentLevel || '',
+            tieBreakRule: matchData.tieBreakRule
+        };
+        
+        console.log('getInitialValues:', initialValues);
+        console.log('matchData:', matchData);
+        
+        return initialValues;
+    };
+
+    if (loadingMatch || !formReady) {
+        return (
+            <DefaultPage title="Edit Match">
+                <div className="flex items-center justify-center h-64">
+                    <LoadingSpinner />
+                </div>
+            </DefaultPage>
+        );
+    }
+
+    if (!matchData) {
+        return (
+            <DefaultPage title="Edit Match">
+                <div className="text-center text-red-600 py-8">
+                    Match not found
+                </div>
+            </DefaultPage>
+        );
+    }
 
     return (
         <DefaultPage
-            title="Schedule New Match"
+            title="Edit Match"
             rightAction={
                 <Button
-                    onClick={() => navigate('/admin/matchs')}
+                    onClick={() => navigate(`/admin/matchs/detail/${matchId}`)}
                     type="neutral"
                     className="text-sm"
                 >
-                    Back to Matches{" "}
+                    Back to Match Details{" "}
                     <i dangerouslySetInnerHTML={{ __html: icons.chevronRight }} />
                 </Button>
             }
         >
             <div className="w-full mx-auto px-4">
                 <Form<MatchFormData>
+                    key={matchId}
+                    defaultValues={initialFormValues as MatchFormData}
                     form={({ onSubmit, watch, setValue, errors }) => {
-                        // Watch for match category and format changes
                         const currentMatchCategory = watch('matchCategory') as "practice" | "tournament";
                         const currentTournamentType = watch('tournamentType') as keyof typeof TOURNAMENT_LEVELS;
                         const currentMatchFormat = watch('matchFormat') as MatchFormat;
                         
-                        // Update local state when form value changes
+                        // Set all form values on mount
+                        useEffect(() => {
+                            console.log('Setting all form values with initialFormValues:', initialFormValues);
+                            Object.entries(initialFormValues).forEach(([key, value]) => {
+                                if (value !== undefined) {
+                                    setValue(key as any, value);
+                                }
+                            });
+                        }, []);
+                        
                         useEffect(() => {
                             if (currentMatchCategory) {
                                 setMatchCategory(currentMatchCategory);
                             }
                         }, [currentMatchCategory]);
 
-                        // Clear scoring variation if it's not compatible with the selected match format
                         useEffect(() => {
                             if (currentMatchFormat) {
                                 const currentScoringVariation = watch('scoringVariation') as ScoringVariation;
@@ -395,46 +433,14 @@ export default function ScheduleMatch() {
                                     setValue('scoringVariation', 'standard');
                                 }
                                 
-                                // Set default values based on match format
-                                if (currentMatchFormat === 'oneSet') {
-                                    setValue('tieBreakRule', 7);
-                                    setValue('scoringVariation', 'standard');
-                                } else if (currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive') {
-                                    setValue('tieBreakRule', 7);
-                                    setValue('scoringVariation', 'standard');
-                                } else if (currentMatchFormat === 'shortSets') {
-                                    setValue('tieBreakRule', 7);
-                                    setValue('scoringVariation', 'standard');
+                                // Automatically enable No-Ad Scoring for tiebreak formats
+                                if (currentMatchFormat.startsWith('tiebreak')) {
                                     setValue('noAdScoring', true);
-                                } else if (currentMatchFormat === 'proSet8') {
-                                    setValue('tieBreakRule', 7);
                                     setValue('scoringVariation', 'standard');
-                                } else if (currentMatchFormat.startsWith('tiebreak')) {
-                                    setValue('scoringVariation', 'standard');
-                                    setValue('noAdScoring', true);
-                                    if (currentMatchFormat === 'tiebreak7') {
-                                        setValue('tieBreakRule', 7);
-                                    } else if (currentMatchFormat === 'tiebreak10') {
-                                        setValue('tieBreakRule', 10);
-                                    } else if (currentMatchFormat === 'tiebreak21') {
-                                        setValue('tieBreakRule', 21);
-                                    }
                                 }
                             }
                         }, [currentMatchFormat, watch, setValue]);
 
-                        // Set default scoring variation to 'standard' when format changes and scoring variation is available
-                        useEffect(() => {
-                            if (currentMatchFormat && !currentMatchFormat.startsWith('tiebreak')) {
-                                const hasScoringVariation = isFormatCompatibleWithVariation(currentMatchFormat, 'standard');
-                                if (hasScoringVariation) {
-                                    // Always set to standard when format changes
-                                    setValue('scoringVariation', 'standard');
-                                }
-                            }
-                        }, [currentMatchFormat, setValue]);
-
-                        // Calculate scoring variation options based on selected match format
                         const scoringVariationOptions = availableVariations
                             .filter(variation => 
                                 !currentMatchFormat || 
@@ -445,7 +451,6 @@ export default function ScheduleMatch() {
                                 label: variation.label
                             }));
 
-                        // Calculate tie break options based on selected match format
                         const getTieBreakOptions = () => {
                             if (!currentMatchFormat) return tieBreakOptions;
                             
@@ -455,15 +460,10 @@ export default function ScheduleMatch() {
                                     { value: 10, label: '10 points' }
                                 ];
                             } else if (currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive') {
-                                return [
-                                    { value: 7, label: '7 points' }
-                                ];
+                                return [{ value: 7, label: '7 points' }];
                             } else if (currentMatchFormat === 'shortSets' || currentMatchFormat === 'proSet8') {
-                                return [
-                                    { value: 7, label: '7 points' }
-                                ];
+                                return [{ value: 7, label: '7 points' }];
                             } else if (currentMatchFormat.startsWith('tiebreak')) {
-                                // For tiebreak-only formats, tie break rule is determined by the format
                                 return [];
                             }
                             
@@ -472,14 +472,10 @@ export default function ScheduleMatch() {
 
                         const currentTieBreakOptions = getTieBreakOptions();
 
-                    return (
-                            <div className=" w-full">
-                                {/* Hero Section with Background */}
-                             
-
+                        return (
+                            <div className="w-full">
                                 {/* Player Selection Section */}
-                                <div className="relative bg-gradient-to-br from-white via-blue-50 to-indigo-100 rounded-3xl p-10 shadow-xl border border-blue-100 ">
-                                    {/* Tennis Court Background Image */}
+                                <div className="relative bg-gradient-to-br from-white via-blue-50 to-indigo-100 rounded-3xl p-10 shadow-xl border border-blue-100">
                                     <div className="absolute inset-0">
                                         <img
                                             src="/stuff.jpg"
@@ -491,13 +487,13 @@ export default function ScheduleMatch() {
                                     
                                     <div className="relative z-10">
                                         <div className="text-center mb-10">
-                                                                            <h2 className="text-4xl font-bold text-[var(--text-primary)] mb-3">Player Selection</h2>
-                                <p className="text-xl text-[var(--text-secondary)]">Choose your players or add custom names</p>
+                                            <h2 className="text-4xl font-bold text-[var(--text-primary)] mb-3">Player Selection</h2>
+                                            <p className="text-xl text-[var(--text-secondary)]">Update player information</p>
                                         </div>
                                         
                                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-12 items-center max-w-6xl mx-auto">
                                             {/* Player 1 */}
-                                            <div className="bg-[var(--bg-card)] rounded-3xl p-8 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+                                            <div className="bg-[var(--bg-card)] rounded-3xl p-8 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)]">
                                                 <div className="text-center mb-6">
                                                     <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                                                         <span className="text-3xl font-bold text-white">1</span>
@@ -506,7 +502,7 @@ export default function ScheduleMatch() {
                                                 </div>
                                                 
                                                 <div className="space-y-5">
-                                                    <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-4 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors">
+                                                    <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-4 rounded-xl">
                                                         <input
                                                             type="checkbox"
                                                             checked={p1IsObject}
@@ -516,7 +512,7 @@ export default function ScheduleMatch() {
                                                                     setSelectedP1("");
                                                                 }
                                                             }}
-                                                            className="w-6 h-6 text-blue-600 bg-[var(--bg-card)] border-2 border-blue-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                            className="w-6 h-6 text-blue-600 bg-[var(--bg-card)] border-2 border-blue-300 rounded"
                                                         />
                                                         <span className="text-base font-medium text-blue-600">Registered Player</span>
                                                     </label>
@@ -528,16 +524,19 @@ export default function ScheduleMatch() {
                                                             placeholder="Search for a Player"
                                                             options={getFilteredPlayersForP1()}
                                                             validation={{ required: required }}
-                                                            onUpdate={(value) => setSelectedP1(value)}
+                                                            value={watch('p1') || selectedP1}
+                                                            onUpdate={(value) => {
+                                                                setSelectedP1(value);
+                                                                setValue('p1', value);
+                                                            }}
                                                         />
                                                     ) : (
                                                         <input
                                                             type="text"
                                                             placeholder="Enter player 1 name"
-                                                            className="w-full h-14 bg-[var(--bg-card)] rounded-xl px-5 text-base border-2 border-[var(--border-primary)] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-[var(--text-primary)]"
-                                                            onChange={(e) => {
-                                                                setValue("p1Name", e.target.value);
-                                                            }}
+                                                            value={watch('p1Name') || ''}
+                                                            className="w-full h-14 bg-[var(--bg-card)] rounded-xl px-5 text-base border-2 border-[var(--border-primary)]"
+                                                            onChange={(e) => setValue("p1Name", e.target.value)}
                                                         />
                                                     )}
                                                 </div>
@@ -548,15 +547,10 @@ export default function ScheduleMatch() {
                                                 <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
                                                     <span className="text-3xl font-bold text-white">VS</span>
                                                 </div>
-                                                <div className="mt-6 text-center">
-                                                    <div className="w-3 h-3 bg-green-500 rounded-full mx-auto mb-3"></div>
-                                                    <div className="w-3 h-3 bg-green-500 rounded-full mx-auto mb-3"></div>
-                                                    <div className="w-3 h-3 bg-green-500 rounded-full mx-auto"></div>
-                                                </div>
                                             </div>
                                             
                                             {/* Player 2 */}
-                                            <div className="bg-[var(--bg-card)] rounded-3xl p-8 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
+                                            <div className="bg-[var(--bg-card)] rounded-3xl p-8 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)]">
                                                 <div className="text-center mb-6">
                                                     <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
                                                         <span className="text-3xl font-bold text-white">2</span>
@@ -565,7 +559,7 @@ export default function ScheduleMatch() {
                                                 </div>
                                                 
                                                 <div className="space-y-5">
-                                                    <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-4 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors">
+                                                    <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-4 rounded-xl">
                                                         <input
                                                             type="checkbox"
                                                             checked={p2IsObject}
@@ -575,7 +569,7 @@ export default function ScheduleMatch() {
                                                                     setSelectedP2("");
                                                                 }
                                                             }}
-                                                            className="w-6 h-6 text-purple-600 bg-[var(--bg-card)] border-2 border-purple-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                            className="w-6 h-6 text-purple-600 bg-[var(--bg-card)] border-2 border-purple-300 rounded"
                                                         />
                                                         <span className="text-base font-medium text-purple-600">Registered Player</span>
                                                     </label>
@@ -587,16 +581,19 @@ export default function ScheduleMatch() {
                                                             placeholder="Search for a Player"
                                                             options={getFilteredPlayersForP2()}
                                                             validation={{ required: required }}
-                                                            onUpdate={(value) => setSelectedP2(value)}
+                                                            value={watch('p2') || selectedP2}
+                                                            onUpdate={(value) => {
+                                                                setSelectedP2(value);
+                                                                setValue('p2', value);
+                                                            }}
                                                         />
                                                     ) : (
                                                         <input
                                                             type="text"
                                                             placeholder="Enter player 2 name"
-                                                            className="w-full h-14 bg-[var(--bg-card)] rounded-xl px-5 text-base border-2 border-[var(--border-primary)] focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-[var(--text-primary)]"
-                                                            onChange={(e) => {
-                                                                setValue("p2Name", e.target.value);
-                                                            }}
+                                                            value={watch('p2Name') || ''}
+                                                            className="w-full h-14 bg-[var(--bg-card)] rounded-xl px-5 text-base border-2 border-[var(--border-primary)]"
+                                                            onChange={(e) => setValue("p2Name", e.target.value)}
                                                         />
                                                     )}
                                                 </div>
@@ -606,11 +603,11 @@ export default function ScheduleMatch() {
                                 </div>
 
                                 {/* Match Details Section */}
-                                <div className="bg-[var(--bg-card)] rounded-3xl p-10 shadow-[var(--shadow-primary)] border border-[var(--border-primary)] transition-colors duration-300">
+                                <div className="bg-[var(--bg-card)] rounded-3xl p-10 shadow-[var(--shadow-primary)] border border-[var(--border-primary)] mt-8">
                                     <div className="text-center mb-10">
                                         <h2 className="text-4xl font-bold text-[var(--text-primary)] mb-3">Match Details</h2>
-                                        <p className="text-xl text-[var(--text-secondary)]">Configure your match settings and preferences</p>
-                            </div>
+                                        <p className="text-xl text-[var(--text-secondary)]">Update match settings and preferences</p>
+                                    </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
                                         <div className="space-y-3">
@@ -620,33 +617,23 @@ export default function ScheduleMatch() {
                                             <input
                                                 type="datetime-local"
                                                 value={watch("date") || ""}
-                                                onChange={(e) => {
-                                                    setValue("date", e.target.value);
-                                                    console.log('Date input changed to:', e.target.value);
-                                                }}
+                                                onChange={(e) => setValue("date", e.target.value)}
                                                 min={new Date().toISOString().slice(0, 16)}
-                                                max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
-                                                className="w-full px-4 py-3 border-2 border-[var(--border-primary)] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-[var(--bg-secondary)] hover:bg-[var(--bg-card)] text-[var(--text-primary)]"
+                                                className="w-full px-4 py-3 border-2 border-[var(--border-primary)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                                                 required
                                             />
-                                            {errors.date && (
-                                                <span className="text-red-500 text-xs">
-                                                    {String(errors.date.message)}
-                                                </span>
-                                            )}
-                                        
                                         </div>
                                         
                                         <div className="space-y-3">
-                                <Select
+                                            <Select
                                                 options={matchFormatOptions}
                                                 label="Match Format"
                                                 validation={{ required: required }}
                                                 name="matchFormat"
+                                                value={watch('matchFormat')}
                                             />
                                         </div>
                                         
-                                        {/* Tie Break - Hidden for tiebreak-only formats */}
                                         {!currentMatchFormat?.startsWith('tiebreak') && currentTieBreakOptions.length > 0 && (
                                             <div className="space-y-3">
                                                 <Select
@@ -654,11 +641,11 @@ export default function ScheduleMatch() {
                                                     label="Tie Break"
                                                     validation={{ required: required }}
                                                     name="tieBreakRule"
+                                                    value={watch('tieBreakRule')}
                                                 />
                                             </div>
                                         )}
                                         
-                                        {/* Scoring Variation - Hidden for tiebreak-only formats */}
                                         {!currentMatchFormat?.startsWith('tiebreak') && (
                                             <div className="space-y-3">
                                                 <Select
@@ -666,58 +653,48 @@ export default function ScheduleMatch() {
                                                     label="Scoring Variation"
                                                     validation={{ required: required }}
                                                     name="scoringVariation"
-                                                    value={watch('scoringVariation') || 'standard'}
+                                                    value={watch('scoringVariation')}
                                                 />
-                                                {/* Help text for scoring variations */}
-                                                {currentMatchFormat && (
-                                                    <div className="text-xs text-gray-600 mt-1">
-                                                        {currentMatchFormat === 'bestOfThree' || currentMatchFormat === 'bestOfFive' ? (
-                                                            <span>✅ Final set can use 10-point tiebreak</span>
-                                                        ) : currentMatchFormat === 'oneSet' ? (
-                                                            <span>✅ Can use 10-point tiebreak</span>
-                                                        ) : currentMatchFormat === 'shortSets' || currentMatchFormat === 'proSet8' ? (
-                                                            <span>✅ Final set 10-point tiebreak available</span>
-                                                        ) : (
-                                                            <span>ℹ️ Only standard scoring available for this format</span>
-                                                        )}
-                                                    </div>
-                                                )}
                                             </div>
                                         )}
                                         
                                         <div className="space-y-3">
-                                <Select
+                                            <Select
                                                 options={trackingLevelOptions}
                                                 label="Tracking Level"
                                                 validation={{ required: required }}
                                                 name="trackingLevel"
+                                                value={watch('trackingLevel')}
                                             />
                                         </div>
                                         
                                         <div className="space-y-3">
-                                <Select
+                                            <Select
                                                 options={matchCategoryOptions}
                                                 label="Match Category"
                                                 validation={{ required: required }}
                                                 name="matchCategory"
+                                                value={watch('matchCategory')}
                                             />
                                         </div>
                                         
                                         <div className="space-y-3">
-                                <Select
+                                            <Select
                                                 options={courtSurfaceOptions}
                                                 label="Court Surface"
                                                 validation={{ required: required }}
                                                 name="courtSurface"
-                                />
-                            </div>
+                                                value={watch('courtSurface')}
+                                            />
+                                        </div>
 
                                         <div className="flex items-center justify-center">
-                                            <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-5 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors w-full justify-center">
+                                            <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-5 rounded-xl w-full justify-center">
                                                 <input
                                                     type="checkbox"
-                                                    name="indoor"
-                                                    className="w-6 h-6 text-blue-600 bg-[var(--bg-card)] border-2 border-[var(--border-primary)] rounded focus:ring-blue-500 focus:ring-2"
+                                                    checked={watch('indoor') || false}
+                                                    onChange={(e) => setValue('indoor', e.target.checked)}
+                                                    className="w-6 h-6 text-blue-600 bg-[var(--bg-card)] border-2 border-[var(--border-primary)] rounded"
                                                 />
                                                 <span className="text-base font-medium text-[var(--text-primary)]">Indoor Court</span>
                                             </label>
@@ -726,11 +703,12 @@ export default function ScheduleMatch() {
                                         {/* Hide No-Ad Scoring for tiebreak formats - it's automatically enabled */}
                                         {!currentMatchFormat?.startsWith('tiebreak') && (
                                             <div className="flex items-center justify-center">
-                                                <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-5 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors w-full justify-center">
+                                                <label className="flex items-center gap-3 cursor-pointer bg-[var(--bg-secondary)] p-5 rounded-xl w-full justify-center">
                                                     <input
                                                         type="checkbox"
-                                                        name="noAdScoring"
-                                                        className="w-6 h-6 text-green-600 bg-[var(--bg-card)] border-2 border-[var(--border-primary)] rounded focus:ring-green-500 focus:ring-2"
+                                                        checked={watch('noAdScoring') || false}
+                                                        onChange={(e) => setValue('noAdScoring', e.target.checked)}
+                                                        className="w-6 h-6 text-green-600 bg-[var(--bg-card)] border-2 border-[var(--border-primary)] rounded"
                                                     />
                                                     <span className="text-base font-medium text-[var(--text-primary)]">No-Ad Scoring</span>
                                                 </label>
@@ -738,138 +716,85 @@ export default function ScheduleMatch() {
                                         )}
                                     </div>
 
-                                                                        {/* Tournament fields - shown conditionally */}
+                                    {/* Tournament fields */}
                                     {matchCategory === 'tournament' && (
-                                        <div className="mt-10 p-8 bg-[var(--bg-secondary)] rounded-3xl border border-[var(--border-primary)] max-w-5xl mx-auto transition-colors duration-300">
-                                            <h3 className="text-2xl font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-3 text-center justify-center">
+                                        <div className="mt-10 p-8 bg-[var(--bg-secondary)] rounded-3xl border border-[var(--border-primary)] max-w-5xl mx-auto">
+                                            <h3 className="text-2xl font-semibold text-[var(--text-primary)] mb-6 text-center">
                                                 🏆 Tournament Information
                                             </h3>
-                                            <p className="text-center text-[var(--text-secondary)] mb-8 text-lg">
-                                                Select the tournament type and level to categorize your match properly. 
-                                                The tournament level options will update based on your selection.
-                                            </p>
-                                            <div className="mb-6 p-4 bg-[var(--bg-tertiary)] rounded-xl border border-[var(--border-secondary)]">
-                                                <div className="flex items-center gap-3 text-[var(--text-primary)]">
-                                                    <span className="text-xl">ℹ️</span>
-                                                    <div className="flex-1">
-                                                        <p className="font-medium">Tournament Match Requirements:</p>
-                                                        <p className="text-sm">Both tournament type and level must be selected to proceed with scheduling.</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-medium">Progress:</span>
-                                                        <div className="flex gap-1">
-                                                            <div className={`w-3 h-3 rounded-full ${currentTournamentType ? 'bg-green-500' : 'bg-[var(--bg-tertiary)]'}`}></div>
-                                                            <div className={`w-3 h-3 rounded-full ${currentTournamentType && watch('tournamentLevel') ? 'bg-green-500' : 'bg-[var(--bg-tertiary)]'}`}></div>
-                                                        </div>
-                                                        <span className="text-xs text-[var(--text-secondary)]">
-                                                            {currentTournamentType && watch('tournamentLevel') ? '2/2' : currentTournamentType ? '1/2' : '0/2'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                                 <div className="space-y-3">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="text-2xl">🏆</span>
-                                                        <span className="text-lg font-medium text-[var(--text-primary)]">Tournament Type</span>
-                                                    </div>
                                                     <Select
                                                         options={Object.keys(TOURNAMENT_LEVELS).map(type => ({ 
                                                             value: type, 
                                                             label: `${type} (${TOURNAMENT_LEVELS[type as keyof typeof TOURNAMENT_LEVELS].length} levels)` 
                                                         }))}
-                                                        label=""
+                                                        label="Tournament Type"
                                                         validation={{ required: required }}
                                                         name="tournamentType"
-                                                        onUpdate={() => {
-                                                            setValue("tournamentLevel", ""); // Clear level when type changes
-                                                        }}
+                                                        value={watch('tournamentType')}
+                                                        onUpdate={() => setValue("tournamentLevel", "")}
                                                     />
                                                 </div>
 
                                                 <div className="space-y-3">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="text-2xl">📊</span>
-                                                        <span className="text-lg font-medium text-[var(--text-primary)]">Tournament Level</span>
-                                                    </div>
                                                     <Select
                                                         options={currentTournamentType && TOURNAMENT_LEVELS[currentTournamentType] 
                                                             ? TOURNAMENT_LEVELS[currentTournamentType].map(level => ({ value: level, label: level }))
                                                             : []}
-                                                        label=""
+                                                        label="Tournament Level"
                                                         validation={{ required: required }}
                                                         name="tournamentLevel"
+                                                        value={watch('tournamentLevel')}
                                                         placeholder={currentTournamentType ? "Select tournament level" : "Select tournament type first"}
                                                     />
-                                                    {!currentTournamentType && (
-                                                        <p className="text-sm text-[var(--text-secondary)] mt-2 flex items-center gap-2">
-                                                            <span>⚠️</span>
-                                                            <span>Please select a tournament type first to see available levels</span>
-                                                        </p>
-                                                    )}
-                                                    {currentTournamentType && TOURNAMENT_LEVELS[currentTournamentType] && (
-                                                        <div className="mt-3 p-3 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-secondary)]">
-                                                            <p className="text-sm text-[var(--text-primary)] flex items-center gap-2">
-                                                                <span>📋</span>
-                                                                <span>Available levels for <strong>{currentTournamentType}</strong>: {TOURNAMENT_LEVELS[currentTournamentType].length} options</span>
-                                                            </p>
-                                                            <p className="text-xs text-[var(--text-secondary)] mt-1">
-                                                                {TOURNAMENT_LEVELS[currentTournamentType].slice(0, 5).join(', ')}
-                                                                {TOURNAMENT_LEVELS[currentTournamentType].length > 5 && '...'}
-                                                            </p>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>
                                     )}
 
-                                    
-
                                     {/* Notes Section */}
                                     <div className="mt-12 pt-8 border-t border-[var(--border-secondary)]">
                                         <div className="text-center mb-8">
                                             <h3 className="text-3xl font-bold text-[var(--text-primary)] mb-3">📝 Match Notes</h3>
-                                            <p className="text-xl text-[var(--text-secondary)]">Add any additional information about your match</p>
                                         </div>
                                         <div className="w-full max-w-4xl mx-auto">
                                             <Textarea
                                                 label=""
                                                 name="note"
-                                                placeholder="Enter any special instructions, court preferences, or additional notes for your match..."
+                                                placeholder="Enter any special instructions or notes..."
                                             />
                                         </div>
                                     </div>
 
                                     {/* Submit Button */}
-                                    <div className="flex justify-center mt-16 mb-8">
-                                <Button
-                                    type="action"
+                                    <div className="flex justify-center gap-4 mt-16 mb-8">
+                                        <Button
+                                            type="secondary"
                                             size="lg"
-                                            className="rounded-3xl text-center text-2xl px-24 py-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-80"
+                                            className="rounded-3xl text-xl px-12 py-6"
+                                            onClick={() => navigate(`/admin/matchs/detail/${matchId}`)}
+                                            disabled={loading}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="action"
+                                            size="lg"
+                                            className="rounded-3xl text-xl px-12 py-6"
                                             onClick={onSubmit(handleSubmit)}
                                             disabled={loading}
                                         >
-                                            {loading ? (
-                                                <div className="flex items-center gap-6">
-                                                    <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                    <span className="text-2xl">Scheduling Match...</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-6">
-                                                    <span className="text-3xl">🎾</span>
-                                                    <span className="text-2xl font-semibold">Schedule Match</span>
-                                                    <span className="text-3xl">🎾</span>
-                                                </div>
-                                            )}
-                                </Button>
+                                            {loading ? 'Updating...' : 'Update Match'}
+                                        </Button>
                                     </div>
+                                </div>
                             </div>
-                        </div>
-                    );
-                }}
-            />
+                        );
+                    }}
+                />
             </div>
         </DefaultPage>
     );
 }
+

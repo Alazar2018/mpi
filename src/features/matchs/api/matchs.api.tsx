@@ -83,6 +83,18 @@ export function updateMatchStatus(matchId: string, status: "confirmed" | "reject
 	}));
 }
 
+export function updateMatch(matchId: string, matchData: Partial<CreateMatchRequest>): Promise<AsyncResponse<any>> {
+	return matchesService.updateMatch(matchId, matchData).then(data => ({
+		success: true,
+		data,
+		status: 200
+	})).catch(error => ({
+		success: false,
+		error: error.message || 'Failed to update match',
+		status: 500
+	}));
+}
+
 export function deleteMatch(matchId: string): Promise<AsyncResponse<MatchesListResponse>> {
 	return matchesService.deleteMatch(matchId).then(data => ({
 		success: true,
