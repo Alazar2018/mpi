@@ -100,8 +100,8 @@ export default function MatchDetail() {
 				lastOnline: ""
 			} : {
 				_id: "custom_player_1",
-				firstName: matchData.p1Name || "Player",
-				lastName: "One",
+				firstName: matchData.p1Name ? matchData.p1Name.split(' ')[0] : "Player 1",
+				lastName: matchData.p1Name ? matchData.p1Name.split(' ').slice(1).join(' ') : "",
 				avatar: "https://randomuser.me/api/portraits/men/32.jpg",
 				emailAddress: { email: "" },
 				phoneNumber: { countryCode: "", number: "" },
@@ -117,8 +117,8 @@ export default function MatchDetail() {
 				lastOnline: ""
 			} : {
 				_id: "custom_player_2",
-				firstName: matchData.p2Name || "Player",
-				lastName: "Two",
+				firstName: matchData.p2Name ? matchData.p2Name.split(' ')[0] : "Player 2",
+				lastName: matchData.p2Name ? matchData.p2Name.split(' ').slice(1).join(' ') : "",
 				avatar: "https://randomuser.me/api/portraits/women/44.jpg",
 				emailAddress: { email: "" },
 				phoneNumber: { countryCode: "", number: "" },
@@ -455,6 +455,7 @@ export default function MatchDetail() {
 						{matchDetails ? (
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							{/* Match Date & Time */}
+							{matchDetails?.date && matchDetails.date !== 'Invalid Date' && (
 							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 								<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 									<i className="text-[var(--text-tertiary)]">📅</i>
@@ -463,13 +464,15 @@ export default function MatchDetail() {
 									<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Match Date & Time</span>
 									<div className="font-bold text-[var(--text-primary)] flex items-center gap-1 transition-colors duration-300">
 										<span className="text-sm py-1 px-2 bg-[var(--bg-secondary)] rounded-sm transition-colors duration-300">
-											{matchDetails?.date || 'Loading...'}
+											{matchDetails.date}
 										</span>
 									</div>
 								</div>
 							</div>
+							)}
 
 							{/* Match Length */}
+							{matchDetails?.totalGameTime != null && matchDetails.totalGameTime > 0 && (
 							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 								<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 									<i className="text-[var(--text-tertiary)]">⏰</i>
@@ -477,10 +480,11 @@ export default function MatchDetail() {
 								<div className="flex flex-col flex-1">
 									<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Match Length</span>
 									<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-										{matchDetails?.totalGameTime ? `${Math.round(matchDetails.totalGameTime / 60)} Min` : 'Not set'}
+										{Math.round(matchDetails.totalGameTime / 60)} Min
 									</span>
 								</div>
 							</div>
+							)}
 
 							{/* Game Best Out of */}
 							{/* <div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
@@ -496,6 +500,7 @@ export default function MatchDetail() {
 							</div> */}
 
 								{/* Match Format */}
+								{matchDetails?.matchFormatDisplay && matchDetails.matchFormatDisplay !== 'Unknown' && (
 								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 										<i className="text-[var(--text-tertiary)]">🎾</i>
@@ -503,12 +508,14 @@ export default function MatchDetail() {
 									<div className="flex flex-col flex-1">
 										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Match Format</span>
 										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-											{matchDetails?.matchFormatDisplay || 'Loading...'}
+											{matchDetails.matchFormatDisplay}
 										</span>
 									</div>
 								</div>
+								)}
 
 								{/* Scoring Variation */}
+								{matchDetails?.scoringVariationDisplay && (
 								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 										<i className="text-[var(--text-tertiary)]">📊</i>
@@ -516,12 +523,14 @@ export default function MatchDetail() {
 									<div className="flex flex-col flex-1">
 										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Scoring Variation</span>
 										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-											{matchDetails?.scoringVariationDisplay || 'Loading...'}
+											{matchDetails.scoringVariationDisplay}
 										</span>
 									</div>
 								</div>
+								)}
 
 								{/* Tracking Level */}
+								{matchDetails?.trackingLevelDisplay && (
 								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 										<i className="text-[var(--text-tertiary)]">📈</i>
@@ -529,10 +538,11 @@ export default function MatchDetail() {
 									<div className="flex flex-col flex-1">
 										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Tracking Level</span>
 										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-											{matchDetails?.trackingLevelDisplay || 'Loading...'}
+											{matchDetails.trackingLevelDisplay}
 										</span>
 									</div>
 								</div>
+								)}
 
 								{/* No-Ad Scoring */}
 								{matchDetails?.noAdScoring && (
@@ -565,6 +575,7 @@ export default function MatchDetail() {
 								)}
 
 								{/* Tie-Breaker Rule */}
+								{matchDetails?.tieBreakRule != null && matchDetails.tieBreakRule > 0 && (
 								<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 									<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 										<i className="text-[var(--text-tertiary)]">🎯</i>
@@ -572,12 +583,14 @@ export default function MatchDetail() {
 									<div className="flex flex-col flex-1">
 										<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Default Tie-Breaker Rule</span>
 										<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-											{matchDetails?.tieBreakRule || 'Loading...'} points
+											{matchDetails.tieBreakRule} points
 										</span>
 									</div>
 								</div>
+								)}
 
 							{/* Court Type */}
+							{matchDetails?.indoor && (
 							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 								<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 									<i className="text-[var(--text-tertiary)]">🏟️</i>
@@ -585,12 +598,14 @@ export default function MatchDetail() {
 								<div className="flex flex-col flex-1">
 									<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Court Type</span>
 									<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-										{matchDetails?.indoor || 'Loading...'}
+										{matchDetails.indoor}
 									</span>
 								</div>
 							</div>
+							)}
 
 							{/* Court Surface Type */}
+							{matchDetails?.courtSurface && (
 							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 								<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 									<i className="text-[var(--text-tertiary)]">🌊</i>
@@ -598,12 +613,14 @@ export default function MatchDetail() {
 								<div className="flex flex-col flex-1">
 									<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Court Surface Type</span>
 									<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-										{matchDetails?.courtSurface || 'Loading...'}
+										{matchDetails.courtSurface}
 									</span>
 								</div>
 							</div>
+							)}
 
 							{/* Match Creator */}
+							{matchData?.matchCreator && matchData.matchCreator.firstName && (
 							<div className="flex items-center p-4 gap-4 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300">
 								<div className="w-12 h-12 bg-[var(--bg-secondary)] grid place-items-center rounded-lg transition-colors duration-300">
 									<i className="text-[var(--text-tertiary)]">👤</i>
@@ -611,10 +628,11 @@ export default function MatchDetail() {
 								<div className="flex flex-col flex-1">
 									<span className="text-sm font-medium text-[var(--text-secondary)] mb-1 transition-colors duration-300">Match Creator</span>
 									<span className="text-base font-bold text-[var(--text-primary)] transition-colors duration-300">
-										{matchData?.matchCreator ? `${matchData.matchCreator.firstName} ${matchData.matchCreator.lastName}` : 'Loading...'}
+										{matchData.matchCreator.firstName} {matchData.matchCreator.lastName}
 									</span>
 								</div>
 							</div>
+							)}
 						</div>
 						) : (
 							<div className="flex items-center justify-center p-8">
@@ -650,14 +668,14 @@ export default function MatchDetail() {
 										className="w-full h-full object-cover"
 									/>
 								</div>
-								<div className="text-[var(--text-primary)] transition-colors duration-300">
-									<h2 className="text-xl font-bold">
-										{playerData?.player1?.firstName || (typeof matchData.p1 === 'object' ? matchData.p1?.firstName : undefined) || matchData.p1Name || 'Player'} {playerData?.player1?.lastName || (typeof matchData.p1 === 'object' ? matchData.p1?.lastName : undefined) || ''}
-									</h2>
-										<p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
-											{matchData.p1IsObject ? 'Registered Player' : 'Custom Player'}
-										</p>
-								</div>
+							<div className="text-[var(--text-primary)] transition-colors duration-300">
+								<h2 className="text-xl font-bold">
+									{playerData?.player1?.firstName || (typeof matchData.p1 === 'object' ? matchData.p1?.firstName : undefined) || matchData.p1Name || 'Player 1'} {playerData?.player1?.lastName || (typeof matchData.p1 === 'object' ? matchData.p1?.lastName : undefined) || ''}
+								</h2>
+									<p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
+										{matchData.p1IsObject ? 'Registered Player' : 'Custom Player'}
+									</p>
+							</div>
 							</div>
 							<div className="absolute left-4 top-1/2 transform -translate-y-1/2">
 								<i 
@@ -677,14 +695,14 @@ export default function MatchDetail() {
 										className="w-full h-full object-cover"
 									/>
 								</div>
-								<div className="text-[var(--text-primary)] transition-colors duration-300">
-									<h2 className="text-xl font-bold">
-										{playerData?.player2?.firstName || (typeof matchData.p2 === 'object' ? matchData.p2?.firstName : undefined) || matchData.p2Name || 'Player'} {(typeof matchData.p2 === 'object' ? matchData.p2?.lastName : undefined) || 'Two'}
-									</h2>
-										<p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
-											{matchData.p2IsObject ? 'Registered Player' : 'Custom Player'}
-										</p>
-								</div>
+							<div className="text-[var(--text-primary)] transition-colors duration-300">
+								<h2 className="text-xl font-bold">
+									{playerData?.player2?.firstName || (typeof matchData.p2 === 'object' ? matchData.p2?.firstName : undefined) || matchData.p2Name || 'Player 2'} {playerData?.player2?.lastName || (typeof matchData.p2 === 'object' ? matchData.p2?.lastName : undefined) || ''}
+								</h2>
+									<p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
+										{matchData.p2IsObject ? 'Registered Player' : 'Custom Player'}
+									</p>
+							</div>
 							</div>
 							<div className="absolute right-4 top-1/2 transform -translate-y-1/2">
 								<i 

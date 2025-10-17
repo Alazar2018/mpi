@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import { useApiRequest } from "@/hooks/useApiRequest";
 import { getMatchById, saveMatchProgress, submitMatchResult } from "./api/matchs.api";
 import type { Match, SaveMatchProgressRequest, SubmitMatchResultRequest } from "@/service/matchs.server";
+import { notesService, type MatchNote, type NoteType, type Priority, type Visibility } from "@/service/notes.server";
 import { 
   getMatchRules, 
   isMatchComplete as isMatchCompleteUtil, 
@@ -69,7 +70,7 @@ interface CourtZone {
 
 
 interface ShotPlacement {
-  type: 'net' | 'long' | 'wide' | 'crossCourt' | 'downTheLine' | 'downTheMiddle';
+  type: 'net' | 'long' | 'shortAngle' | 'crossCourt' | 'downTheLine' | 'downTheMiddle';
   label: string;
 }
 
@@ -509,8 +510,8 @@ const MatchTracker: React.FC = () => {
         name: matchData.p1IsObject && typeof matchData.p1 !== 'string' && matchData.p1
           ? `${matchData.p1?.firstName || ''} ${matchData.p1?.lastName || ''}`.trim() || "Player 1"
           : matchData?.p1Name || "Player 1",
-        image: typeof matchData?.p1 !== 'string' && matchData.p1?.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        usdta: 19,
+        image: (typeof matchData?.p1 !== 'string' && matchData.p1?.avatar) || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+        usdta: 19, // USDTA rating not available in Player data
         // Don't reset scores for saved matches - they will be restored by resumeMatchWithExistingData
         sets: (matchData as any).status === 'saved' ? prev.sets : 0,
         games: (matchData as any).status === 'saved' ? prev.games : 0,
@@ -525,8 +526,8 @@ const MatchTracker: React.FC = () => {
         name: matchData.p2IsObject && typeof matchData.p2 !== 'string' && matchData.p2
           ? `${matchData.p2?.firstName || ''} ${matchData.p2?.lastName || ''}`.trim() || "Player 2"
           : matchData?.p2Name || "Player 2",
-        image: typeof matchData?.p2 !== 'string' && matchData.p2?.avatar || "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-        usdta: 19,
+        image: (typeof matchData?.p2 !== 'string' && matchData.p2?.avatar) || "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+        usdta: 19, // USDTA rating not available in Player data
         // Don't reset scores for saved matches - they will be restored by resumeMatchWithExistingData
         sets: (matchData as any).status === 'saved' ? prev.sets : 0,
         games: (matchData as any).status === 'saved' ? prev.games : 0,
@@ -1119,7 +1120,7 @@ const MatchTracker: React.FC = () => {
 
 
   const shotPlacements: ShotPlacement[] = [
-    { type: 'wide', label: 'Wide' },
+    { type: 'shortAngle', label: 'Short Angle' },
     { type: 'crossCourt', label: 'Cross Court' },
     { type: 'downTheLine', label: 'Down The Line' },
     { type: 'downTheMiddle', label: 'Down The Middle' }
@@ -1354,9 +1355,20 @@ const MatchTracker: React.FC = () => {
   
   // Note-taking state
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [notes, setNotes] = useState<Array<{id: string, content: string, timestamp: string}>>([]);
+  const [notes, setNotes] = useState<MatchNote[]>([]);
   const [currentNote, setCurrentNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  
+  // Note filter and metadata states
+  const [noteType, setNoteType] = useState<NoteType>('general');
+  const [notePriority, setNotePriority] = useState<Priority>('medium');
+  const [noteVisibility, setNoteVisibility] = useState<Visibility>('coach');
+  const [noteTags, setNoteTags] = useState<string[]>([]);
+  const [noteTagInput, setNoteTagInput] = useState('');
+  const [noteFilterType, setNoteFilterType] = useState<NoteType | 'all'>('all');
+  const [noteFilterPriority, setNoteFilterPriority] = useState<Priority | 'all'>('all');
+  const [noteSearchQuery, setNoteSearchQuery] = useState('');
+  const [isLoadingNotes, setIsLoadingNotes] = useState(false);
 
   // Winners modal state
   const [showWinnersModal, setShowWinnersModal] = useState(false);
@@ -2060,6 +2072,10 @@ const MatchTracker: React.FC = () => {
       const currentServer = player1.isServing ? 1 : 2;
       const isServerClickingOwnField = currentServer === zone.player;
       
+      // Check if this is a serve to the wrong service box
+      const isCorrectServiceBox = servingPosition === 'up' ? zone.y >= 298 : zone.y < 298;
+      const isWrongServiceBox = isPointActive && !isServerClickingOwnField && !isCorrectServiceBox;
+      
       console.log('🎯 [Court Click] Debug info:', {
         courtRotation,
         matchServer: match.server,
@@ -2067,11 +2083,56 @@ const MatchTracker: React.FC = () => {
         zonePlayer: zone.player,
         isServerClickingOwnField,
         player1Serving: player1.isServing,
-        player2Serving: player2.isServing
+        player2Serving: player2.isServing,
+        isPointActive,
+        servingPosition,
+        zoneY: zone.y,
+        isCorrectServiceBox,
+        isWrongServiceBox
       });
       
+      // Handle serve to wrong service box (fault/double fault)
+      if (isWrongServiceBox) {
+        if (faultCount === 0) {
+          // First fault
+          setFaultCount(1);
+          toast('Fault! Ball served to wrong service box.', {
+            duration: 2000,
+            icon: '❌',
+          });
+          return;
+        } else if (faultCount === 1) {
+          // Double fault
+          setFaultCount(2);
+          
+          // Clear serve placement for double fault
+          setSelectedServePlacement(null);
+          
+          // Double fault - the non-serving player gets the point
+          const nonServingPlayer = player1.isServing ? 2 : 1;
+          
+          // Reset fault count
+          setFaultCount(0);
+          
+          // Set flag that user came from modal
+          sessionStorage.setItem('cameFromModal', 'true');
+          
+          // Show player reaction modal for double fault - point will be added after modal closes
+          setLastPointWinner(nonServingPlayer);
+          setLevel3ModalType('reaction');
+          setDefaultReactions();
+          setShowLevel3Modal(true);
+          
+          toast.error('Double Fault! Ball served to wrong service box.', {
+            duration: 2000,
+            icon: '⚠️',
+          });
+          return;
+        }
+      }
+      
       if (isServerClickingOwnField) {
-        // Server clicked their own field - opponent wins the point
+        // Server clicked their own field (during rally) - opponent wins the point
         const opponent = currentServer === 1 ? 2 : 1;
         setLastPointWinner(opponent);
         console.log('🎯 [Court Click] Server clicked own field, opponent wins:', opponent);
@@ -2115,7 +2176,47 @@ const MatchTracker: React.FC = () => {
 
   // Level 3 net click handler
   const handleNetClick = (player: 1 | 2) => {
-    // Check if we're in "ball in court" mode
+    // Check if point is active (serving) - net touch during serve is a fault
+    if (isPointActive) {
+      if (faultCount === 0) {
+        // First serve touched the net - it's a fault
+        setFaultCount(1);
+        toast('Fault! Ball touched the net on first serve.', {
+          duration: 2000,
+          icon: '🎾',
+        });
+        return;
+      } else if (faultCount === 1) {
+        // Second serve touched the net - it's a double fault
+        setFaultCount(2);
+        
+        // Clear serve placement for double fault
+        setSelectedServePlacement(null);
+        
+        // Double fault - the non-serving player gets the point
+        const nonServingPlayer = player1.isServing ? 2 : 1;
+        
+        // Reset fault count
+        setFaultCount(0);
+        
+        // Set flag that user came from modal
+        sessionStorage.setItem('cameFromModal', 'true');
+        
+        // Show player reaction modal for double fault - point will be added after modal closes
+        setLastPointWinner(nonServingPlayer);
+        setLevel3ModalType('reaction');
+        setDefaultReactions();
+        setShowLevel3Modal(true);
+        
+        toast.error('Double Fault! Ball touched the net on second serve.', {
+          duration: 2000,
+          icon: '⚠️',
+        });
+        return;
+      }
+    }
+    
+    // Check if we're in "ball in court" mode (for rallies)
     const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
     
     if (hasChosenBallInCourt) {
@@ -2360,75 +2461,167 @@ const MatchTracker: React.FC = () => {
     setIsPointActive(true);
     // Reset serve placement for new point
     setSelectedServePlacement(null);
+    // Reset fault count for new point
+    setFaultCount(0);
     // The in-between timer will automatically stop when isPointActive becomes true
   };
 
   // Note-taking functions
-  const addNote = () => {
-    if (currentNote.trim()) {
-      const newNote = {
-        id: Date.now().toString(),
-        content: currentNote.trim(),
-        timestamp: new Date().toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: true 
-        })
-      };
+  // Fetch notes for the current match
+  const fetchMatchNotes = async () => {
+    if (!matchId) return;
+    
+    try {
+      setIsLoadingNotes(true);
+      const query: any = {};
+      
+      if (noteFilterType && noteFilterType !== 'all') {
+        query.noteType = noteFilterType;
+      }
+      
+      if (noteFilterPriority && noteFilterPriority !== 'all') {
+        query.priority = noteFilterPriority;
+      }
+      
+      if (noteSearchQuery) {
+        query.search = noteSearchQuery;
+      }
+      
+      const response = await notesService.getMatchNotes(matchId, query);
+      setNotes(response.notes);
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+      toast.error('Failed to load notes');
+    } finally {
+      setIsLoadingNotes(false);
+    }
+  };
+
+  const addNote = async () => {
+    if (!currentNote.trim() || !matchId) return;
+    
+    try {
+      const pointDetail = isGameRunning ? {
+        setNumber: match.currentSet + 1,
+        gameNumber: match.games.length,
+        pointNumber: match.games[match.games.length - 1]?.scores.length || 0,
+        isTiebreak: match.isTieBreak,
+        score: `${player1.points}-${player2.points}`
+      } : undefined;
+      
+      const newNote = await notesService.createMatchNote(matchId, {
+        note: currentNote.trim(),
+        noteType,
+        priority: notePriority,
+        visibility: noteVisibility,
+        tags: noteTags,
+        pointDetail,
+        relatedPlayer: undefined // Can be enhanced to select a player
+      });
+      
       setNotes(prev => [newNote, ...prev]);
       setCurrentNote('');
-      setEditingNoteId(null);
+      setNoteTags([]);
+      setNoteTagInput('');
       
       // Show success toast
       toast.success('Note added successfully! 📝', {
         duration: 3000,
-        icon: '✏️',
+        icon: '✅',
       });
+    } catch (error) {
+      console.error('Error adding note:', error);
+      toast.error('Failed to add note');
     }
   };
 
   const handleNoteInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCurrentNote(e.target.value);
-    // If user starts typing and there's no editing happening, prepare to create a new note
-    if (e.target.value.trim() && !editingNoteId) {
-      // This will trigger the creation of a new note when they click Add
-    }
   };
 
   const editNote = (id: string) => {
-    const note = notes.find(n => n.id === id);
+    const note = notes.find(n => n._id === id);
     if (note) {
-      setCurrentNote(note.content);
+      setCurrentNote(note.note);
+      setNoteType(note.noteType);
+      setNotePriority(note.priority);
+      setNoteVisibility(note.visibility);
+      setNoteTags(note.tags);
       setEditingNoteId(id);
     }
   };
 
-  const updateNote = () => {
-    if (editingNoteId && currentNote.trim()) {
+  const updateNote = async () => {
+    if (!editingNoteId || !currentNote.trim()) return;
+    
+    try {
+      const updatedNote = await notesService.updateNote(editingNoteId, {
+        note: currentNote.trim(),
+        noteType,
+        priority: notePriority,
+        visibility: noteVisibility,
+        tags: noteTags
+      });
+      
       setNotes(prev => prev.map(note => 
-        note.id === editingNoteId 
-          ? { ...note, content: currentNote.trim() }
-          : note
+        note._id === editingNoteId ? updatedNote : note
       ));
       setCurrentNote('');
       setEditingNoteId(null);
+      setNoteTags([]);
+      setNoteTagInput('');
       
       // Show success toast
       toast.success('Note updated successfully! ✏️', {
         duration: 3000,
         icon: '📝',
       });
+    } catch (error) {
+      console.error('Error updating note:', error);
+      toast.error('Failed to update note');
     }
   };
 
-  const deleteNote = (id: string) => {
-    setNotes(prev => prev.filter(note => note.id !== id));
-    
-    // Show success toast
-    toast.success('Note deleted successfully! 🗑️', {
-      duration: 3000,
-      icon: '✅',
-    });
+  const deleteNote = async (id: string) => {
+    try {
+      await notesService.deleteNote(id);
+      setNotes(prev => prev.filter(note => note._id !== id));
+      
+      // Show success toast
+      toast.success('Note deleted successfully! 🗑️', {
+        duration: 3000,
+        icon: '✅',
+      });
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      toast.error('Failed to delete note');
+    }
+  };
+
+  const toggleNoteResolved = async (id: string) => {
+    try {
+      const updatedNote = await notesService.toggleResolveStatus(id);
+      setNotes(prev => prev.map(note => 
+        note._id === id ? updatedNote : note
+      ));
+      toast.success(updatedNote.isResolved ? 'Note marked as resolved ✓' : 'Note marked as unresolved', {
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Error toggling note status:', error);
+      toast.error('Failed to update note status');
+    }
+  };
+
+  const addNoteTag = () => {
+    if (noteTagInput.trim() && !noteTags.includes(noteTagInput.trim())) {
+      setNoteTags(prev => [...prev, noteTagInput.trim()]);
+      setNoteTagInput('');
+    }
+  };
+
+  const removeNoteTag = (tag: string) => {
+    setNoteTags(prev => prev.filter(t => t !== tag));
   };
 
   const openNoteModal = () => {
@@ -2439,6 +2632,20 @@ const MatchTracker: React.FC = () => {
     }
     setShowNoteModal(true);
   };
+
+  // Load notes when match data is ready
+  useEffect(() => {
+    if (matchId && matchData) {
+      fetchMatchNotes();
+    }
+  }, [matchId, matchData]);
+
+  // Reload notes when filters change
+  useEffect(() => {
+    if (matchId && showNoteModal) {
+      fetchMatchNotes();
+    }
+  }, [noteFilterType, noteFilterPriority, noteSearchQuery, matchId, showNoteModal]);
 
   const addPoint = (player: 1 | 2) => {
     // Don't allow points to be scored if match hasn't started
@@ -2454,6 +2661,9 @@ const MatchTracker: React.FC = () => {
       });
       return;
     }
+    
+    // Reset fault count at the start of each new point
+    setFaultCount(0);
     
     // For Level 3, allow points to be added when called from completePointWithReactions
     if (match.level === 3) {
@@ -2526,6 +2736,16 @@ const MatchTracker: React.FC = () => {
       // Calculate the new point totals correctly
       const p1Total = (player === 1 ? player1.points + 1 : player1.points);
       const p2Total = (player === 2 ? player2.points + 1 : player2.points);
+      
+      // Handle tiebreak server switching: 1-1-2-2-2-2 pattern
+      if (match.isTieBreak) {
+        const totalPoints = p1Total + p2Total;
+        // Switch after point 1, point 2, then every 2 points after that (4, 6, 8, 10...)
+        if (totalPoints === 1 || totalPoints === 2 || (totalPoints > 2 && totalPoints % 2 === 0)) {
+          switchServer();
+          console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
+        }
+      }
       
       console.log('🎯 [Debug] Checking game winner with points:', { p1Total, p2Total });
       
@@ -3107,6 +3327,16 @@ const MatchTracker: React.FC = () => {
       // Calculate the new point totals correctly
       const p1Total = (lastPointWinner === 1 ? player1.points + 1 : player1.points);
       const p2Total = (lastPointWinner === 2 ? player2.points + 1 : player2.points);
+      
+      // Handle tiebreak server switching: 1-1-2-2-2-2 pattern
+      if (match.isTieBreak) {
+        const totalPoints = p1Total + p2Total;
+        // Switch after point 1, point 2, then every 2 points after that (4, 6, 8, 10...)
+        if (totalPoints === 1 || totalPoints === 2 || (totalPoints > 2 && totalPoints % 2 === 0)) {
+          switchServer();
+          console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
+        }
+      }
       
       const gameWinner = checkGameWinner(p1Total, p2Total);
       
@@ -3921,9 +4151,8 @@ const MatchTracker: React.FC = () => {
                   height="640"
                   fill={getCourtColors().leftCourt}
                   opacity="0.3"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeDasharray="5,5"
+                  stroke="#FFD700"
+                  strokeWidth="3"
                   style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                   onClick={() => {
                     // Set flag that modal came from outfield click
@@ -3962,9 +4191,8 @@ const MatchTracker: React.FC = () => {
                   height="640"
                   fill={getCourtColors().rightCourt}
                   opacity="0.3"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeDasharray="5,5"
+                  stroke="#FFD700"
+                  strokeWidth="3"
                   style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                   onClick={() => {
                     // Set flag that modal came from outfield click
@@ -4015,10 +4243,14 @@ const MatchTracker: React.FC = () => {
             <rect x="70" y="40" width="480" height="520" fill={getCourtColors().leftCourt} />
             <rect x="550" y="40" width="480" height="520" fill={getCourtColors().rightCourt} />
                 <line x1="550" y1="40" x2="550" y2="560" stroke="white" strokeWidth="4" />
-            <line x1="70" y1="213" x2="310" y2="213" stroke="white" strokeDasharray="10,10" strokeWidth="2" />
-            <line x1="70" y1="385" x2="310" y2="385" stroke="white" strokeDasharray="10,10" strokeWidth="2" />
-                <line x1="790" y1="213" x2="1030" y2="213" stroke="white" strokeDasharray="10,10" strokeWidth="2" />
-                <line x1="790" y1="385" x2="1030" y2="385" stroke="white" strokeDasharray="10,10" strokeWidth="2" />
+            <line x1="70" y1="213" x2="310" y2="213" stroke="#FFD700" strokeWidth="3" />
+            <line x1="70" y1="385" x2="310" y2="385" stroke="#FFD700" strokeWidth="3" />
+                <line x1="790" y1="213" x2="1030" y2="213" stroke="#FFD700" strokeWidth="3" />
+                <line x1="790" y1="385" x2="1030" y2="385" stroke="#FFD700" strokeWidth="3" />
+            
+            {/* Outer border around service box areas (W, B, T zones combined) */}
+            <rect x="70" y="40" width="240" height="345" fill="none" stroke="#FFD700" strokeWidth="2" />
+            <rect x="790" y="40" width="240" height="345" fill="none" stroke="#FFD700" strokeWidth="2" />
 
             {/* Level 3 Scoring Zones - Only replace the scoring area */}
             {match.level === 3 ? (
@@ -4030,13 +4262,6 @@ const MatchTracker: React.FC = () => {
                 <rect x="310" y="298" width="240" height="86" fill={getCourtColors().leftZones[3]} />
                 <rect x="310" y="384" width="240" height="86" fill={getCourtColors().leftZones[4]} />
                 <rect x="310" y="470" width="240" height="86" fill={getCourtColors().leftZones[5]} />
-                
-                {/* Zone division lines - aligned with service box lines */}
-                <line x1="310" y1="126" x2="550" y2="126" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="212" x2="550" y2="212" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="298" x2="550" y2="298" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="384" x2="550" y2="384" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="470" x2="550" y2="470" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
                 
                 {/* Net design based on user choice and modal state */}
                 {(() => {
@@ -4056,7 +4281,7 @@ const MatchTracker: React.FC = () => {
                           onClick={() => isGameRunning && handleNetClick(courtRotation === 0 ? 1 : 2)}
                         />
                         {/* Mesh pattern for left net */}
-                        <g stroke={courtRotation === 0 ? "#9ACD32" : "#2F3FB0"} strokeWidth="1" opacity="0.6">
+                        <g stroke={courtRotation === 0 ? "#9ACD32" : "#2F3FB0"} strokeWidth="1" opacity="0.6" style={{ pointerEvents: 'none' }}>
                           {/* Vertical mesh lines */}
                           <line x1="555" y1="40" x2="555" y2="560" />
                           <line x1="560" y1="40" x2="560" y2="560" />
@@ -4093,7 +4318,7 @@ const MatchTracker: React.FC = () => {
                           <line x1="550" y1="500" x2="600" y2="500" />
                           <line x1="550" y1="520" x2="600" y2="520" />
                         </g>
-                        <text x="575" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "#86909C" : "white"} transform="rotate(-90, 575, 300)">
+                        <text x="575" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "#86909C" : "white"} transform="rotate(-90, 575, 300)" style={{ pointerEvents: 'none' }}>
                           {courtRotation === 0 ? player1.name : player2.name}
                         </text>
                         
@@ -4105,7 +4330,7 @@ const MatchTracker: React.FC = () => {
                           onClick={() => isGameRunning && handleNetClick(courtRotation === 0 ? 2 : 1)}
                         />
                         {/* Mesh pattern for right net */}
-                        <g stroke={courtRotation === 0 ? "#2F3FB0" : "#9ACD32"} strokeWidth="1" opacity="0.6">
+                        <g stroke={courtRotation === 0 ? "#2F3FB0" : "#9ACD32"} strokeWidth="1" opacity="0.6" style={{ pointerEvents: 'none' }}>
                           {/* Vertical mesh lines */}
                           <line x1="604" y1="40" x2="604" y2="560" />
                           <line x1="610" y1="40" x2="610" y2="560" />
@@ -4142,7 +4367,7 @@ const MatchTracker: React.FC = () => {
                           <line x1="599" y1="500" x2="654" y2="500" />
                           <line x1="599" y1="520" x2="654" y2="520" />
                         </g>
-                        <text x="626" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "white" : "#86909C"} transform="rotate(-90, 626, 300)">
+                        <text x="626" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "white" : "#86909C"} transform="rotate(-90, 626, 300)" style={{ pointerEvents: 'none' }}>
                           {courtRotation === 0 ? player2.name : player1.name}
                         </text>
                       </>
@@ -4151,10 +4376,15 @@ const MatchTracker: React.FC = () => {
                     // Show neutral net with white background and NET text
                     return (
                       <>
-                        {/* Neutral net with white background */}
-                        <rect x="550" y="40" width="120" height="520" fill="white" />
+                        {/* Neutral net with white background - clickable for serve faults */}
+                        <rect 
+                          x="550" y="40" width="120" height="520" 
+                          fill="white" 
+                          style={{ cursor: isGameRunning && isPointActive ? "pointer" : "default" }}
+                          onClick={() => isGameRunning && isPointActive && handleNetClick(1)}
+                        />
                         {/* NET text repeated from top to bottom - perfectly centered */}
-                        <g fill="#1B2B5B" fontSize="18" fontWeight="bold">
+                        <g fill="#1B2B5B" fontSize="18" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                           {/* Top section */}
                           <text x="610" y="75" textAnchor="middle" transform="rotate(-90, 610, 85)">NET</text>
                           <text x="610" y="115" textAnchor="middle" transform="rotate(-90, 610, 125)">NET</text>
@@ -4182,21 +4412,22 @@ const MatchTracker: React.FC = () => {
                 <rect x="630" y="298" width="240" height="86" fill={getCourtColors().rightZones[3]} />
                 <rect x="630" y="384" width="240" height="86" fill={getCourtColors().rightZones[4]} />
                 <rect x="630" y="470" width="240" height="86" fill={getCourtColors().rightZones[5]} />
-                    
-                    {/* Zone division lines - aligned with service box lines */}
-                    <line x1="630" y1="126" x2="870" y2="126" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                    <line x1="630" y1="212" x2="870" y2="212" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                    <line x1="630" y1="298" x2="870" y2="298" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                    <line x1="630" y1="384" x2="870" y2="384" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                    <line x1="630" y1="470" x2="870" y2="470" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
                 
                 {/* Clickable zones for Level 3 */}
                 {courtZones.map((zone) => {
                   // Determine which player this zone belongs to based on court rotation
                   const actualPlayer = courtRotation === 0 ? zone.player : (zone.player === 1 ? 2 : 1);
                   
-                  // All zones are clickable in Level 3 - server clicking own field means opponent wins
-                  const isClickable = isGameRunning;
+                  // Check if this is the server's own field during a serve
+                  const currentServer = player1.isServing ? 1 : 2;
+                  const isServerOwnField = actualPlayer === currentServer;
+                  
+                  // During a serve, only the server's own field is disabled (can't serve to your own side)
+                  // Wrong service boxes are clickable and will trigger fault/double fault
+                  const isDisabledDuringServe = isPointActive && isServerOwnField;
+                  
+                  // Zone is clickable if game is running and it's not disabled
+                  const isClickable = isGameRunning && !isDisabledDuringServe;
                   
                   return (
                     <rect
@@ -4206,9 +4437,7 @@ const MatchTracker: React.FC = () => {
                       width={zone.width}
                       height={zone.height}
                       fill="transparent"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeDasharray="5,5"
+                      stroke="none"
                       style={{ cursor: isClickable ? "pointer" : "not-allowed" }}
                       onClick={() => isClickable && handleCourtZoneClick({
                         ...zone,
@@ -4278,13 +4507,6 @@ const MatchTracker: React.FC = () => {
                   }} 
                 />
                 
-                {/* Left Court Zone Lines (Level 3 Style) */}
-                <line x1="310" y1="126" x2="550" y2="126" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="212" x2="550" y2="212" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="298" x2="550" y2="298" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="384" x2="550" y2="384" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="310" y1="470" x2="550" y2="470" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                
                 {/* Right Court Scoring Area with Level 3 Visual Style */}
                 <rect 
                   x="630" y="40" width="240" height="520" 
@@ -4295,16 +4517,14 @@ const MatchTracker: React.FC = () => {
                   }} 
                 />
                 
-                {/* Right Court Zone Lines (Level 3 Style) */}
-                <line x1="630" y1="126" x2="870" y2="126" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="630" y1="212" x2="870" y2="212" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="630" y1="298" x2="870" y2="298" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="630" y1="384" x2="870" y2="384" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1="630" y1="470" x2="870" y2="470" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
-                
-                {/* Net Design (Level 3 Style) - Smaller Width */}
-                <rect x="550" y="40" width="80" height="520" fill="white" />
-                <g fill="#1B2B5B" fontSize="18" fontWeight="bold">
+                {/* Net Design (Level 3 Style) - Smaller Width - Clickable for serve faults */}
+                <rect 
+                  x="550" y="40" width="80" height="520" 
+                  fill="white" 
+                  style={{ cursor: isGameRunning && isPointActive ? "pointer" : "default" }}
+                  onClick={() => isGameRunning && isPointActive && handleNetClick(1)}
+                />
+                <g fill="#1B2B5B" fontSize="18" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   <text x="590" y="75" textAnchor="middle" transform="rotate(-90, 590, 85)">NET</text>
                   <text x="590" y="115" textAnchor="middle" transform="rotate(-90, 590, 125)">NET</text>
                   <text x="590" y="155" textAnchor="middle" transform="rotate(-90, 590, 165)">NET</text>
@@ -4739,7 +4959,11 @@ const MatchTracker: React.FC = () => {
                 {!isPointActive && (
                   <button 
                     onClick={handleStartPoint}
-                    className="text-center text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl text-2xl min-h-[60px] w-full bg-[#5368FF] hover:bg-[#4A5FE8]"
+                    className={`text-center font-bold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl text-2xl min-h-[60px] w-full ${
+                      player1.isServing 
+                        ? 'bg-[#D4FF5A] hover:bg-[#9ACD32] text-gray-800' 
+                        : 'bg-[#4C6BFF] hover:bg-[#3B5BDB] text-white'
+                    }`}
                   >
                     TAP WHEN {player1.isServing ? player1.name : player2.name} HAS STARTED SERVING
                   </button>
@@ -5115,7 +5339,7 @@ const MatchTracker: React.FC = () => {
                   <section className="space-y-4">
                     <h3 className="text-xl font-semibold text-gray-800">Shot Type</h3>
                     <div className="grid grid-cols-2 gap-3">
-                      {shotTypes.map((type) => (
+                      {shotTypes.filter(type => type.type !== 'volley' && type.type !== 'overhead').map((type) => (
                         <button
                           key={type.type}
                           onClick={() => setSelectedShotType(type.type)}
@@ -5454,8 +5678,10 @@ const MatchTracker: React.FC = () => {
                       {/* Placement */}
                       <div className="space-y-3">
                         <h4 className="font-medium text-gray-700">Placement</h4>
-                        <div className="grid grid-cols-3 gap-3">
-                          {['downTheLine', 'crossCourt', 'dropShot'].map((place) => (
+                        <div className={`grid gap-3 ${selectedMissedShot === 'long' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                          {['downTheLine', 'crossCourt', 'dropShot']
+                            .filter(place => selectedMissedShot === 'long' ? place !== 'dropShot' : true)
+                            .map((place) => (
                     <button
                               key={place}
                               onClick={() => setSelectedPlacement(place)}
@@ -6164,27 +6390,133 @@ const MatchTracker: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-8">
+            <div className="p-8 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Side - Note Input */}
                 <div className="space-y-6">
                   <div>
                     <label htmlFor="noteInput" className="block text-sm font-medium text-gray-700 mb-2">
-                      Note Content
+                      Note Content *
                     </label>
                     <textarea
                       id="noteInput"
                       value={currentNote}
                       onChange={handleNoteInput}
                       placeholder="Enter your note here..."
-                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 bg-white placeholder-gray-400"
                     />
+                  </div>
+
+                  {/* Note Type */}
+                  <div>
+                    <label htmlFor="noteType" className="block text-sm font-medium text-gray-700 mb-2">
+                      Note Type
+                    </label>
+                    <select
+                      id="noteType"
+                      value={noteType}
+                      onChange={(e) => setNoteType(e.target.value as NoteType)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+                    >
+                      <option value="general">General</option>
+                      <option value="technical">Technical</option>
+                      <option value="tactical">Tactical</option>
+                      <option value="mental">Mental</option>
+                      <option value="physical">Physical</option>
+                      <option value="strategy">Strategy</option>
+                      <option value="improvement">Improvement</option>
+                      <option value="strength">Strength</option>
+                    </select>
+                  </div>
+
+                  {/* Priority */}
+                  <div>
+                    <label htmlFor="notePriority" className="block text-sm font-medium text-gray-700 mb-2">
+                      Priority
+                    </label>
+                    <select
+                      id="notePriority"
+                      value={notePriority}
+                      onChange={(e) => setNotePriority(e.target.value as Priority)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  {/* Visibility */}
+                  <div>
+                    <label htmlFor="noteVisibility" className="block text-sm font-medium text-gray-700 mb-2">
+                      Visibility
+                    </label>
+                    <select
+                      id="noteVisibility"
+                      value={noteVisibility}
+                      onChange={(e) => setNoteVisibility(e.target.value as Visibility)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+                    >
+                      <option value="private">Private (Only Me)</option>
+                      <option value="coach">Coach & Me</option>
+                      <option value="public">Public (All Participants)</option>
+                    </select>
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label htmlFor="noteTags" className="block text-sm font-medium text-gray-700 mb-2">
+                      Tags
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        id="noteTags"
+                        value={noteTagInput}
+                        onChange={(e) => setNoteTagInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNoteTag())}
+                        placeholder="Add tags..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={addNoteTag}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    {noteTags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {noteTags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => removeNoteTag(tag)}
+                              className="hover:text-blue-900"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-4">
                     <button
-                      onClick={() => setShowNoteModal(false)}
+                      onClick={() => {
+                        setShowNoteModal(false);
+                        setCurrentNote('');
+                        setEditingNoteId(null);
+                        setNoteTags([]);
+                        setNoteTagInput('');
+                      }}
                       className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300"
                     >
                       Cancel
@@ -6219,26 +6551,113 @@ const MatchTracker: React.FC = () => {
 
                 {/* Right Side - Existing Notes */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Match Notes ({notes.length})
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Match Notes ({notes.length})
+                    </h3>
+                  </div>
+
+                  {/* Search and Filters */}
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={noteSearchQuery}
+                      onChange={(e) => setNoteSearchQuery(e.target.value)}
+                      placeholder="Search notes..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white placeholder-gray-400"
+                    />
+                    <div className="flex gap-2">
+                      <select
+                        value={noteFilterType}
+                        onChange={(e) => setNoteFilterType(e.target.value as NoteType | 'all')}
+                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                      >
+                        <option value="all">All Types</option>
+                        <option value="general">General</option>
+                        <option value="technical">Technical</option>
+                        <option value="tactical">Tactical</option>
+                        <option value="mental">Mental</option>
+                        <option value="physical">Physical</option>
+                        <option value="strategy">Strategy</option>
+                        <option value="improvement">Improvement</option>
+                        <option value="strength">Strength</option>
+                      </select>
+                      <select
+                        value={noteFilterPriority}
+                        onChange={(e) => setNoteFilterPriority(e.target.value as Priority | 'all')}
+                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                      >
+                        <option value="all">All Priorities</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
+                  </div>
                   
-                  {notes.length > 0 ? (
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                  {isLoadingNotes ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  ) : notes.length > 0 ? (
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                       {notes.map((note) => (
-                        <div key={note.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <p className="text-gray-800 text-sm leading-relaxed">{note.content}</p>
-                              <p className="text-xs text-gray-500 mt-2 font-mono">{note.timestamp}</p>
+                        <div key={note._id} className={`bg-gray-50 rounded-lg p-4 border-l-4 ${note.isResolved ? 'border-green-500 opacity-70' : 'border-blue-500'}`}>
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex gap-2 flex-wrap">
+                              <span className={`text-xs px-2 py-1 rounded ${notesService.getNoteTypeColor(note.noteType)}`}>
+                                {notesService.formatNoteType(note.noteType)}
+                              </span>
+                              <span className={`text-xs px-2 py-1 rounded border ${notesService.getPriorityColor(note.priority)}`}>
+                                {note.priority.toUpperCase()}
+                              </span>
+                              {note.isResolved && (
+                                <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">
+                                  ✓ Resolved
+                                </span>
+                              )}
                             </div>
-                            <div className="flex gap-2 ml-4">
+                          </div>
+                          
+                          <p className="text-gray-800 text-sm leading-relaxed mb-2">{note.note}</p>
+                          
+                          {note.pointDetail && (
+                            <p className="text-xs text-indigo-600 mb-2">
+                              📍 {notesService.formatPointDetail(note.pointDetail)}
+                            </p>
+                          )}
+                          
+                          {note.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {note.tags.map((tag) => (
+                                <span key={tag} className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
+                            <p className="text-xs text-gray-500">
+                              {notesService.formatRelativeTime(note.createdAt)}
+                              {note.creator && ` • ${note.creator.firstName} ${note.creator.lastName}`}
+                            </p>
+                            <div className="flex gap-1">
                               <button
-                                onClick={() => editNote(note.id)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                onClick={() => toggleNoteResolved(note._id)}
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                                title={note.isResolved ? "Mark as unresolved" : "Mark as resolved"}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => editNote(note._id)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                                 title="Edit note"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6246,8 +6665,8 @@ const MatchTracker: React.FC = () => {
                                 </svg>
                               </button>
                               <button
-                                onClick={() => deleteNote(note.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                onClick={() => deleteNote(note._id)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                                 title="Delete note"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6270,8 +6689,6 @@ const MatchTracker: React.FC = () => {
                   )}
                 </div>
               </div>
-
-
             </div>
           </div>
         </div>

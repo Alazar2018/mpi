@@ -161,33 +161,71 @@ export default function EditMatch() {
                     }
                 }
 
-                // Load players
-                const friendsResponse = await friendsService.getFriendsList();
+                // Load players based on user role
                 const playersList: PlayerOption[] = [];
                 
-                // Add current user as an option
-                if (user) {
+                // Handle different user roles
+                if (user?.role === 'player') {
+                    // PLAYER: Can select themselves and their player friends
+                    const friendsResponse = await friendsService.getFriendsList();
+                    
+                    // Add current user (player)
                     playersList.push({
                         value: user._id,
                         label: `${user.firstName} ${user.lastName}`,
                         avatar: user.avatar,
                         isRegistered: true
                     });
-                }
 
-                // Add friends
-                if (friendsResponse.friendship?.friends) {
-                    friendsResponse.friendship.friends.forEach(friendship => {
-                        const otherUser = friendsService.getOtherUser(friendship, user?._id || '');
-                        if (otherUser) {
+                    // Add friends who are players only
+                    if (friendsResponse.friendship?.friends) {
+                        friendsResponse.friendship.friends.forEach(friendship => {
+                            const otherUser = friendsService.getOtherUser(friendship, user?._id || '');
+                            if (otherUser) {
+                                const userRole = (otherUser as any).__t || (otherUser as any).role;
+                                
+                                // Only add if they're a player
+                                if (userRole === 'Player' || userRole === 'player') {
+                                    playersList.push({
+                                        value: otherUser._id,
+                                        label: `${otherUser.firstName} ${otherUser.lastName}`,
+                                        avatar: otherUser.avatar,
+                                        isRegistered: true
+                                    });
+                                }
+                            }
+                        });
+                    }
+                } else if (user?.role === 'coach') {
+                    // COACH: Can select their players (students)
+                    const { playersService } = await import('@/service/players.server');
+                    const response = await playersService.getPlayers(1, 100); // Get up to 100 players
+                    
+                    if (response.players) {
+                        response.players.forEach(player => {
                             playersList.push({
-                                value: otherUser._id,
-                                label: `${otherUser.firstName} ${otherUser.lastName}`,
-                                avatar: otherUser.avatar,
+                                value: player._id,
+                                label: `${player.firstName} ${player.lastName}`,
+                                avatar: player.avatar,
                                 isRegistered: true
                             });
-                        }
-                    });
+                        });
+                    }
+                } else if (user?.role === 'parent') {
+                    // PARENT: Can select their children
+                    const { childrenService } = await import('@/service/children.server');
+                    const response = await childrenService.getChildren({ page: 1, limit: 100 });
+                    
+                    if (response.children) {
+                        response.children.forEach(child => {
+                            playersList.push({
+                                value: child._id,
+                                label: `${child.firstName} ${child.lastName}`,
+                                avatar: child.avatar,
+                                isRegistered: true
+                            });
+                        });
+                    }
                 }
 
                 setPlayers(playersList);
