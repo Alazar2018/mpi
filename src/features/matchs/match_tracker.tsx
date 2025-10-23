@@ -4463,12 +4463,17 @@ const MatchTracker: React.FC = () => {
                   const currentServer = player1.isServing ? 1 : 2;
                   const isServerOwnField = actualPlayer === currentServer;
                   
+                  // Check if server's name starts with 'p'
+                  const serverName = currentServer === 1 ? player1.name : player2.name;
+                  const isServerNameStartsWithP = serverName.toLowerCase().startsWith('p');
+                  
                   // During a serve, only the server's own field is disabled (can't serve to your own side)
                   // Wrong service boxes are clickable and will trigger fault/double fault
                   const isDisabledDuringServe = isPointActive && isServerOwnField;
                   
-                  // Zone is clickable if game is running and it's not disabled
-                  const isClickable = isGameRunning && !isDisabledDuringServe;
+                  // Zone is clickable if game is running, point is active (TAP WHEN button clicked), and it's not disabled
+                  // Also disable if server's name starts with 'p'
+                  const isClickable = isGameRunning && isPointActive && !isDisabledDuringServe && !isServerNameStartsWithP;
                   
                   return (
                     <rect
@@ -5636,33 +5641,49 @@ const MatchTracker: React.FC = () => {
                             {/* Court Background */}
                             <div className="absolute inset-0 bg-[#D4FF5A]"></div>
                             
-                            {/* Service Boxes - 6 zones */}
+                            {/* Service Boxes - 6 zones with red borders */}
                             <div className="absolute inset-0 flex">
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-green-800 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-green-800 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">W</span>
+                                {/* Server circle for W zone */}
+                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-green-600 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-green-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">B</span>
+                                {/* Server circle for B zone */}
+                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-green-400 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-green-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">T</span>
+                                {/* Server circle for T zone */}
+                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-green-400 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-green-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">T</span>
+                                {/* Server circle for T zone */}
+                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-green-600 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-green-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">B</span>
+                                {/* Server circle for B zone */}
+                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-green-800 flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-green-800 border-2 border-red-600 flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">W</span>
+                                {/* Server circle for W zone */}
+                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                             </div>
+                            
+                            {/* Horizontal separator lines */}
+                            <div className="absolute top-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
+                            <div className="absolute bottom-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
                           </div>
                           
                           {/* Net */}
@@ -5675,33 +5696,49 @@ const MatchTracker: React.FC = () => {
                             {/* Court Background */}
                             <div className="absolute inset-0 bg-[#4C6BFF]"></div>
                             
-                            {/* Service Boxes - 6 zones */}
+                            {/* Service Boxes - 6 zones with red borders */}
                             <div className="absolute inset-0 flex">
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-blue-800 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-blue-800 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">W</span>
+                                {/* Server circle for W zone */}
+                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-blue-600 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-blue-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">B</span>
+                                {/* Server circle for B zone */}
+                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-blue-400 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-blue-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">T</span>
+                                {/* Server circle for T zone */}
+                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-blue-400 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-blue-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">T</span>
+                                {/* Server circle for T zone */}
+                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-blue-600 border-r border-white flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-blue-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">B</span>
+                                {/* Server circle for B zone */}
+                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-blue-800 flex items-center justify-center">
+                              <div className="w-1/6 h-full bg-blue-800 border-2 border-red-600 flex items-center justify-center relative">
                                 <span className="text-white text-xs font-bold">W</span>
+                                {/* Server circle for W zone */}
+                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
                               </div>
                             </div>
+                            
+                            {/* Horizontal separator lines */}
+                            <div className="absolute top-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
+                            <div className="absolute bottom-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
                           </div>
                         </div>
                       </div>
