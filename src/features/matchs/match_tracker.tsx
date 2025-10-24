@@ -328,16 +328,7 @@ const WinnersModal = ({
                     )}
                     {rules.isTiebreakOnly && (
                       <div className="font-medium">
-                        Final Score: {(() => {
-                          console.log('🎯 [Winner Modal] Final Score Debug:', {
-                            player1Points: matchData.player1.points,
-                            player2Points: matchData.player2.points,
-                            player1Name: matchData.player1.name,
-                            player2Name: matchData.player2.name,
-                            matchDataKeys: Object.keys(matchData)
-                          });
-                          return `${matchData.player1.points} - ${matchData.player2.points}`;
-                        })()}
+                        Final Score: {matchData.player1.points} - {matchData.player2.points}
                       </div>
                     )}
                     {!isMatchComplete() && !rules.isTiebreakOnly && (
@@ -389,7 +380,6 @@ const WinnersModal = ({
                   <div className="text-2xl font-bold text-gray-800">
                     {isTiebreakOnly ? (() => {
                       const points = winner === 1 ? matchData.player1.points : matchData.player2.points;
-                      console.log('🎯 [Winner Modal] Winner points:', { winner, points, player1Points: matchData.player1.points, player2Points: matchData.player2.points });
                       return points;
                     })() : 0}
                   </div>
@@ -413,7 +403,6 @@ const WinnersModal = ({
                   <div className="text-2xl font-bold text-gray-800">
                     {isTiebreakOnly ? (() => {
                       const points = winner === 2 ? matchData.player1.points : matchData.player2.points;
-                      console.log('🎯 [Winner Modal] Loser points:', { winner, points, player1Points: matchData.player1.points, player2Points: matchData.player2.points });
                       return points;
                     })() : 0}
                   </div>
@@ -458,7 +447,6 @@ const MatchTracker: React.FC = () => {
     if (!matchId) return;
     
     // Clear any previous state when matchId changes
-    console.log('🔄 Match ID changed, clearing previous state...');
     setMatch(prev => ({
       ...prev,
       currentSet: 0,
@@ -480,7 +468,6 @@ const MatchTracker: React.FC = () => {
       (res) => {
         if (res.success && res.data) {
           // Match data fetched successfully
-          console.log('Match data loaded:', res.data);
         }
       }
     );
@@ -491,7 +478,6 @@ const MatchTracker: React.FC = () => {
     return () => {
       // Clear localStorage when component unmounts to prevent stale data
       if (matchId) {
-        console.log('🧹 Component unmounting, cleaning up localStorage...');
         // Only clear if this is not a saved match
         const currentMatchData = matchReq.response;
         if (currentMatchData && (currentMatchData as any).status !== 'saved') {
@@ -570,7 +556,6 @@ const MatchTracker: React.FC = () => {
         });
       } else if ((matchData as any).status === 'pending' || (matchData as any).status === 'confirmed') {
         // For new matches, clear any previous localStorage data and ensure fresh start
-        console.log('🆕 New match detected, clearing previous state...');
         
         // Clear localStorage for this match
         localStorage.removeItem(`tennisMatchState_${matchId}`);
@@ -583,14 +568,6 @@ const MatchTracker: React.FC = () => {
           matchData.customTiebreakRules,
           matchData.noAdScoring
         );
-        
-        console.log('🎯 [Match Init] Format detection:', {
-          matchFormat,
-          matchType: matchData.matchType,
-          isTiebreakOnly: rules.isTiebreakOnly,
-          tiebreakRule: rules.tiebreakRule,
-          noAdScoring: rules.noAdScoring
-        });
         
         setMatch(prev => ({
           ...prev,
@@ -705,7 +682,7 @@ const MatchTracker: React.FC = () => {
 
   // Point tracking helper functions
   const startNewPoint = () => {
-    console.log('🎯 [startNewPoint] Starting new point:', {
+    setCurrentPointData({
       isSecondService,
       pointStartTime: Date.now()
     });
@@ -729,20 +706,11 @@ const MatchTracker: React.FC = () => {
       courtPosition: null // Set to null for Level 1
     });
     
-    console.log('🎯 [startNewPoint] New point data initialized');
   };
 
   const endPoint = (winner: 1 | 2, pointType: string, additionalData?: Partial<PointScore>) => {
     const pointEndTime = Date.now();
     const betweenPointDuration = Math.floor((pointEndTime - lastPointEndTime) / 1000);
-    
-    console.log('🎯 [endPoint] Starting point end process:', {
-      winner,
-      pointType,
-      betweenPointDuration,
-      currentPointData: currentPointData ? 'exists' : 'null',
-      additionalData
-    });
     
     if (currentPointData) {
       // Calculate the score after this point is won
@@ -777,20 +745,10 @@ const MatchTracker: React.FC = () => {
         completedPoint.isSecondService = false; // Simplify for Level 1
       }
 
-      console.log('🎯 [endPoint] Completed point data:', completedPoint);
-      console.log('🎯 [endPoint] Court position check:', {
-        courtPosition: completedPoint.courtPosition,
-        hasCourtPosition: 'courtPosition' in completedPoint,
-        additionalData: additionalData
-      });
       
       // CRITICAL: Verify courtPosition is present for Level 3
       if (match.level === 3 && !completedPoint.courtPosition) {
-        console.error('❌ [endPoint] CRITICAL ERROR: Level 3 point missing courtPosition!', {
-          matchLevel: match.level,
-          completedPoint,
-          additionalData
-        });
+        // Error: Level 3 point missing courtPosition
       }
 
       // Add to current game scores
@@ -2215,8 +2173,14 @@ const MatchTracker: React.FC = () => {
 
   // Level 3 net click handler
   const handleNetClick = (player: 1 | 2) => {
-    // Check if point is active (serving) - net touch during serve is a fault
-    if (isPointActive) {
+    // Check if we're in "ball in court" mode (for rallies)
+    const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+    
+    // Only treat net clicks as faults during serving phase (faultCount 0 or 1)
+    // If we're in ball in court mode or faultCount is 2, we're in rally phase
+    const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+    
+    if (isServingPhase) {
       if (faultCount === 0) {
         // First serve touched the net - it's a fault
         setFaultCount(1);
@@ -2254,9 +2218,6 @@ const MatchTracker: React.FC = () => {
         return;
       }
     }
-    
-    // Check if we're in "ball in court" mode (for rallies)
-    const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
     
     if (hasChosenBallInCourt) {
       // In ball in court mode - show ball in court modal
@@ -4968,21 +4929,6 @@ const MatchTracker: React.FC = () => {
               Debug State 🔍
             </button>
             
-            {/* Test Data Button - For testing API submission */}
-            {/* <button 
-              onClick={populateTestData}
-              className="text-center text-purple-600 font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg text-sm min-h-[40px] w-full bg-purple-100 hover:bg-purple-200"
-            >
-              🧪 Test Data
-            </button> */}
-
-            {/* Load Sample Data Button - For testing API submission */}
-            {/* <button 
-              onClick={populateWithSampleData}
-              className="text-center text-blue-600 font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg text-sm min-h-[40px] w-full bg-blue-100 hover:bg-blue-200"
-            >
-              Load Sample Data 🧪
-            </button> */}
 
             {/* Level 3 Fault/Start Button - Only shown when match is running */}
             {isGameRunning && match.level === 3 && (
@@ -5369,7 +5315,13 @@ const MatchTracker: React.FC = () => {
                   <section className="space-y-4">
                     <h3 className="text-xl font-semibold text-gray-800">Shot Placement</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {shotPlacements.map((placement) => (
+                      {shotPlacements
+                        .filter(placement => {
+                          // Remove wide when outcome is 'returnWinner'
+                          if (selectedOutcome === 'returnWinner' && placement.type === 'wide') return false;
+                          return true;
+                        })
+                        .map((placement) => (
                         <button
                           key={placement.type}
                           onClick={() => setSelectedShotPlacement(placement.type)}
@@ -5565,7 +5517,7 @@ const MatchTracker: React.FC = () => {
                                 ? 'bg-[#D4FF5A] text-gray-800' 
                                 : 'bg-[#4C6BFF] text-white'
                             }`}>
-                              {lastPointWinner === 1 ? player1.name : player2.name}
+                              Winner - {lastPointWinner === 1 ? player1.name : player2.name}
                             </span>
                           </div>
                         </button>
@@ -5636,54 +5588,48 @@ const MatchTracker: React.FC = () => {
                       {/* Ball In Court Tennis Court Visualization */}
                       <div className="flex justify-center px-1">
                         <div className="relative w-full max-w-md h-24 bg-white rounded-lg border-2 border-gray-300 overflow-hidden">
-                          {/* Top Court (Player 1 - Green) */}
+                          {/* Top Court - Respects court rotation */}
                           <div className="absolute left-0 top-0 w-full h-1/2">
-                            {/* Court Background */}
-                            <div className="absolute inset-0 bg-[#D4FF5A]"></div>
+                            {/* Court Background - Dynamic based on court rotation */}
+                            <div 
+                              className="absolute inset-0" 
+                              style={{ backgroundColor: courtRotation === 0 ? '#D4FF5A' : '#4C6BFF' }}
+                            ></div>
                             
                             {/* Service Boxes - 6 zones with red borders */}
                             <div className="absolute inset-0 flex">
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-green-800 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">W</span>
-                                {/* Server circle for W zone */}
-                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#6B8E23' : '#1E2D86' }}
+                              ></div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-green-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">B</span>
-                                {/* Server circle for B zone */}
-                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#9ACD32' : '#2F3FB0' }}
+                              ></div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-green-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">T</span>
-                                {/* Server circle for T zone */}
-                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#D4FF5A' : '#4C6BFF' }}
+                              ></div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-green-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">T</span>
-                                {/* Server circle for T zone */}
-                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#D4FF5A' : '#4C6BFF' }}
+                              ></div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-green-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">B</span>
-                                {/* Server circle for B zone */}
-                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#9ACD32' : '#2F3FB0' }}
+                              ></div>
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-green-800 border-2 border-red-600 flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">W</span>
-                                {/* Server circle for W zone */}
-                                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600"
+                                style={{ backgroundColor: courtRotation === 0 ? '#6B8E23' : '#1E2D86' }}
+                              ></div>
                             </div>
                             
-                            {/* Horizontal separator lines */}
-                            <div className="absolute top-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
-                            <div className="absolute bottom-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
                           </div>
                           
                           {/* Net */}
@@ -5691,54 +5637,48 @@ const MatchTracker: React.FC = () => {
                             <span className="text-white text-xs font-bold">NET NET NET NET NET NET NET NET NET NET NET NET</span>
                           </div>
                           
-                          {/* Bottom Court (Player 2 - Blue) */}
+                          {/* Bottom Court - Respects court rotation */}
                           <div className="absolute left-0 bottom-0 w-full h-1/2">
-                            {/* Court Background */}
-                            <div className="absolute inset-0 bg-[#4C6BFF]"></div>
+                            {/* Court Background - Dynamic based on court rotation */}
+                            <div 
+                              className="absolute inset-0" 
+                              style={{ backgroundColor: courtRotation === 0 ? '#4C6BFF' : '#D4FF5A' }}
+                            ></div>
                             
                             {/* Service Boxes - 6 zones with red borders */}
                             <div className="absolute inset-0 flex">
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-blue-800 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">W</span>
-                                {/* Server circle for W zone */}
-                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#1E2D86' : '#6B8E23' }}
+                              ></div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-blue-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">B</span>
-                                {/* Server circle for B zone */}
-                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#2F3FB0' : '#9ACD32' }}
+                              ></div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-blue-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">T</span>
-                                {/* Server circle for T zone */}
-                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#4C6BFF' : '#D4FF5A' }}
+                              ></div>
                               {/* T zone */}
-                              <div className="w-1/6 h-full bg-blue-400 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">T</span>
-                                {/* Server circle for T zone */}
-                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#4C6BFF' : '#D4FF5A' }}
+                              ></div>
                               {/* B zone */}
-                              <div className="w-1/6 h-full bg-blue-600 border-2 border-red-600 border-r border-white flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">B</span>
-                                {/* Server circle for B zone */}
-                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600 border-r border-white"
+                                style={{ backgroundColor: courtRotation === 0 ? '#2F3FB0' : '#9ACD32' }}
+                              ></div>
                               {/* W zone */}
-                              <div className="w-1/6 h-full bg-blue-800 border-2 border-red-600 flex items-center justify-center relative">
-                                <span className="text-white text-xs font-bold">W</span>
-                                {/* Server circle for W zone */}
-                                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full border border-red-600"></div>
-                              </div>
+                              <div 
+                                className="w-1/6 h-full border-2 border-red-600"
+                                style={{ backgroundColor: courtRotation === 0 ? '#1E2D86' : '#6B8E23' }}
+                              ></div>
                             </div>
                             
-                            {/* Horizontal separator lines */}
-                            <div className="absolute top-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
-                            <div className="absolute bottom-1/3 left-0 right-0 h-0.5 bg-red-600"></div>
                           </div>
                         </div>
                       </div>
@@ -5774,9 +5714,9 @@ const MatchTracker: React.FC = () => {
 
                       {/* Missed Shot */}
                       <div className="space-y-1">
-                        <h4 className="font-medium text-gray-700 text-xs">Missed Shot</h4>
+                        <h4 className="font-medium text-gray-700 text-xs">Error Zone</h4>
                         <div className="grid grid-cols-3 gap-1">
-                          {['wide', 'long', 'short'].map((shot) => (
+                          {['wide', 'long', 'net'].map((shot) => (
                 <button 
                               key={shot}
                               onClick={() => setSelectedMissedShot(shot)}
@@ -5796,10 +5736,16 @@ const MatchTracker: React.FC = () => {
 
                       {/* Placement */}
                       <div className="space-y-1">
-                        <h4 className="font-medium text-gray-700 text-xs">Placement</h4>
-                        <div className={`grid gap-1 ${selectedMissedShot === 'long' ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                          {['downTheLine', 'crossCourt', 'dropShot']
-                            .filter(place => selectedMissedShot === 'long' ? place !== 'dropShot' : true)
+                        <h4 className="font-medium text-gray-700 text-xs">Shot Placement</h4>
+                        <div className={`grid gap-1 ${selectedMissedShot === 'long' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                          {['downTheLine', 'crossCourt', 'downTheMiddle', 'shortAngle', 'dropShot']
+                            .filter(place => {
+                              // Remove dropShot when error zone is 'long'
+                              if (selectedMissedShot === 'long' && place === 'dropShot') return false;
+                              // Remove wide when outcome is 'returnWinner'
+                              if (selectedOutcome === 'returnWinner' && place === 'wide') return false;
+                              return true;
+                            })
                             .map((place) => (
                     <button
                               key={place}
