@@ -425,7 +425,6 @@ const WinnersModal = ({
     </div>
   );
 };
-
 const MatchTracker: React.FC = () => {
   const navigate = useNavigate();
   const { matchId } = useParams();
@@ -887,7 +886,6 @@ const MatchTracker: React.FC = () => {
       default: return 'leftCourt';  // Default to leftCourt
     }
   };
-
   // Enhanced point tracking for different levels using actual user selections
   const trackPointWithLevel = (winner: 1 | 2, pointType: string, level: 1 | 2 | 3) => {
     console.log('🎯 [trackPointWithLevel] Starting point tracking:', {
@@ -1074,9 +1072,6 @@ const MatchTracker: React.FC = () => {
     { type: 'positiveSelfTalk', label: 'Positive Self Talk', icon: '💪' },
     { type: 'noResponse', label: 'No Response', icon: '😐' }
   ];
-
-
-
   const shotPlacements: ShotPlacement[] = [
     { type: 'shortAngle', label: 'Short Angle' },
     { type: 'crossCourt', label: 'Cross Court' },
@@ -1113,20 +1108,20 @@ const MatchTracker: React.FC = () => {
   // Court zones for Level 3 (6 zones per side, vertical stacked layout: W|B|T|T|B|W)
   const courtZones: CourtZone[] = [
     // Player 1 zones (left side) - 6 vertical zones stacked: W|B|T|T|B|W
-    { id: 'p1_w1', label: 'Wide 1', x: 310, y: 40, width: 240, height: 86, player: 1, type: 'W' },
-    { id: 'p1_b1', label: 'Back 1', x: 310, y: 126, width: 240, height: 86, player: 1, type: 'B' },
-    { id: 'p1_t1', label: 'Top 1', x: 310, y: 212, width: 240, height: 86, player: 1, type: 'T' },
-    { id: 'p1_t2', label: 'Top 2', x: 310, y: 298, width: 240, height: 86, player: 1, type: 'T' },
-    { id: 'p1_b2', label: 'Back 2', x: 310, y: 384, width: 240, height: 86, player: 1, type: 'B' },
-    { id: 'p1_w2', label: 'Wide 2', x: 310, y: 470, width: 240, height: 86, player: 1, type: 'W' },
+    { id: 'p1_w1', label: 'Wide 1', x: 270, y: 40, width: 240, height: 86, player: 1, type: 'W' },
+    { id: 'p1_b1', label: 'Back 1', x: 270, y: 126, width: 240, height: 86, player: 1, type: 'B' },
+    { id: 'p1_t1', label: 'Top 1', x: 270, y: 212, width: 240, height: 86, player: 1, type: 'T' },
+    { id: 'p1_t2', label: 'Top 2', x: 270, y: 298, width: 240, height: 86, player: 1, type: 'T' },
+    { id: 'p1_b2', label: 'Back 2', x: 270, y: 384, width: 240, height: 86, player: 1, type: 'B' },
+    { id: 'p1_w2', label: 'Wide 2', x: 270, y: 470, width: 240, height: 86, player: 1, type: 'W' },
     
     // Player 2 zones (right side) - 6 vertical zones stacked: W|B|T|T|B|W
-    { id: 'p2_w1', label: 'Wide 1', x: 630, y: 40, width: 240, height: 86, player: 2, type: 'W' },
-    { id: 'p2_b1', label: 'Back 1', x: 630, y: 126, width: 240, height: 86, player: 2, type: 'B' },
-    { id: 'p2_t1', label: 'Top 1', x: 630, y: 212, width: 240, height: 86, player: 2, type: 'T' },
-    { id: 'p2_t2', label: 'Top 2', x: 630, y: 298, width: 240, height: 86, player: 2, type: 'T' },
-    { id: 'p2_b2', label: 'Back 2', x: 630, y: 384, width: 240, height: 86, player: 2, type: 'B' },
-    { id: 'p2_w2', label: 'Wide 2', x: 630, y: 470, width: 240, height: 86, player: 2, type: 'W' }
+    { id: 'p2_w1', label: 'Wide 1', x: 590, y: 40, width: 240, height: 86, player: 2, type: 'W' },
+    { id: 'p2_b1', label: 'Back 1', x: 590, y: 126, width: 240, height: 86, player: 2, type: 'B' },
+    { id: 'p2_t1', label: 'Top 1', x: 590, y: 212, width: 240, height: 86, player: 2, type: 'T' },
+    { id: 'p2_t2', label: 'Top 2', x: 590, y: 298, width: 240, height: 86, player: 2, type: 'T' },
+    { id: 'p2_b2', label: 'Back 2', x: 590, y: 384, width: 240, height: 86, player: 2, type: 'B' },
+    { id: 'p2_w2', label: 'Wide 2', x: 590, y: 470, width: 240, height: 86, player: 2, type: 'W' }
     
     // Note: Outfield zones are now handled directly in the SVG for better visual coverage
   ];
@@ -1242,6 +1237,8 @@ const MatchTracker: React.FC = () => {
     setPlayer2(prev => ({ ...prev, isServing: !prev.isServing }));
     // Update match.server state
     setMatch(prev => ({ ...prev, server: prev.server === 1 ? 2 : 1 }));
+    // Start the new server at the bottom position
+    setServingPosition('down');
   };
 
   const selectServer = (playerNumber: 1 | 2) => {
@@ -1262,6 +1259,8 @@ const MatchTracker: React.FC = () => {
       currentSet: 0,
       sets: [{ player1: 0, player2: 0 }]
     }));
+    // Ensure the selected server starts at the bottom position
+    setServingPosition('down');
     setShowServingModal(false);
     
     // For Level 3, automatically start the match to eliminate double-click
@@ -1315,7 +1314,7 @@ const MatchTracker: React.FC = () => {
     // Save state after selecting server
     setTimeout(() => saveMatchState(), 100);
   };
-  const [servingPosition, setServingPosition] = useState<'up' | 'down'>('up');
+  const [servingPosition, setServingPosition] = useState<'up' | 'down'>('down');
   const [courtRotation, setCourtRotation] = useState<0 | 1>(0); // 0 = normal, 1 = rotated
   const [showServingModal, setShowServingModal] = useState(true);
   const [tempServer, setTempServer] = useState<1 | 2 | null>(null);
@@ -1377,11 +1376,9 @@ const MatchTracker: React.FC = () => {
   
   // Reset confirmation dialog state
   const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
-  
   // Browser back navigation dialog state
   const [showBackNavigationDialog, setShowBackNavigationDialog] = useState(false);
   const [allowNavigation, setAllowNavigation] = useState(false);
-
   // Update point outcomes when serving player changes
   useEffect(() => {
     // Only update if we have a last point winner (meaning we're in a point outcome selection)
@@ -1535,7 +1532,6 @@ const MatchTracker: React.FC = () => {
       console.error('Error saving match progress:', error);
     }
   };
-
   // Submit final match result to API
   const submitMatchResultToAPI = async () => {
     console.log('🎯 [submitMatchResultToAPI] Starting API submission...');
@@ -1868,7 +1864,6 @@ const MatchTracker: React.FC = () => {
     }
     return false;
   };
-
   // Load state on component mount
   useEffect(() => {
     const hasLoadedState = loadMatchState();
@@ -1894,6 +1889,7 @@ const MatchTracker: React.FC = () => {
     setSelectedOutcome(null);
     setSelectedRallyLength(null);
     setCourtRotation(0);
+    setServingPosition('down');
     setInBetweenTime(0);
     setGameTime(0); // Always reset game time to 0 on component mount
     setIsPointActive(false);
@@ -2069,9 +2065,12 @@ const MatchTracker: React.FC = () => {
       const currentServer = player1.isServing ? 1 : 2;
       const isServerClickingOwnField = currentServer === zone.player;
       
-      // Check if this is a serve to the wrong service box
-      const isCorrectServiceBox = servingPosition === 'up' ? zone.y >= 298 : zone.y < 298;
-      const isWrongServiceBox = isPointActive && !isServerClickingOwnField && !isCorrectServiceBox;
+      // Determine if clicked zone is in the correct opponent half (the only non-fault serve target)
+      const splitY = 298;
+      const isCorrectHalf = servingPosition === 'up' ? zone.y >= splitY : zone.y < splitY;
+      const isClickOnOpponentField = !isServerClickingOwnField;
+      const isWBT = zone.type === 'W' || zone.type === 'B' || zone.type === 'T';
+      const isNonFaultServe = isPointActive && isClickOnOpponentField && isCorrectHalf && isWBT;
       
       console.log('🎯 [Court Click] Debug info:', {
         courtRotation,
@@ -2084,16 +2083,16 @@ const MatchTracker: React.FC = () => {
         isPointActive,
         servingPosition,
         zoneY: zone.y,
-        isCorrectServiceBox,
-        isWrongServiceBox
+        isCorrectHalf,
+        isNonFaultServe
       });
       
-      // Handle serve to wrong service box (fault/double fault)
-      if (isWrongServiceBox) {
+      // During serve: any click NOT on the opponent's correct W/B/T half is a fault
+      if (isPointActive && !isNonFaultServe) {
         if (faultCount === 0) {
           // First fault
           setFaultCount(1);
-          toast('Fault! Ball served to wrong service box.', {
+          toast('Fault! Invalid serve target.', {
             duration: 2000,
             icon: '❌',
           });
@@ -2101,26 +2100,15 @@ const MatchTracker: React.FC = () => {
         } else if (faultCount === 1) {
           // Double fault
           setFaultCount(2);
-          
-          // Clear serve placement for double fault
           setSelectedServePlacement(null);
-          
-          // Double fault - the non-serving player gets the point
           const nonServingPlayer = player1.isServing ? 2 : 1;
-          
-          // Reset fault count
           setFaultCount(0);
-          
-          // Set flag that user came from modal
           sessionStorage.setItem('cameFromModal', 'true');
-          
-          // Show player reaction modal for double fault - point will be added after modal closes
           setLastPointWinner(nonServingPlayer);
           setLevel3ModalType('reaction');
           setDefaultReactions();
           setShowLevel3Modal(true);
-          
-          toast.error('Double Fault! Ball served to wrong service box.', {
+          toast.error('Double Fault! Invalid serve target.', {
             duration: 2000,
             icon: '⚠️',
           });
@@ -2128,6 +2116,7 @@ const MatchTracker: React.FC = () => {
         }
       }
       
+      // Non-serve or valid serve into opponent correct half
       if (isServerClickingOwnField) {
         // Server clicked their own field (during rally) - opponent wins the point
         const opponent = currentServer === 1 ? 2 : 1;
@@ -2143,7 +2132,6 @@ const MatchTracker: React.FC = () => {
         }
       } else {
         // Server clicked opponent's field - don't set winner yet, let user choose outcome
-        // The winner will be determined based on the selected outcome (ace, return winner, return error)
         console.log('🎯 [Court Click] Server clicked opponent field - winner will be determined by outcome selection');
         
         // Set serve placement based on zone type (W/B/T) for first serve
@@ -2170,7 +2158,6 @@ const MatchTracker: React.FC = () => {
       }
     }
   };
-
   // Level 3 net click handler
   const handleNetClick = (player: 1 | 2) => {
     // Check if we're in "ball in court" mode (for rallies)
@@ -2367,7 +2354,6 @@ const MatchTracker: React.FC = () => {
       setDefaultReactions();
     }
   };
-
   const handleReturnErrorChoice = (choice: 'forced' | 'unforced') => {
     if (choice === 'forced') {
       // Forced error - server gets the point (same as unforced)
@@ -2737,11 +2723,11 @@ const MatchTracker: React.FC = () => {
       const p1Total = (player === 1 ? player1.points + 1 : player1.points);
       const p2Total = (player === 2 ? player2.points + 1 : player2.points);
       
-      // Handle tiebreak server switching: 1-1-2-2-2-2 pattern
+      // Tiebreak serving order: A (1), B (2), A (2), B (2), ...
+      // Switch server after point 1 and then after every odd-numbered point (1,3,5,7,...)
       if (match.isTieBreak) {
         const totalPoints = p1Total + p2Total;
-        // Switch after point 1, point 2, then every 2 points after that (4, 6, 8, 10...)
-        if (totalPoints === 1 || totalPoints === 2 || (totalPoints > 2 && totalPoints % 2 === 0)) {
+        if (totalPoints % 2 === 1) {
           switchServer();
           console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
@@ -2819,7 +2805,6 @@ const MatchTracker: React.FC = () => {
   const handleResetClick = () => {
     setShowResetConfirmDialog(true);
   };
-
   const confirmReset = () => {
     setShowResetConfirmDialog(false);
     console.log('🔄 [Reset] Resetting match state...');
@@ -2873,7 +2858,7 @@ const MatchTracker: React.FC = () => {
     setFinalTiebreakScores(null);
     setShowInfoModal(false);
     setCourtRotation(0);
-    setServingPosition('up');
+    setServingPosition('down');
     setSelectedOutcome(null);
     setSelectedRallyLength(null);
     setPlayer1Reaction(null);
@@ -3268,7 +3253,6 @@ const MatchTracker: React.FC = () => {
     // Save state after redo
     setTimeout(() => saveMatchState(), 100);
   };
-
   const handlePointOutcomeComplete = () => {
     if (!lastPointWinner || !selectedPointOutcome || !player1Reaction || !player2Reaction) {
       return; // Don't proceed if not all selections are made
@@ -3363,7 +3347,6 @@ const MatchTracker: React.FC = () => {
       startNewPoint();
     }, 0);
   };
-
   // Resume match with existing data function
   const resumeMatchWithExistingData = () => {
     if (!matchData) return;
@@ -3568,9 +3551,6 @@ const MatchTracker: React.FC = () => {
       showServingModal
     });
   };
-
-
-
   // Function to complete point after reactions are captured
   const completePointWithReactions = () => {
     if (!lastPointWinner) {
@@ -3771,7 +3751,6 @@ const MatchTracker: React.FC = () => {
       isGameWinningPoint,
       completedPoint
     });
-
     console.log('🎯 [Debug] Final court position determination:', {
       selectedCourtZone,
       selectedCourtZoneType: selectedCourtZone?.type,
@@ -3841,8 +3820,8 @@ const MatchTracker: React.FC = () => {
   // SVG for serving player (large version for court)
   const ServingPlayerIcon = ({ flip = false }: { flip?: boolean }) => (
     <svg 
-      width="80" 
-      height="100" 
+      width="60" 
+      height="80" 
       viewBox="0 0 80 100" 
       transform={flip ? "scale(-1,1)" : undefined}
       style={{ overflow: 'visible' }}
@@ -4009,7 +3988,6 @@ const MatchTracker: React.FC = () => {
         }}
       />
 )}
-
     <div className="min-h-screen bg-[#1B2B5B] text-white p-4 md:p-6 flex flex-col gap-4 md:gap-6 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-center justify-between bg-gradient-to-r from-[#D4FF5A] to-[#4C6BFF] rounded-xl overflow-hidden shadow-lg border-2 border-white">
@@ -4128,7 +4106,6 @@ const MatchTracker: React.FC = () => {
           </div>
         </button>
       </div>
-
       {/* Court */} 
       <div className="bg-[#1E2D86] p-4 md:p-6 rounded-2xl flex justify-center overflow-auto">
         <div className="relative w-full max-w-4xl">
@@ -4145,16 +4122,15 @@ const MatchTracker: React.FC = () => {
             {/* Only show when Ball In Court modal is open */}
             {sessionStorage.getItem('ballInCourtChoice') === 'true' && (
               <>
-                {/* 🟠 Outfield - Left - Full width coverage */}
+                {/* 🟠 Outfield - Left - Full width coverage (dark overlay) */}
                 <rect
                   x="0"
                   y="0"
                   width="600"
                   height="640"
-                  fill={getCourtColors().leftCourt}
-                  opacity="0.3"
-                  stroke="#FFD700"
-                  strokeWidth="3"
+                  fill="#000000"
+                  opacity="0.4"
+                  stroke="none"
                   style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                   onClick={() => {
                     // Set flag that modal came from outfield click
@@ -4185,16 +4161,15 @@ const MatchTracker: React.FC = () => {
                   }}
                 />
                 
-                {/* 🔵 Outfield - Right - Full width coverage */}
+                {/* 🔵 Outfield - Right - Full width coverage (dark overlay) */}
                 <rect
                   x="600"
                   y="0"
                   width="650"
-                  height="640"
-                  fill={getCourtColors().rightCourt}
-                  opacity="0.3"
-                  stroke="#FFD700"
-                  strokeWidth="3"
+                  height="40"
+                  fill="#000000"
+                  opacity="0.4"
+                  stroke="none"
                   style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                   onClick={() => {
                     // Set flag that modal came from outfield click
@@ -4240,30 +4215,120 @@ const MatchTracker: React.FC = () => {
             )}
             
             <rect x="70" y="40" width="960" height="520" fill="none" stroke="white" strokeWidth="6" rx="8" />
+            {/* Subtle outer frame for depth */}
+            <rect x="65" y="35" width="970" height="530" fill="none" stroke="#111827" strokeOpacity="0.15" strokeWidth="2" rx="12" />
+            
+            {/* Doubles alleys (inside the main court border) */}
+            {/* Left alley */}
+            <rect x="70" y="40" width="40" height="520" fill={getCourtColors().leftCourt} opacity="0.65" stroke="#FFFFFF" strokeWidth="3" rx="2" />
+            {/* Right alley */}
+            <rect x="990" y="40" width="40" height="520" fill={getCourtColors().rightCourt} opacity="0.65" stroke="#FFFFFF" strokeWidth="3" rx="2" />
+            {/* Alley inner guide lines */}
+            <line x1="110" y1="40" x2="110" y2="560" stroke="#FFFFFF" strokeOpacity="0.7" strokeDasharray="8 10" strokeWidth="2" />
+            <line x1="990" y1="40" x2="990" y2="560" stroke="#FFFFFF" strokeOpacity="0.7" strokeDasharray="8 10" strokeWidth="2" />
+
+            {/* Horizontal outfield (top and bottom bands) */}
+            {/* Top band split by halves aligned with court widths */}
+            <rect x="70" y="0" width="440" height="40" fill={getCourtColors().leftCourt} style={{ pointerEvents: 'none' }} />
+            <rect x="590" y="0" width="440" height="40" fill={getCourtColors().rightCourt} style={{ pointerEvents: 'none' }} />
+            {/* Bottom band split by halves aligned with court widths */}
+            <rect x="70" y="560" width="440" height="40" fill={getCourtColors().leftCourt} style={{ pointerEvents: 'none' }} />
+            <rect x="590" y="560" width="440" height="40" fill={getCourtColors().rightCourt} style={{ pointerEvents: 'none' }} />
             
             {/* Court Layout - Same for all levels */}
-            <rect x="70" y="40" width="480" height="520" fill={getCourtColors().leftCourt} />
-            <rect x="550" y="40" width="480" height="520" fill={getCourtColors().rightCourt} />
-                <line x1="550" y1="40" x2="550" y2="560" stroke="white" strokeWidth="4" />
-            <line x1="70" y1="213" x2="310" y2="213" stroke="#FFD700" strokeWidth="3" />
-            <line x1="70" y1="385" x2="310" y2="385" stroke="#FFD700" strokeWidth="3" />
-                <line x1="790" y1="213" x2="1030" y2="213" stroke="#FFD700" strokeWidth="3" />
-                <line x1="790" y1="385" x2="1030" y2="385" stroke="#FFD700" strokeWidth="3" />
+            {/* Equal courts: Left x=70 to x=510 (440px), Net x=510 to x=590 (80px), Right x=590 to x=1030 (440px) */}
+            <rect x="70" y="40" width="440" height="520" fill={getCourtColors().leftCourt} />
+            <rect x="590" y="40" width="440" height="520" fill={getCourtColors().rightCourt} />
+                <line x1="510" y1="40" x2="510" y2="560" stroke="white" strokeWidth="4" />
+                <line x1="590" y1="40" x2="590" y2="560" stroke="white" strokeWidth="4" />
+            {/* Baseline center marks (drawn later to sit above overlays) */}
+            <line x1="70" y1="213" x2="270" y2="213" stroke="white" strokeWidth="2" strokeOpacity="0.9" strokeDasharray="8 10" />
+            <line x1="70" y1="385" x2="270" y2="385" stroke="white" strokeWidth="2" strokeOpacity="0.9" strokeDasharray="8 10" />
+                <line x1="830" y1="213" x2="1030" y2="213" stroke="white" strokeWidth="2" strokeOpacity="0.9" strokeDasharray="8 10" />
+                <line x1="830" y1="385" x2="1030" y2="385" stroke="white" strokeWidth="2" strokeOpacity="0.9" strokeDasharray="8 10" />
+            {/* Dashed guide lines on each half (subtle) */}
+           
             
-            {/* Outer border around service box areas (W, B, T zones combined) */}
-            <rect x="70" y="40" width="240" height="345" fill="none" stroke="#FFD700" strokeWidth="2" />
-            <rect x="790" y="40" width="240" height="345" fill="none" stroke="#FFD700" strokeWidth="2" />
+            {/* Removed inner service-box border rectangles (replaced with dashed guides above) */}
+
+            {/* In-court outzone overlays (dim non-WBT areas, excluding net) */}
+            {/* Left half outside W|B|T strip (x=70 to x=270) */}
+            <rect x="70" y="40" width="200" height="520" fill={getCourtColors().leftCourt} opacity="0.35" stroke="#FFFFFF" strokeWidth="2" style={{ pointerEvents: 'none' }} />
+            {/* Right half outside W|B|T strip (x=830 to x=1030) */}
+            <rect x="830" y="40" width="200" height="520" fill={getCourtColors().rightCourt} opacity="0.35" stroke="#FFFFFF" strokeWidth="2" style={{ pointerEvents: 'none' }} />
+            {/* Click-capture for in-court outzones (serve faults) */}
+            <rect
+              x="70" y="40" width="200" height="520"
+              fill="transparent"
+              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+              onClick={() => {
+                if (!(isGameRunning && isPointActive)) return;
+                const leftPlayer = courtRotation === 0 ? 1 : 2;
+                handleCourtZoneClick({ id: 'left_outzone', label: 'Outzone Left', x: 70, y: servingPosition === 'up' ? 40 : 560, width: 200, height: 520, player: leftPlayer, type: 'O' } as any);
+              }}
+            />
+            <rect
+              x="830" y="40" width="200" height="520"
+              fill="transparent"
+              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+              onClick={() => {
+                if (!(isGameRunning && isPointActive)) return;
+                const rightPlayer = courtRotation === 0 ? 2 : 1;
+                handleCourtZoneClick({ id: 'right_outzone', label: 'Outzone Right', x: 830, y: servingPosition === 'up' ? 40 : 560, width: 200, height: 520, player: rightPlayer, type: 'O' } as any);
+              }}
+            />
+
+            {/* Horizontal outfield (top and bottom bands) - click as serve faults */}
+            {/* Top band split by halves aligned with court widths */}
+            <rect x="70" y="0" width="440" height="40" fill={getCourtColors().leftCourt} opacity="0.6" stroke="#FFFFFF" strokeWidth="3" rx="2" style={{ pointerEvents: 'none' }} />
+            <rect x="590" y="0" width="440" height="40" fill={getCourtColors().rightCourt} opacity="0.6" stroke="#FFFFFF" strokeWidth="3" rx="2" style={{ pointerEvents: 'none' }} />
+            {/* Bottom band split by halves aligned with court widths */}
+            <rect x="70" y="560" width="440" height="40" fill={getCourtColors().leftCourt} opacity="0.6" stroke="#FFFFFF" strokeWidth="3" rx="2" style={{ pointerEvents: 'none' }} />
+            <rect x="590" y="560" width="440" height="40" fill={getCourtColors().rightCourt} opacity="0.6" stroke="#FFFFFF" strokeWidth="3" rx="2" style={{ pointerEvents: 'none' }} />
+            {/* Click-capture for horizontal outfields (serve faults) */}
+            <rect
+              x="70" y="0" width="960" height="40"
+              fill="transparent"
+              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+              onClick={() => {
+                if (!(isGameRunning && isPointActive)) return;
+                // Top band: choose player by half clicked inside handler if needed; default to server's opponent field
+                const player = (courtRotation === 0 ? 1 : 2);
+                handleCourtZoneClick({ id: 'top_outfield', label: 'Top Outfield', x: 70, y: 0, width: 960, height: 40, player, type: 'O' } as any);
+              }}
+            />
+            <rect
+              x="70" y="560" width="960" height="40"
+              fill="transparent"
+              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+              onClick={() => {
+                if (!(isGameRunning && isPointActive)) return;
+                const player = (courtRotation === 0 ? 1 : 2);
+                handleCourtZoneClick({ id: 'bottom_outfield', label: 'Bottom Outfield', x: 70, y: 560, width: 960, height: 40, player, type: 'O' } as any);
+              }}
+            />
+
+            {/* Baseline center marks (visible above overlays) */}
+            <line x1="70" y1="300" x2="82" y2="300" stroke="white" strokeWidth="4" strokeLinecap="round" />
+            <line x1="1018" y1="300" x2="1030" y2="300" stroke="white" strokeWidth="4" strokeLinecap="round" />
+            <line x1="70" y1="213" x2="1030" y2="213" stroke="white" strokeWidth="2" strokeOpacity="0.9" strokeDasharray="8 10" />
+            <line x1="70" y1="385" x2="1030" y2="385" stroke="white" strokeWidth="2" strokeOpacity="0.9" strokeDasharray="8 10" />
+            {/* Additional center mark for green (top edge center) */}
+           {/* <line x1="160" y1="40" x2="160" y2="52" stroke="white" strokeWidth="4" strokeLinecap="round" />*/}
 
             {/* Level 3 Scoring Zones - Only replace the scoring area */}
             {match.level === 3 ? (
               <>
                 {/* Player 1 zones (left side) - 6 vertical zones stacked: W|B|T|T|B|W */}
-                <rect x="310" y="40" width="240" height="86" fill={getCourtColors().leftZones[0]} />
-                <rect x="310" y="126" width="240" height="86" fill={getCourtColors().leftZones[1]} />
-                <rect x="310" y="212" width="240" height="86" fill={getCourtColors().leftZones[2]} />
-                <rect x="310" y="298" width="240" height="86" fill={getCourtColors().leftZones[3]} />
-                <rect x="310" y="384" width="240" height="86" fill={getCourtColors().leftZones[4]} />
-                <rect x="310" y="470" width="240" height="86" fill={getCourtColors().leftZones[5]} />
+                <rect x="270" y="40" width="240" height="86" fill={getCourtColors().leftZones[0]} />
+                <rect x="270" y="126" width="240" height="86" fill={getCourtColors().leftZones[1]} />
+                <rect x="270" y="212" width="240" height="86" fill={getCourtColors().leftZones[2]} />
+                <rect x="270" y="298" width="240" height="86" fill={getCourtColors().leftZones[3]} />
+                <rect x="270" y="384" width="240" height="86" fill={getCourtColors().leftZones[4]} />
+                <rect x="270" y="470" width="240" height="86" fill={getCourtColors().leftZones[5]} />
+                {/* Border covering W|B|T group per court half (left side) */}
+                <rect x="270" y="40" width="240" height="258" fill="none" stroke="#E5E7EB" strokeWidth="3" rx="6" style={{ pointerEvents: 'none' }} />
+                <rect x="270" y="298" width="240" height="258" fill="none" stroke="#E5E7EB" strokeWidth="3" rx="6" style={{ pointerEvents: 'none' }} />
                 
                 {/* Net design based on user choice and modal state */}
                 {(() => {
@@ -4277,7 +4342,7 @@ const MatchTracker: React.FC = () => {
                       <>
                         {/* Left net - color depends on court rotation */}
                         <rect 
-                          x="550" y="40" width="50" height="520" 
+                          x="510" y="40" width="40" height="520" 
                           fill={courtRotation === 0 ? "#D4FF5A" : "#4C6BFF"} 
                           style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                           onClick={() => isGameRunning && handleNetClick(courtRotation === 0 ? 1 : 2)}
@@ -4285,48 +4350,46 @@ const MatchTracker: React.FC = () => {
                         {/* Mesh pattern for left net */}
                         <g stroke={courtRotation === 0 ? "#9ACD32" : "#2F3FB0"} strokeWidth="1" opacity="0.6" style={{ pointerEvents: 'none' }}>
                           {/* Vertical mesh lines */}
-                          <line x1="555" y1="40" x2="555" y2="560" />
-                          <line x1="560" y1="40" x2="560" y2="560" />
-                          <line x1="565" y1="40" x2="565" y2="560" />
-                          <line x1="570" y1="40" x2="570" y2="560" />
-                          <line x1="575" y1="40" x2="575" y2="560" />
-                          <line x1="580" y1="40" x2="580" y2="560" />
-                          <line x1="585" y1="40" x2="585" y2="560" />
-                          <line x1="590" y1="40" x2="590" y2="560" />
-                          <line x1="595" y1="40" x2="595" y2="560" />
+                          <line x1="513" y1="40" x2="513" y2="560" />
+                          <line x1="517" y1="40" x2="517" y2="560" />
+                          <line x1="521" y1="40" x2="521" y2="560" />
+                          <line x1="525" y1="40" x2="525" y2="560" />
+                          <line x1="529" y1="40" x2="529" y2="560" />
+                          <line x1="533" y1="40" x2="533" y2="560" />
+                          <line x1="537" y1="40" x2="537" y2="560" />
                           {/* Horizontal mesh lines */}
-                          <line x1="550" y1="60" x2="600" y2="60" />
-                          <line x1="550" y1="80" x2="600" y2="80" />
-                          <line x1="550" y1="100" x2="600" y2="100" />
-                          <line x1="550" y1="120" x2="600" y2="120" />
-                          <line x1="550" y1="140" x2="600" y2="140" />
-                          <line x1="550" y1="160" x2="600" y2="160" />
-                          <line x1="550" y1="180" x2="600" y2="180" />
-                          <line x1="550" y1="200" x2="600" y2="200" />
-                          <line x1="550" y1="220" x2="600" y2="220" />
-                          <line x1="550" y1="240" x2="600" y2="240" />
-                          <line x1="550" y1="260" x2="600" y2="260" />
-                          <line x1="550" y1="280" x2="600" y2="280" />
-                          <line x1="550" y1="300" x2="600" y2="300" />
-                          <line x1="550" y1="320" x2="600" y2="320" />
-                          <line x1="550" y1="340" x2="600" y2="340" />
-                          <line x1="550" y1="360" x2="600" y2="360" />
-                          <line x1="550" y1="380" x2="600" y2="380" />
-                          <line x1="550" y1="400" x2="600" y2="400" />
-                          <line x1="550" y1="420" x2="600" y2="420" />
-                          <line x1="550" y1="440" x2="600" y2="440" />
-                          <line x1="550" y1="460" x2="600" y2="460" />
-                          <line x1="550" y1="480" x2="600" y2="480" />
-                          <line x1="550" y1="500" x2="600" y2="500" />
-                          <line x1="550" y1="520" x2="600" y2="520" />
+                          <line x1="510" y1="60" x2="550" y2="60" />
+                          <line x1="510" y1="80" x2="550" y2="80" />
+                          <line x1="510" y1="100" x2="550" y2="100" />
+                          <line x1="510" y1="120" x2="550" y2="120" />
+                          <line x1="510" y1="140" x2="550" y2="140" />
+                          <line x1="510" y1="160" x2="550" y2="160" />
+                          <line x1="510" y1="180" x2="550" y2="180" />
+                          <line x1="510" y1="200" x2="550" y2="200" />
+                          <line x1="510" y1="220" x2="550" y2="220" />
+                          <line x1="510" y1="240" x2="550" y2="240" />
+                          <line x1="510" y1="260" x2="550" y2="260" />
+                          <line x1="510" y1="280" x2="550" y2="280" />
+                          <line x1="510" y1="300" x2="550" y2="300" />
+                          <line x1="510" y1="320" x2="550" y2="320" />
+                          <line x1="510" y1="340" x2="550" y2="340" />
+                          <line x1="510" y1="360" x2="550" y2="360" />
+                          <line x1="510" y1="380" x2="550" y2="380" />
+                          <line x1="510" y1="400" x2="550" y2="400" />
+                          <line x1="510" y1="420" x2="550" y2="420" />
+                          <line x1="510" y1="440" x2="550" y2="440" />
+                          <line x1="510" y1="460" x2="550" y2="460" />
+                          <line x1="510" y1="480" x2="550" y2="480" />
+                          <line x1="510" y1="500" x2="550" y2="500" />
+                          <line x1="510" y1="520" x2="550" y2="520" />
                         </g>
-                        <text x="575" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "#86909C" : "white"} transform="rotate(-90, 575, 300)" style={{ pointerEvents: 'none' }}>
+                        <text x="530" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "#86909C" : "white"} transform="rotate(-90, 530, 300)" style={{ pointerEvents: 'none' }}>
                           {courtRotation === 0 ? player1.name : player2.name}
                         </text>
                         
                         {/* Right net - color depends on court rotation */}
                         <rect 
-                          x="599" y="40" width="70" height="520" 
+                          x="550" y="40" width="40" height="520" 
                           fill={courtRotation === 0 ? "#4C6BFF" : "#D4FF5A"} 
                           style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                           onClick={() => isGameRunning && handleNetClick(courtRotation === 0 ? 2 : 1)}
@@ -4334,42 +4397,40 @@ const MatchTracker: React.FC = () => {
                         {/* Mesh pattern for right net */}
                         <g stroke={courtRotation === 0 ? "#2F3FB0" : "#9ACD32"} strokeWidth="1" opacity="0.6" style={{ pointerEvents: 'none' }}>
                           {/* Vertical mesh lines */}
-                          <line x1="604" y1="40" x2="604" y2="560" />
-                          <line x1="610" y1="40" x2="610" y2="560" />
-                          <line x1="616" y1="40" x2="616" y2="560" />
-                          <line x1="622" y1="40" x2="622" y2="560" />
-                          <line x1="628" y1="40" x2="628" y2="560" />
-                          <line x1="634" y1="40" x2="634" y2="560" />
-                          <line x1="640" y1="40" x2="640" y2="560" />
-                          <line x1="646" y1="40" x2="646" y2="560" />
-                          <line x1="652" y1="40" x2="652" y2="560" />
+                          <line x1="554" y1="40" x2="554" y2="560" />
+                          <line x1="558" y1="40" x2="558" y2="560" />
+                          <line x1="562" y1="40" x2="562" y2="560" />
+                          <line x1="566" y1="40" x2="566" y2="560" />
+                          <line x1="570" y1="40" x2="570" y2="560" />
+                          <line x1="574" y1="40" x2="574" y2="560" />
+                          <line x1="578" y1="40" x2="578" y2="560" />
                           {/* Horizontal mesh lines */}
-                          <line x1="599" y1="60" x2="654" y2="60" />
-                          <line x1="599" y1="80" x2="654" y2="80" />
-                          <line x1="599" y1="100" x2="654" y2="100" />
-                          <line x1="599" y1="120" x2="654" y2="120" />
-                          <line x1="599" y1="140" x2="654" y2="140" />
-                          <line x1="599" y1="160" x2="654" y2="160" />
-                          <line x1="599" y1="180" x2="654" y2="180" />
-                          <line x1="599" y1="200" x2="654" y2="200" />
-                          <line x1="599" y1="220" x2="654" y2="220" />
-                          <line x1="599" y1="240" x2="654" y2="240" />
-                          <line x1="599" y1="260" x2="654" y2="260" />
-                          <line x1="599" y1="280" x2="654" y2="280" />
-                          <line x1="599" y1="300" x2="654" y2="300" />
-                          <line x1="599" y1="320" x2="654" y2="320" />
-                          <line x1="599" y1="340" x2="654" y2="340" />
-                          <line x1="599" y1="360" x2="654" y2="360" />
-                          <line x1="599" y1="380" x2="654" y2="380" />
-                          <line x1="599" y1="400" x2="654" y2="400" />
-                          <line x1="599" y1="420" x2="654" y2="420" />
-                          <line x1="599" y1="440" x2="654" y2="440" />
-                          <line x1="599" y1="460" x2="654" y2="460" />
-                          <line x1="599" y1="480" x2="654" y2="480" />
-                          <line x1="599" y1="500" x2="654" y2="500" />
-                          <line x1="599" y1="520" x2="654" y2="520" />
+                          <line x1="550" y1="60" x2="590" y2="60" />
+                          <line x1="550" y1="80" x2="590" y2="80" />
+                          <line x1="550" y1="100" x2="590" y2="100" />
+                          <line x1="550" y1="120" x2="590" y2="120" />
+                          <line x1="550" y1="140" x2="590" y2="140" />
+                          <line x1="550" y1="160" x2="590" y2="160" />
+                          <line x1="550" y1="180" x2="590" y2="180" />
+                          <line x1="550" y1="200" x2="590" y2="200" />
+                          <line x1="550" y1="220" x2="590" y2="220" />
+                          <line x1="550" y1="240" x2="590" y2="240" />
+                          <line x1="550" y1="260" x2="590" y2="260" />
+                          <line x1="550" y1="280" x2="590" y2="280" />
+                          <line x1="550" y1="300" x2="590" y2="300" />
+                          <line x1="550" y1="320" x2="590" y2="320" />
+                          <line x1="550" y1="340" x2="590" y2="340" />
+                          <line x1="550" y1="360" x2="590" y2="360" />
+                          <line x1="550" y1="380" x2="590" y2="380" />
+                          <line x1="550" y1="400" x2="590" y2="400" />
+                          <line x1="550" y1="420" x2="590" y2="420" />
+                          <line x1="550" y1="440" x2="590" y2="440" />
+                          <line x1="550" y1="460" x2="590" y2="460" />
+                          <line x1="550" y1="480" x2="590" y2="480" />
+                          <line x1="550" y1="500" x2="590" y2="500" />
+                          <line x1="550" y1="520" x2="590" y2="520" />
                         </g>
-                        <text x="626" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "white" : "#86909C"} transform="rotate(-90, 626, 300)" style={{ pointerEvents: 'none' }}>
+                        <text x="570" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "white" : "#86909C"} transform="rotate(-90, 570, 300)" style={{ pointerEvents: 'none' }}>
                           {courtRotation === 0 ? player2.name : player1.name}
                         </text>
                       </>
@@ -4380,26 +4441,25 @@ const MatchTracker: React.FC = () => {
                       <>
                         {/* Neutral net with white background - clickable for serve faults */}
                         <rect 
-                          x="550" y="40" width="120" height="520" 
+                          x="510" y="40" width="80" height="520" 
                           fill="white" 
                           style={{ cursor: isGameRunning && isPointActive ? "pointer" : "default" }}
                           onClick={() => isGameRunning && isPointActive && handleNetClick(1)}
                         />
-                        {/* NET text repeated from top to bottom - perfectly centered */}
+                        {/* NET text repeated 12 times - evenly justified across full height */}
                         <g fill="#1B2B5B" fontSize="18" fontWeight="bold" style={{ pointerEvents: 'none' }}>
-                          {/* Top section */}
-                          <text x="610" y="75" textAnchor="middle" transform="rotate(-90, 610, 85)">NET</text>
-                          <text x="610" y="115" textAnchor="middle" transform="rotate(-90, 610, 125)">NET</text>
-                          <text x="610" y="155" textAnchor="middle" transform="rotate(-90, 610, 165)">NET</text>
-                          <text x="610" y="195" textAnchor="middle" transform="rotate(-90, 610, 205)">NET</text>
-                          <text x="610" y="235" textAnchor="middle" transform="rotate(-90, 610, 245)">NET</text>
-                          <text x="610" y="275" textAnchor="middle" transform="rotate(-90, 610, 285)">NET</text>
-                          <text x="610" y="315" textAnchor="middle" transform="rotate(-90, 610, 325)">NET</text>
-                          <text x="610" y="355" textAnchor="middle" transform="rotate(-90, 610, 365)">NET</text>
-                          <text x="610" y="395" textAnchor="middle" transform="rotate(-90, 610, 405)">NET</text>
-                          <text x="610" y="435" textAnchor="middle" transform="rotate(-90, 610, 445)">NET</text>
-                          <text x="610" y="475" textAnchor="middle" transform="rotate(-90, 610, 485)">NET</text>
-                          <text x="610" y="515" textAnchor="middle" transform="rotate(-90, 610, 525)">NET</text>
+                          <text x="550" y="60" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 60)">NET</text>
+                          <text x="550" y="104" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 104)">NET</text>
+                          <text x="550" y="148" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 148)">NET</text>
+                          <text x="550" y="192" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 192)">NET</text>
+                          <text x="550" y="236" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 236)">NET</text>
+                          <text x="550" y="280" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 280)">NET</text>
+                          <text x="550" y="324" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 324)">NET</text>
+                          <text x="550" y="368" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 368)">NET</text>
+                          <text x="550" y="412" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 412)">NET</text>
+                          <text x="550" y="456" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 456)">NET</text>
+                          <text x="550" y="500" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 500)">NET</text>
+                          <text x="550" y="544" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 544)">NET</text>
                         </g>
                       </>
                     );
@@ -4408,33 +4468,55 @@ const MatchTracker: React.FC = () => {
 
                 
                 {/* Player 2 zones (right side) - 6 vertical zones stacked: W|B|T|T|B|W */}
-                <rect x="630" y="40" width="240" height="86" fill={getCourtColors().rightZones[0]} />
-                <rect x="630" y="126" width="240" height="86" fill={getCourtColors().rightZones[1]} />
-                <rect x="630" y="212" width="240" height="86" fill={getCourtColors().rightZones[2]} />
-                <rect x="630" y="298" width="240" height="86" fill={getCourtColors().rightZones[3]} />
-                <rect x="630" y="384" width="240" height="86" fill={getCourtColors().rightZones[4]} />
-                <rect x="630" y="470" width="240" height="86" fill={getCourtColors().rightZones[5]} />
+                <rect x="590" y="40" width="240" height="86" fill={getCourtColors().rightZones[0]} />
+                <rect x="590" y="126" width="240" height="86" fill={getCourtColors().rightZones[1]} />
+                <rect x="590" y="212" width="240" height="86" fill={getCourtColors().rightZones[2]} />
+                <rect x="590" y="298" width="240" height="86" fill={getCourtColors().rightZones[3]} />
+                <rect x="590" y="384" width="240" height="86" fill={getCourtColors().rightZones[4]} />
+                <rect x="590" y="470" width="240" height="86" fill={getCourtColors().rightZones[5]} />
+                {/* Border covering W|B|T group per court half (right side) */}
+                <rect x="590" y="40" width="240" height="258" fill="none" stroke="#E5E7EB" strokeWidth="3" rx="6" style={{ pointerEvents: 'none' }} />
+                <rect x="590" y="298" width="240" height="258" fill="none" stroke="#E5E7EB" strokeWidth="3" rx="6" style={{ pointerEvents: 'none' }} />
+                
+                {/* Fault zone overlays during serve (server own field + net) */}
+                {isPointActive && (
+                  <>
+                    {(() => {
+                      const currentServer = player1.isServing ? 1 : 2;
+                      const serverOnLeft = (courtRotation === 0 ? currentServer === 1 : currentServer === 2);
+                      return serverOnLeft ? (
+                        <rect x="270" y="40" width="240" height="520" fill="#000000" opacity="0.35" style={{ pointerEvents: 'none' }} />
+                      ) : (
+                        <rect x="590" y="40" width="240" height="520" fill="#000000" opacity="0.35" style={{ pointerEvents: 'none' }} />
+                      );
+                    })()}
+                    {/* Receiver side wrong service-box overlay (exclude correct half) */}
+                    {(() => {
+                      const currentServer = player1.isServing ? 1 : 2;
+                      const serverOnLeft = (courtRotation === 0 ? currentServer === 1 : currentServer === 2);
+                      const receiverX = serverOnLeft ? 590 : 270;
+                      const overlayTopHalf = servingPosition === 'up';
+                      return overlayTopHalf ? (
+                        <rect x={receiverX} y={40} width={240} height={258} fill="#000000" opacity="0.28" style={{ pointerEvents: 'none' }} />
+                      ) : (
+                        <rect x={receiverX} y={298} width={240} height={258} fill="#000000" opacity="0.28" style={{ pointerEvents: 'none' }} />
+                      );
+                    })()}
+                    {/* Net intentionally excluded from overlay */}
+                  </>
+                )}
                 
                 {/* Clickable zones for Level 3 */}
                 {courtZones.map((zone) => {
                   // Determine which player this zone belongs to based on court rotation
                   const actualPlayer = courtRotation === 0 ? zone.player : (zone.player === 1 ? 2 : 1);
                   
-                  // Check if this is the server's own field during a serve
-                  const currentServer = player1.isServing ? 1 : 2;
-                  const isServerOwnField = actualPlayer === currentServer;
-                  
-                  // Check if server's name starts with 'p'
-                  const serverName = currentServer === 1 ? player1.name : player2.name;
-                  const isServerNameStartsWithP = serverName.toLowerCase().startsWith('p');
-                  
                   // During a serve, only the server's own field is disabled (can't serve to your own side)
                   // Wrong service boxes are clickable and will trigger fault/double fault
-                  const isDisabledDuringServe = isPointActive && isServerOwnField;
+                  const isDisabledDuringServe = false;
                   
-                  // Zone is clickable if game is running, point is active (TAP WHEN button clicked), and it's not disabled
-                  // Also disable if server's name starts with 'p'
-                  const isClickable = isGameRunning && isPointActive && !isDisabledDuringServe && !isServerNameStartsWithP;
+                  // Zone is clickable if game is running and point is active
+                  const isClickable = isGameRunning && isPointActive;
                   
                   return (
                     <rect
@@ -4453,21 +4535,30 @@ const MatchTracker: React.FC = () => {
                     />
                   );
                 })}
-                
                 {/* Zone labels - 6 per side, vertically stacked: W|B|T|T|B|W */}
-                <text x="430" y="95" textAnchor="middle" fontSize="12" fill="white">W</text>
-                <text x="430" y="181" textAnchor="middle" fontSize="12" fill="white">B</text>
-                <text x="430" y="267" textAnchor="middle" fontSize="12" fill="white">T</text>
-                <text x="430" y="353" textAnchor="middle" fontSize="12" fill="white">T</text>
-                <text x="430" y="439" textAnchor="middle" fontSize="12" fill="white">B</text>
-                <text x="430" y="525" textAnchor="middle" fontSize="12" fill="white">W</text>
+                <text x="390" y="95" textAnchor="middle" fontSize="12" fill="white">W</text>
+                <text x="390" y="181" textAnchor="middle" fontSize="12" fill="white">B</text>
+                <text x="390" y="267" textAnchor="middle" fontSize="12" fill="white">T</text>
+                <text x="390" y="353" textAnchor="middle" fontSize="12" fill="white">T</text>
+                <text x="390" y="439" textAnchor="middle" fontSize="12" fill="white">B</text>
+                <text x="390" y="525" textAnchor="middle" fontSize="12" fill="white">W</text>
                 
-                    <text x="750" y="95" textAnchor="middle" fontSize="12" fill="white">W</text>
-                    <text x="750" y="181" textAnchor="middle" fontSize="12" fill="white">B</text>
-                    <text x="750" y="267" textAnchor="middle" fontSize="12" fill="white">T</text>
-                    <text x="750" y="353" textAnchor="middle" fontSize="12" fill="white">T</text>
-                    <text x="750" y="439" textAnchor="middle" fontSize="12" fill="white">B</text>
-                    <text x="750" y="525" textAnchor="middle" fontSize="12" fill="white">W</text>
+                    <text x="710" y="95" textAnchor="middle" fontSize="12" fill="white">W</text>
+                    <text x="710" y="181" textAnchor="middle" fontSize="12" fill="white">B</text>
+                    <text x="710" y="267" textAnchor="middle" fontSize="12" fill="white">T</text>
+                    <text x="710" y="353" textAnchor="middle" fontSize="12" fill="white">T</text>
+                    <text x="710" y="439" textAnchor="middle" fontSize="12" fill="white">B</text>
+                    <text x="710" y="525" textAnchor="middle" fontSize="12" fill="white">W</text>
+
+                {/* Net posts (visual only) */}
+                <g fill="#9CA3AF">
+                  {/* Left edge of net */}
+                  <circle cx="510" cy="48" r="6" />
+                  <circle cx="510" cy="552" r="6" />
+                  {/* Right edge of net */}
+                  <circle cx="590" cy="48" r="6" />
+                  <circle cx="590" cy="552" r="6" />
+                </g>
 
                 {/* Player Labels for Level 3 */}
             <rect x="10" y="180" width="50" height="240" fill={getCourtColors().leftCourt} rx="6" />
@@ -4500,13 +4591,12 @@ const MatchTracker: React.FC = () => {
               
               </>
             )}
-
             {/* Level 1 & 2 Scoring Areas - Show for all levels except Level 3 */}
             {match.level !== 3 && (
               <>
                 {/* Left Court Scoring Area with Level 3 Visual Style */}
                 <rect 
-                  x="310" y="40" width="240" height="520" 
+                  x="270" y="40" width="240" height="520" 
                   fill={isGameRunning ? (getCourtColors().leftCourt === '#D4FF5A' ? "#49682E" : "#2F3FB0") : "#6B7280"} 
                   onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 1 : 2)} 
                   style={{ 
@@ -4516,7 +4606,7 @@ const MatchTracker: React.FC = () => {
                 
                 {/* Right Court Scoring Area with Level 3 Visual Style */}
                 <rect 
-                  x="630" y="40" width="240" height="520" 
+                  x="590" y="40" width="240" height="520" 
                   fill={isGameRunning ? (getCourtColors().rightCourt === '#D4FF5A' ? "#49682E" : "#2F3FB0") : "#6B7280"} 
                   onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 2 : 1)} 
                   style={{ 
@@ -4526,31 +4616,32 @@ const MatchTracker: React.FC = () => {
                 
                 {/* Net Design (Level 3 Style) - Smaller Width - Clickable for serve faults */}
                 <rect 
-                  x="550" y="40" width="80" height="520" 
+                  x="510" y="40" width="80" height="520" 
                   fill="white" 
                   style={{ cursor: isGameRunning && isPointActive ? "pointer" : "default" }}
                   onClick={() => isGameRunning && isPointActive && handleNetClick(1)}
                 />
+                {/* NET text repeated 12 times - evenly justified across full height */}
                 <g fill="#1B2B5B" fontSize="18" fontWeight="bold" style={{ pointerEvents: 'none' }}>
-                  <text x="590" y="75" textAnchor="middle" transform="rotate(-90, 590, 85)">NET</text>
-                  <text x="590" y="115" textAnchor="middle" transform="rotate(-90, 590, 125)">NET</text>
-                  <text x="590" y="155" textAnchor="middle" transform="rotate(-90, 590, 165)">NET</text>
-                  <text x="590" y="195" textAnchor="middle" transform="rotate(-90, 590, 205)">NET</text>
-                  <text x="590" y="235" textAnchor="middle" transform="rotate(-90, 590, 245)">NET</text>
-                  <text x="590" y="275" textAnchor="middle" transform="rotate(-90, 590, 285)">NET</text>
-                  <text x="590" y="315" textAnchor="middle" transform="rotate(-90, 590, 325)">NET</text>
-                  <text x="590" y="355" textAnchor="middle" transform="rotate(-90, 590, 365)">NET</text>
-                  <text x="590" y="395" textAnchor="middle" transform="rotate(-90, 590, 405)">NET</text>
-                  <text x="590" y="435" textAnchor="middle" transform="rotate(-90, 590, 445)">NET</text>
-                  <text x="590" y="475" textAnchor="middle" transform="rotate(-90, 590, 485)">NET</text>
-                  <text x="590" y="515" textAnchor="middle" transform="rotate(-90, 590, 525)">NET</text>
+                  <text x="550" y="60" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 60)">NET</text>
+                  <text x="550" y="104" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 104)">NET</text>
+                  <text x="550" y="148" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 148)">NET</text>
+                  <text x="550" y="192" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 192)">NET</text>
+                  <text x="550" y="236" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 236)">NET</text>
+                  <text x="550" y="280" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 280)">NET</text>
+                  <text x="550" y="324" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 324)">NET</text>
+                  <text x="550" y="368" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 368)">NET</text>
+                  <text x="550" y="412" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 412)">NET</text>
+                  <text x="550" y="456" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 456)">NET</text>
+                  <text x="550" y="500" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 500)">NET</text>
+                  <text x="550" y="544" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 544)">NET</text>
                 </g>
                 
                 {/* Tennis Ball Icons for Tap-to-Score Areas (Background) */}
                 {isGameRunning && (
                   <>
                     {/* Left Court Tennis Ball */}
-                    <g transform="translate(430, 450)">
+                    <g transform="translate(390, 450)">
                       <circle cx="0" cy="0" r="25" fill="#FFD700" stroke="#FFA500" strokeWidth="3" />
                       <path d="M-20,-10 Q-15,-5 -10,-10 Q-5,-15 0,-10 Q5,-15 10,-10 Q15,-5 20,-10" stroke="#000" strokeWidth="2" fill="none" />
                       <path d="M-20,10 Q-15,5 -10,10 Q-5,15 0,10 Q5,15 10,10 Q15,5 20,10" stroke="#000" strokeWidth="2" fill="none" />
@@ -4559,7 +4650,7 @@ const MatchTracker: React.FC = () => {
                     </g>
                     
                     {/* Right Court Tennis Ball */}
-                    <g transform="translate(750, 450)">
+                    <g transform="translate(710, 450)">
                       <circle cx="0" cy="0" r="25" fill="#FFD700" stroke="#FFA500" strokeWidth="3" />
                       <path d="M-20,-10 Q-15,-5 -10,-10 Q-5,-15 0,-10 Q5,-15 10,-10 Q15,-5 20,-10" stroke="#000" strokeWidth="2" fill="none" />
                       <path d="M-20,10 Q-15,5 -10,10 Q-5,15 0,10 Q5,15 10,10 Q15,5 20,10" stroke="#000" strokeWidth="2" fill="none" />
@@ -4568,10 +4659,10 @@ const MatchTracker: React.FC = () => {
                     </g>
                     
                     {/* Tap Instructions */}
-                    <text x="430" y="500" textAnchor="middle" fontSize="16" fontWeight="bold" fill="white" stroke="black" strokeWidth="1">
+                    <text x="390" y="500" textAnchor="middle" fontSize="16" fontWeight="bold" fill="white" stroke="black" strokeWidth="1">
                       TAP TO SCORE
                     </text>
-                    <text x="750" y="500" textAnchor="middle" fontSize="16" fontWeight="bold" fill="white" stroke="black" strokeWidth="1">
+                    <text x="710" y="500" textAnchor="middle" fontSize="16" fontWeight="bold" fill="white" stroke="black" strokeWidth="1">
                       TAP TO SCORE
                     </text>
                   </>
@@ -4680,7 +4771,6 @@ const MatchTracker: React.FC = () => {
           </svg>
         </div>
       </div>
-
       {/* Scoreboard */}
       <div className="bg-[var(--bg-card)] text-[var(--text-primary)] p-3 md:p-4 rounded-lg shadow-lg border border-[var(--border-primary)]">
         {/* Level Indicator */}
@@ -4856,10 +4946,20 @@ const MatchTracker: React.FC = () => {
                     Pause
                   </button>
                 )}
+                {/* Quick Reset button */}
+                <button
+                  onClick={handleResetClick}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  title="Reset match"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Reset
+                </button>
               </div>
             )}
           </div>
-          
           {/* Column 4-5: Buttons (Takes 2 columns) */}
           <div className="col-span-2 flex flex-col items-center justify-center gap-3">
             {/* Start Match Button - Only shown when match is ready to start AND not running */}
@@ -4875,6 +4975,7 @@ const MatchTracker: React.FC = () => {
                     setSelectedOutcome(null);
                     setSelectedRallyLength(null);
                     setCourtRotation(0);
+                    setServingPosition('down');
                     setInBetweenTime(0);
                     setGameTime(0); // Reset game time to 0 for new match
                     setIsPointActive(false);
@@ -4933,8 +5034,8 @@ const MatchTracker: React.FC = () => {
             {/* Level 3 Fault/Start Button - Only shown when match is running */}
             {isGameRunning && match.level === 3 && (
               <>
-                {/* Show Fault button when point is active */}
-                {isPointActive && (
+                {/* Hide Fault/Double Fault button UI in Level 3 (logic remains available elsewhere) */}
+                {false && isPointActive && (
               <button 
                 onClick={handleFaultClick}
                 className={`text-center text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl text-sm md:text-base min-h-[60px] w-full ${
@@ -4975,49 +5076,6 @@ const MatchTracker: React.FC = () => {
                 }`}
               >
                 {isPaused ? 'Resume' : 'Pause'}
-          </button> */}
-              
-              {/* Reset Button */}
-              <button 
-                onClick={handleResetClick}
-                className="px-3 py-2 md:px-4 md:py-2 rounded-lg text-xs md:text-sm flex-1 transition-all duration-200 bg-red-600 hover:bg-red-700 text-white font-medium flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Reset Match
-              </button>
-              
-              {/* <button 
-                onClick={() => {
-                  // Show confirmation toast
-                  toast.success('Starting new match... 🔄', {
-                    duration: 2000,
-                    icon: '🔄',
-                  });
-                  
-                  // Clear session storage for net state
-                  sessionStorage.removeItem('ballInCourtChoice');
-                  sessionStorage.removeItem('cameFromModal');
-                  
-                  // Reset selections
-                  setSelectedOutcome(null);
-                  setSelectedRallyLength(null);
-                  setCourtRotation(0);
-                  setInBetweenTime(0);
-                  setIsPointActive(false);
-                  setShowWinnersModal(false);
-                  setMatchWinner(null);
-                  setFinalTiebreakScores(null);
-                  setShowInfoModal(false);
-                  // Note: player1InBetweenTime and player2InBetweenTime are NOT reset to keep records
-                  // Note: notes are NOT reset to keep existing notes
-                  
-                  localStorage.removeItem('tennisMatchState');
-                  window.location.reload();
-                }}
-                className="bg-red-500 text-white px-2 py-1 md:px-4 md:py-1 rounded text-xs md:text-sm flex-1">
-                New Match
           </button> */}
         </div>
       </div>
@@ -5193,7 +5251,6 @@ const MatchTracker: React.FC = () => {
     </div>
   </div>
 )}
-
       {/* Level 3 Modals */}
       {showLevel3Modal && (
         <>
@@ -5392,7 +5449,6 @@ const MatchTracker: React.FC = () => {
               </div>
             </div>
           )}
-
           {/* Ball In Court Modal */}
           {level3ModalType === 'ball_in_court' && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-1">
@@ -5683,7 +5739,6 @@ const MatchTracker: React.FC = () => {
                         </div>
                       </div>
                     </section>
-
                     {/* Shot Details Section */}
                     <section className="space-y-1">
                       <h3 className={`text-sm font-semibold ${
@@ -6041,7 +6096,6 @@ const MatchTracker: React.FC = () => {
           )}
         </>
       )}
-
       {/* Match Info Modal */}
       {showInfoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
@@ -6309,7 +6363,6 @@ const MatchTracker: React.FC = () => {
                   </div>
                 </div>
               </section>
-
               {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
                 <button
@@ -6429,7 +6482,6 @@ const MatchTracker: React.FC = () => {
           </div>
         </div>
       )}
-
       {/* Note Modal */}
       {showNoteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
