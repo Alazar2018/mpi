@@ -713,16 +713,20 @@ export default function Matches() {
                                                     {activeFilter === 'saved' ? 'View' : 'Result'}
                                                 </Button>
                                             </Link>
-                                            <Button 
-                                                type="secondary" 
-                                                size="xs" 
-                                                className="rounded-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                onClick={() => handleDeleteMatch(match._id)}
-                                                disabled={isDeleting}
-                                                aria-label={`Delete match between ${getPlayerDisplayName(match, 'p1')} and ${getPlayerDisplayName(match, 'p2')}`}
-                                            >
-                                                {isDeleting ? 'Deleting...' : 'Delete'}
-                                            </Button>
+                                            {/* Only show delete button if current user is the match creator */}
+                                            {user && match.matchCreator && 
+                                             (typeof match.matchCreator === 'object' && match.matchCreator._id === user._id) && (
+                                                <Button 
+                                                    type="secondary" 
+                                                    size="xs" 
+                                                    className="rounded-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => handleDeleteMatch(match._id)}
+                                                    disabled={isDeleting}
+                                                    aria-label={`Delete match between ${getPlayerDisplayName(match, 'p1')} and ${getPlayerDisplayName(match, 'p2')}`}
+                                                >
+                                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 );

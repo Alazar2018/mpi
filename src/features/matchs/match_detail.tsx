@@ -391,21 +391,27 @@ export default function MatchDetail() {
 						<span dangerouslySetInnerHTML={{ __html: icons.settings || '⚙️' }} />
 						Change tracking level
 					</Button>
-					<Button 
-						onClick={handleEditMatch}
-						type="secondary" 
-						className="text-sm"
-					>
-						<span dangerouslySetInnerHTML={{ __html: icons.edit || '✏️' }} />
-					</Button>
-					<Button 
-						onClick={handleDeleteMatch}
-						type="secondary" 
-						className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
-						disabled={isDeleting}
-					>
-						<span dangerouslySetInnerHTML={{ __html: icons.trash || '🗑️' }} />
-					</Button>
+					{/* Only show edit button if current user is the match creator */}
+					{isCurrentUserCreator() && (
+						<Button 
+							onClick={handleEditMatch}
+							type="secondary" 
+							className="text-sm"
+						>
+							<span dangerouslySetInnerHTML={{ __html: icons.edit || '✏️' }} />
+						</Button>
+					)}
+					{/* Only show delete button if current user is the match creator */}
+					{isCurrentUserCreator() && (
+						<Button 
+							onClick={handleDeleteMatch}
+							type="secondary" 
+							className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
+							disabled={isDeleting}
+						>
+							<span dangerouslySetInnerHTML={{ __html: icons.trash || '🗑️' }} />
+						</Button>
+					)}
 				</div>
 			);
 		}
