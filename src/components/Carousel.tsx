@@ -9,23 +9,35 @@ interface CarouselProps {
 
 export function Carousel({ children, items, className = "" }: CarouselProps) {
     const [currentPage, setCurrentPage] = useState(0);
-    const [isMobile, setIsMobile] = useState(false);
+    const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop' | 'xl'>('desktop');
 
     useEffect(() => {
-        const checkIfMobile = () => {
-            setIsMobile(window.innerWidth < 768);
+        const checkScreenSize = () => {
+            const width = window.innerWidth;
+            if (width < 640) {
+                setScreenSize('mobile');
+            } else if (width < 1024) {
+                setScreenSize('tablet');
+            } else if (width < 1536) {
+                setScreenSize('desktop');
+            } else {
+                setScreenSize('xl');
+            }
         };
 
-        checkIfMobile();
-        window.addEventListener('resize', checkIfMobile);
-        return () => window.removeEventListener('resize', checkIfMobile);
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
 
-    const itemsPerPage = isMobile ? 1 : 3;
+    const itemsPerPage = screenSize === 'mobile' ? 1 : screenSize === 'tablet' ? 2 : 3;
     const totalPages = Math.ceil(items.length / itemsPerPage);
     const startIndex = currentPage * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentItems = items.slice(startIndex, endIndex);
+    
+    const isMobile = screenSize === 'mobile';
+    const isTablet = screenSize === 'tablet';
 
     const next = () => {
         if (currentPage < totalPages - 1) {
@@ -49,7 +61,7 @@ export function Carousel({ children, items, className = "" }: CarouselProps) {
         <div className={`relative ${className}`}>
             <div className="flex overflow-hidden">
                 {currentItems.map((item, index) => (
-                    <div key={startIndex + index} className={`${isMobile ? 'w-full' : 'w-1/3'} flex-shrink-0 ${!isMobile && index > 0 ? 'ml-4' : ''}`}>
+                    <div key={startIndex + index} className={`${isMobile ? 'w-full' : isTablet ? 'w-1/2' : 'w-1/3'} flex-shrink-0 ${!isMobile && index > 0 ? 'ml-4' : ''}`}>
                         {children(item)}
                     </div>
                 ))}

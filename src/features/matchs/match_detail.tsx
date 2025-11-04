@@ -76,7 +76,8 @@ export default function MatchDetail() {
 			totalGameTime: match.totalGameTime,
 			courtSurface: match.courtSurface,
 			matchType: match.matchType,
-			matchCategory: match.matchCategory
+			matchCategory: match.matchCategory,
+			matchFormat: match.matchFormat
 		};
 	};
 	
@@ -289,6 +290,12 @@ export default function MatchDetail() {
 		navigate(`/admin/matchs/edit/${matchData._id}`);
 	};
 
+	// Check if current user is the match creator
+	const isCurrentUserCreator = () => {
+		if (!user || !matchData) return false;
+		return matchData.matchCreator?._id === user._id;
+	};
+
 	// Check if current user is one of the players in the match
 	const isCurrentUserPlayer = () => {
 		if (!user || !matchData) return false;
@@ -346,6 +353,9 @@ export default function MatchDetail() {
 		const matchStatus = (matchData as any)?.status;
 		
 		if (matchStatus === 'saved') {
+			// Only creator can resume saved matches
+			if (!isCurrentUserCreator()) return null;
+			
 			return (
 				<Button 
 					onClick={() => navigate(`/admin/matchs/tracking/${params.matchId}`)}
@@ -358,6 +368,9 @@ export default function MatchDetail() {
 		}
 		
 		if (matchStatus === 'pending') {
+			// Only creator can start pending matches
+			if (!isCurrentUserCreator()) return null;
+			
 			const defaultLevel = matchData?.trackingLevel ? parseInt(matchData.trackingLevel.replace('level', '')) : 1;
 			const defaultLevelDisplay = matchData?.trackingLevel ? `Level ${defaultLevel}` : 'Level 1';
 			
@@ -406,13 +419,13 @@ export default function MatchDetail() {
 
 		switch (activeTab) {
 			case 'sets':
-				return transformedMatchData ? <SetsTab matchData={transformedMatchData} /> : <div>Loading...</div>;
+				return transformedMatchData ? <SetsTab matchData={transformedMatchData as any} /> : <div>Loading...</div>;
 
 			case 'momentum':
-				return transformedMatchData ? <MomentumTab matchData={transformedMatchData} /> : <div>Loading...</div>;
+				return transformedMatchData ? <MomentumTab matchData={transformedMatchData as any} /> : <div>Loading...</div>;
 
 			case 'report':
-				return transformedMatchData ? <ReportTab matchData={transformedMatchData} /> : <div>Loading...</div>;
+				return transformedMatchData ? <ReportTab matchData={transformedMatchData as any} /> : <div>Loading...</div>;
 
 			default: // Match Detail tab
 				return (

@@ -206,7 +206,11 @@ const Confetti = () => {
           }
         `}
       </style>
-      {confettiPieces.map(piece => renderShape(piece))}
+      {confettiPieces.map((piece, index) => (
+        <div key={`confetti-${index}-${piece.x}-${piece.y}`}>
+          {renderShape(piece)}
+        </div>
+      ))}
     </>
   );
 };
@@ -460,6 +464,7 @@ const MatchTracker: React.FC = () => {
     setPlayer1(prev => ({ ...prev, sets: 0, games: 0, points: 0, isServing: tempServer === 2 ? false : true }));
     setPlayer2(prev => ({ ...prev, sets: 0, games: 0, points: 0, isServing: tempServer === 2 ? true : false }));
     setGameHistory([]);
+    setUndoHistory([]);
     setRedoHistory([]);
     
     matchReq.send(
@@ -547,6 +552,31 @@ const MatchTracker: React.FC = () => {
         // For saved matches, don't show the serving modal or start match button
         setShowServingModal(false);
         setMatchReadyToStart(false);
+        
+        // For tiebreak-only saved matches, restore points immediately from API data
+        const savedMatchRules = getMatchRules(
+          matchData.matchFormat || convertLegacyMatchType(matchData.matchType === 'one' ? 1 : matchData.matchType === 'three' ? 3 : matchData.matchType === 'five' ? 5 : 3),
+          matchData.scoringVariation,
+          matchData.customTiebreakRules,
+          matchData.noAdScoring
+        );
+        const isSavedTiebreakOnly = savedMatchRules.isTiebreakOnly;
+        
+        if (isSavedTiebreakOnly && matchData.sets && matchData.sets.length > 0) {
+          const lastSet = matchData.sets[matchData.sets.length - 1];
+          const p1Points = (lastSet as any).p1TotalScore || 0;
+          const p2Points = (lastSet as any).p2TotalScore || 0;
+          
+          console.log('🔄 [initialLoad] Restoring tiebreak points for saved match:', {
+            p1Points,
+            p2Points,
+            p1TotalScore: (lastSet as any).p1TotalScore,
+            p2TotalScore: (lastSet as any).p2TotalScore
+          });
+          
+          setPlayer1(prev => ({ ...prev, points: p1Points }));
+          setPlayer2(prev => ({ ...prev, points: p2Points }));
+        }
         
         // Show toast indicating saved match loaded
         toast.success('Saved match loaded! Click "Resume Match" to continue.', {
@@ -641,7 +671,11 @@ const MatchTracker: React.FC = () => {
     tieBreakRule: 7
   });
 
-  const [gameHistory, setGameHistory] = useState<any[]>([]);
+  // Game score history - stores completed GameScore objects only
+  const [gameHistory, setGameHistory] = useState<GameScore[]>([]);
+  
+  // Undo/Redo history - stores state snapshots for undo functionality
+  const [undoHistory, setUndoHistory] = useState<any[]>([]);
   const [redoHistory, setRedoHistory] = useState<any[]>([]);
 
   // Point tracking state
@@ -711,16 +745,34 @@ const MatchTracker: React.FC = () => {
     const pointEndTime = Date.now();
     const betweenPointDuration = Math.floor((pointEndTime - lastPointEndTime) / 1000);
     
-    if (currentPointData) {
       // Calculate the score after this point is won
       const newP1Points = winner === 1 ? player1.points + 1 : player1.points;
       const newP2Points = winner === 2 ? player2.points + 1 : player2.points;
       
-      // Get the score state after this point
+    // Get the score state before and after this point
+    const currentScore = getCurrentGameScore();
       const scoreAfterPoint = getCurrentGameScoreAfterPoint(newP1Points, newP2Points);
+    
+    // If currentPointData doesn't exist, create it from current state
+    const pointData = currentPointData || {
+      p1Score: currentScore.p1Score,
+      p2Score: currentScore.p2Score,
+      pointWinner: winner === 1 ? "playerOne" : "playerTwo",
+      isSecondService: isSecondService,
+      p1Reaction: null,
+      p2Reaction: null,
+      missedShot: null,
+      placement: null,
+      missedShotWay: null,
+      betweenPointDuration: 0,
+      type: null,
+      rallies: null,
+      servePlacement: null,
+      courtPosition: null
+    };
       
       const completedPoint: PointScore = {
-        ...currentPointData,
+      ...pointData,
         p1Score: scoreAfterPoint.p1Score,
         p2Score: scoreAfterPoint.p2Score,
         type: pointType,
@@ -753,23 +805,23 @@ const MatchTracker: React.FC = () => {
       // Add to current game scores
       setCurrentGameScores(prev => {
         const newScores = [...prev, completedPoint];
-        console.log('🎯 [endPoint] Updated currentGameScores:', {
-          previousLength: prev.length,
-          newLength: newScores.length,
-          newScore: completedPoint,
-          allScores: newScores
-        });
+      // console.log('🎯 [endPoint] Updated currentGameScores:', {
+      //   previousLength: prev.length,
+      //   newLength: newScores.length,
+      //   newScore: completedPoint,
+      //   allScores: newScores
+      // });
         return newScores;
       });
       
       // Add to point history
       setPointHistory(prev => {
         const newHistory = [...prev, completedPoint];
-        console.log('🎯 [endPoint] Updated pointHistory:', {
-          previousLength: prev.length,
-          newLength: newHistory.length,
-          newScore: completedPoint
-        });
+      // console.log('🎯 [endPoint] Updated pointHistory:', {
+      //   previousLength: prev.length,
+      //   newLength: newHistory.length,
+      //   newScore: completedPoint
+      // });
         return newHistory;
       });
       
@@ -785,16 +837,18 @@ const MatchTracker: React.FC = () => {
       // Toggle second service if it was first service
       if (!isSecondService) {
         setIsSecondService(true);
-        console.log('🎯 [endPoint] Toggled to second service');
+      // console.log('🎯 [endPoint] Toggled to second service');
       } else {
         setIsSecondService(false);
-        console.log('🎯 [endPoint] Toggled to first service');
-      }
-      
-      console.log('🎯 [endPoint] Point end process completed successfully');
-    } else {
-      console.error('❌ [endPoint] No currentPointData available!');
+      // console.log('🎯 [endPoint] Toggled to first service');
     }
+    
+    // If we didn't have currentPointData initially, initialize it for next point
+    if (!currentPointData) {
+      startNewPoint();
+    }
+    
+    // console.log('🎯 [endPoint] Point end process completed successfully');
   };
 
   // Convert points to tennis score (0, 15, 30, 40, AD)
@@ -888,20 +942,6 @@ const MatchTracker: React.FC = () => {
   };
   // Enhanced point tracking for different levels using actual user selections
   const trackPointWithLevel = (winner: 1 | 2, pointType: string, level: 1 | 2 | 3) => {
-    console.log('🎯 [trackPointWithLevel] Starting point tracking:', {
-      winner,
-      pointType,
-      level,
-      isSecondService,
-      selectedRallyLength,
-      player1Reaction,
-      player2Reaction,
-      selectedShotPlacement,
-      selectedShotType,
-      selectedServePlacement,
-      selectedCourtZone
-    });
-
     // Get current point scores for this specific point
     const currentP1Points = player1.points;
     const currentP2Points = player2.points;
@@ -936,21 +976,6 @@ const MatchTracker: React.FC = () => {
                    null // Always provide court position for Level 3, null for other levels
     };
 
-    console.log('🎯 [trackPointWithLevel] Prepared point data:', {
-      baseData,
-      pointData,
-      combinedData: { ...baseData, ...pointData },
-      courtPosition: pointData.courtPosition,
-      selectedCourtZone: selectedCourtZone,
-      zoneType: selectedCourtZone?.type,
-      level,
-      finalCourtPosition: pointData.courtPosition,
-      levelCheck: level === 3 ? 'LEVEL 3 DETECTED' : `Level ${level}`,
-      courtPositionLogic: level === 3 ? 
-        (selectedCourtZone ? `Zone clicked: ${selectedCourtZone.type} -> ${zoneTypeToCourtPosition(selectedCourtZone.type)}` : 'No zone -> Default leftCourt') : 
-        'Not Level 3 -> undefined'
-    });
-
     // Create the completed point data directly instead of relying on currentPointData
     const completedPoint: PointScore = {
         ...baseData,
@@ -958,14 +983,43 @@ const MatchTracker: React.FC = () => {
         pointWinner: winner === 1 ? "playerOne" : "playerTwo" as "playerOne" | "playerTwo"
     };
 
+    console.log('📊 [trackPointWithLevel] Tracking point:', {
+      level,
+      winner: winner === 1 ? 'Player 1' : 'Player 2',
+      pointType,
+      score: `${scoreAfterPoint.p1Score}-${scoreAfterPoint.p2Score}`,
+      pointsBefore: `${currentP1Points}-${currentP2Points}`,
+      pointsAfter: `${newP1Points}-${newP2Points}`,
+      pointData: {
+        isSecondService: baseData.isSecondService,
+        betweenPointDuration: baseData.betweenPointDuration,
+        rallies: baseData.rallies,
+        pointWinner: pointData.pointWinner,
+        type: pointData.type,
+        p1Reaction: pointData.p1Reaction,
+        p2Reaction: pointData.p2Reaction,
+        servePlacement: pointData.servePlacement,
+        courtPosition: pointData.courtPosition,
+        placement: pointData.placement,
+        missedShot: pointData.missedShot,
+        missedShotWay: pointData.missedShotWay
+      },
+      completedPoint
+    });
+
     // Add to current game scores
     setCurrentGameScores(prev => {
       const newScores = [...prev, completedPoint];
-      console.log('🎯 [trackPointWithLevel] Updated currentGameScores:', {
-        previousLength: prev.length,
-        newLength: newScores.length,
-        newScore: completedPoint,
-        allScores: newScores
+      console.log('📝 [trackPointWithLevel] Current game state:', {
+        currentSet: match.currentSet,
+        gamesInCurrentSet: `${match.games[match.currentSet]?.player1 || 0}-${match.games[match.currentSet]?.player2 || 0}`,
+        pointsInCurrentGame: newScores.length,
+        currentGameScores: newScores.map((score, idx) => ({
+          pointNumber: idx + 1,
+          score: `${score.p1Score}-${score.p2Score}`,
+          winner: score.pointWinner,
+          type: score.type
+        }))
       });
       return newScores;
     });
@@ -973,11 +1027,11 @@ const MatchTracker: React.FC = () => {
     // Add to point history
     setPointHistory(prev => {
       const newHistory = [...prev, completedPoint];
-      console.log('🎯 [trackPointWithLevel] Updated pointHistory:', {
-        previousLength: prev.length,
-        newLength: newHistory.length,
-        newScore: completedPoint
-      });
+      // console.log('🎯 [trackPointWithLevel] Updated pointHistory:', {
+      //   previousLength: prev.length,
+      //   newLength: newHistory.length,
+      //   newScore: completedPoint
+      // });
       return newHistory;
     });
     
@@ -987,13 +1041,13 @@ const MatchTracker: React.FC = () => {
     // Toggle second service if it was first service
     if (!isSecondService) {
       setIsSecondService(true);
-      console.log('🎯 [trackPointWithLevel] Toggled to second service');
+      // console.log('🎯 [trackPointWithLevel] Toggled to second service');
     } else {
       setIsSecondService(false);
-      console.log('🎯 [trackPointWithLevel] Toggled to first service');
+      // console.log('🎯 [trackPointWithLevel] Toggled to first service');
     }
     
-    console.log('🎯 [trackPointWithLevel] Point tracking completed successfully');
+    // console.log('🎯 [trackPointWithLevel] Point tracking completed successfully');
   };
 
 
@@ -1134,14 +1188,14 @@ const MatchTracker: React.FC = () => {
       match.noAdScoring
     );
     
-    console.log('🎯 [checkGameWinner] Debug:', {
-      p1Points,
-      p2Points,
-      isTieBreak: match.isTieBreak,
-      isTiebreakOnly: rules.isTiebreakOnly,
-      tiebreakRule: rules.tiebreakRule,
-      matchFormat: match.matchFormat
-    });
+    // console.log('🎯 [checkGameWinner] Debug:', {
+    //   p1Points,
+    //   p2Points,
+    //   isTieBreak: match.isTieBreak,
+    //   isTiebreakOnly: rules.isTiebreakOnly,
+    //   tiebreakRule: rules.tiebreakRule,
+    //   matchFormat: match.matchFormat
+    // });
     
     if (match.isTieBreak) {
       // Get the correct tiebreak rule for current set
@@ -1150,12 +1204,12 @@ const MatchTracker: React.FC = () => {
       const winner = (p1Points >= tiebreakRule && p1Points - p2Points >= 2) ? 1 : 
              (p2Points >= tiebreakRule && p2Points - p1Points >= 2) ? 2 : null;
       
-      console.log('🎯 [checkGameWinner] Tiebreak check:', {
-        tiebreakRule,
-        winner,
-        p1Points,
-        p2Points
-      });
+      // console.log('🎯 [checkGameWinner] Tiebreak check:', {
+      //   tiebreakRule,
+      //   winner,
+      //   p1Points,
+      //   p2Points
+      // });
       
       return winner;
     }
@@ -1415,9 +1469,14 @@ const MatchTracker: React.FC = () => {
       matchWinner: null,
       showInfoModal: false,
       gameHistory,
+      undoHistory,
       redoHistory
     };
+    if (matchId) {
+      localStorage.setItem(`tennisMatchState_${matchId}`, JSON.stringify(matchState));
+    } else {
     localStorage.setItem('tennisMatchState', JSON.stringify(matchState));
+    }
     
     // Show auto-save toast (only for important saves, not every point)
   
@@ -1427,6 +1486,9 @@ const MatchTracker: React.FC = () => {
   const saveMatchProgressToAPI = async () => {
     if (!matchId || !matchData) return;
 
+    // Build updated game history including current game scores
+    let updatedGameHistory = [...gameHistory];
+
     // Save current game scores to game history before saving
     if (currentGameScores.length > 0) {
       const currentGameScore: GameScore = {
@@ -1435,7 +1497,13 @@ const MatchTracker: React.FC = () => {
         server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
       };
       
-      setGameHistory(prev => [...prev, currentGameScore]);
+      // Check if this game already exists to avoid duplicates
+      const gameExists = updatedGameHistory.some(g => g.gameNumber === currentGameScore.gameNumber);
+      if (!gameExists) {
+        updatedGameHistory = [...updatedGameHistory, currentGameScore];
+        setGameHistory(updatedGameHistory);
+      }
+      
       setCurrentGameScores([]);
       
       // Start new point for next game
@@ -1454,13 +1522,37 @@ const MatchTracker: React.FC = () => {
         const apiData: SaveMatchProgressRequest = {
           trackingLevel,
           sets: match.sets.map((set, setIndex) => {
-            // Get games for this set from game history
-            const setGames = gameHistory.filter(game => {
-              // Calculate which set this game belongs to based on game numbers
+            // Get games for this set from updated game history
+            // For save progress, use actual games count from match.games, not sets (sets may not be updated yet)
+            const actualGamesInSet = match.games[setIndex]?.player1 + match.games[setIndex]?.player2 || 0;
               const totalGamesBeforeSet = setIndex === 0 ? 0 : 
-                match.sets.slice(0, setIndex).reduce((sum, s) => sum + s.player1 + s.player2, 0);
+              match.games.slice(0, setIndex).reduce((sum, game) => sum + (game?.player1 || 0) + (game?.player2 || 0), 0);
+            
+            // Filter games for this set
+            // Include games up to and including the current in-progress game
+            const isCurrentSet = setIndex === match.currentSet;
+            // For current set, include one more game (the in-progress one) if it exists in history
+            const maxGameNumber = isCurrentSet 
+              ? totalGamesBeforeSet + actualGamesInSet + 1  // Include current in-progress game
+              : totalGamesBeforeSet + actualGamesInSet;      // Only completed games for other sets
+            
+            const setGames = updatedGameHistory.filter(game => {
               return game.gameNumber > totalGamesBeforeSet && 
-                     game.gameNumber <= totalGamesBeforeSet + set.player1 + set.player2;
+                     game.gameNumber <= maxGameNumber;
+            });
+
+            console.log('💾 [saveMatchProgress] Set filtering:', {
+              setIndex,
+              setScores: { p1: set.player1, p2: set.player2 },
+              gamesInMatch: { p1: match.games[setIndex]?.player1 || 0, p2: match.games[setIndex]?.player2 || 0 },
+              actualGamesInSet,
+              totalGamesBeforeSet,
+              maxGameNumber,
+              isCurrentSet,
+              gameHistoryLength: updatedGameHistory.length,
+              filteredGamesCount: setGames.length,
+              gameNumbers: updatedGameHistory.map(g => g.gameNumber),
+              filteredGameNumbers: setGames.map(g => g.gameNumber)
             });
 
             return {
@@ -1482,7 +1574,7 @@ const MatchTracker: React.FC = () => {
                   if (mappedScores.length > 0) {
                     const lastScore = mappedScores[mappedScores.length - 1];
                     mappedScores.push({ ...lastScore });
-                    console.log('🎯 [saveMatchProgressToAPI] Duplicated last point for Level 1:', lastScore);
+                    // console.log('🎯 [saveMatchProgressToAPI] Duplicated last point for Level 1:', lastScore);
                   }
                   
                   return mappedScores;
@@ -1494,7 +1586,7 @@ const MatchTracker: React.FC = () => {
                   if (mappedScores.length > 0) {
                     const lastScore = mappedScores[mappedScores.length - 1];
                     mappedScores.push({ ...lastScore });
-                    console.log('🎯 [saveMatchProgressToAPI] Duplicated last point for Level 2/3:', lastScore);
+                    // console.log('🎯 [saveMatchProgressToAPI] Duplicated last point for Level 2/3:', lastScore);
                   }
                     
                     return mappedScores;
@@ -1504,6 +1596,25 @@ const MatchTracker: React.FC = () => {
             };
           })
         };
+
+      console.log('💾 [saveMatchProgressToAPI] Sending progress data:', {
+        matchId,
+        trackingLevel: apiData.trackingLevel,
+        sets: apiData.sets.map((set, idx) => ({
+          setIndex: idx,
+          p1TotalScore: set.p1TotalScore,
+          p2TotalScore: set.p2TotalScore,
+          gamesCount: set.games?.length || 0,
+          games: set.games?.map(game => ({
+            gameNumber: game.gameNumber,
+            server: game.server,
+            scoresCount: game.scores?.length || 0,
+            firstScore: game.scores?.[0] || null,
+            lastScore: game.scores && game.scores.length > 0 ? game.scores[game.scores.length - 1] : null
+          })) || []
+        })),
+        fullApiData: apiData
+      });
 
       const response = await saveMatchProgress(matchId, apiData);
       
@@ -1515,7 +1626,7 @@ const MatchTracker: React.FC = () => {
           duration: 4000,
           icon: '💾',
         });
-        console.log('Match progress saved successfully');
+        // console.log('Match progress saved successfully');
       } else {
         toast.error(`Failed to save match progress: ${response.error || 'Unknown error'}`, {
           duration: 5000,
@@ -1534,7 +1645,7 @@ const MatchTracker: React.FC = () => {
   };
   // Submit final match result to API
   const submitMatchResultToAPI = async () => {
-    console.log('🎯 [submitMatchResultToAPI] Starting API submission...');
+    // console.log('🎯 [submitMatchResultToAPI] Starting API submission...');
     
     // Check if match is complete before allowing submission
     if (!isMatchComplete()) {
@@ -1562,35 +1673,41 @@ const MatchTracker: React.FC = () => {
       return;
     }
     
-    console.log('🎯 [submitMatchResultToAPI] Current state:', {
-      matchId,
-      matchData: matchData ? 'exists' : 'null',
-      currentGameScoresLength: currentGameScores.length,
-      currentGameScores,
-      gameHistoryLength: gameHistory.length,
-      gameHistory,
-      matchLevel: match.level,
-      gameTime
-    });
+    // console.log('🎯 [submitMatchResultToAPI] Current state:', {
+    //   matchId,
+    //   matchData: matchData ? 'exists' : 'null',
+    //   currentGameScoresLength: currentGameScores.length,
+    //   currentGameScores,
+    //   gameHistoryLength: gameHistory.length,
+    //   gameHistory,
+    //   matchLevel: match.level,
+    //   gameTime
+    // });
     
     if (!matchId || !matchData) {
       console.error('❌ [submitMatchResultToAPI] Missing matchId or matchData');
       return;
     }
 
-    // Save current game scores to game history before submitting
+    // Save current game scores to game history before submitting (only if game hasn't been saved yet)
     if (currentGameScores.length > 0) {
+      const finalGameNumber = match.games[match.currentSet]?.player1 + match.games[match.currentSet]?.player2 + 1;
+      
+      // Check if this game already exists in gameHistory (to avoid duplicates)
+      const gameExists = gameHistory.some(g => g.gameNumber === finalGameNumber);
+      
+      if (!gameExists) {
       const finalGameScore: GameScore = {
-        gameNumber: match.games[match.currentSet]?.player1 + match.games[match.currentSet]?.player2 + 1,
+          gameNumber: finalGameNumber,
         scores: currentGameScores,
         server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
       };
       
-      console.log('🎯 [submitMatchResultToAPI] Saving final game score:', finalGameScore);
+        console.log('💾 [submitMatchResultToAPI] Saving final game score:', finalGameScore);
       
       setGameHistory(prev => {
         const newHistory = [...prev, finalGameScore];
-        console.log('🎯 [submitMatchResultToAPI] Updated gameHistory:', {
+          console.log('💾 [submitMatchResultToAPI] Updated gameHistory:', {
           previousLength: prev.length,
           newLength: newHistory.length,
           finalGameScore
@@ -1598,12 +1715,15 @@ const MatchTracker: React.FC = () => {
         return newHistory;
       });
       setCurrentGameScores([]);
-      console.log('🎯 [submitMatchResultToAPI] Reset currentGameScores');
       
       // Wait a moment for state update to complete before proceeding
       await new Promise(resolve => setTimeout(resolve, 100));
     } else {
-      console.warn('⚠️ [submitMatchResultToAPI] No currentGameScores to save');
+        console.log('💾 [submitMatchResultToAPI] Game already saved, skipping duplicate');
+        setCurrentGameScores([]);
+      }
+    } else {
+      console.log('💾 [submitMatchResultToAPI] No currentGameScores to save (this is normal if game was already completed)');
     }
 
     // Show loading toast
@@ -1615,7 +1735,7 @@ const MatchTracker: React.FC = () => {
       const trackingLevel = `level${match.level}` as "level1" | "level2" | "level3";
       
       // Convert match state to API format with actual point data
-      console.log('🎯 [submitMatchResultToAPI] Preparing API data...');
+      // console.log('🎯 [submitMatchResultToAPI] Preparing API data...');
       
       // Helper function to convert rally formats
       const convertRallyFormat = (rally: string): string => {
@@ -1706,8 +1826,10 @@ const MatchTracker: React.FC = () => {
             );
           } else {
             // Multi-set match - filter games based on set boundaries
+            // Use match.games to get actual game counts, not match.sets
+            const actualGamesInSet = match.games[setIndex]?.player1 + match.games[setIndex]?.player2 || 0;
             const totalGamesBeforeSet = setIndex === 0 ? 0 : 
-              match.sets.slice(0, setIndex).reduce((sum, s) => sum + s.player1 + s.player2, 0);
+              match.games.slice(0, setIndex).reduce((sum, game) => sum + (game?.player1 || 0) + (game?.player2 || 0), 0);
             setGames = gameHistory.filter(game => {
               return game && 
                      typeof game === 'object' && 
@@ -1715,16 +1837,18 @@ const MatchTracker: React.FC = () => {
                      'scores' in game && 
                      'server' in game &&
                      game.gameNumber > totalGamesBeforeSet && 
-                   game.gameNumber <= totalGamesBeforeSet + set.player1 + set.player2;
+                     game.gameNumber <= totalGamesBeforeSet + actualGamesInSet;
           });
           }
 
-          console.log(`🎯 [submitMatchResultToAPI] Set ${setIndex} processing:`, {
-            set,
+          console.log(`💾 [submitMatchResultToAPI] Set ${setIndex} processing:`, {
+            setScores: { p1: set.player1, p2: set.player2 },
+            gamesInMatch: { p1: match.games[setIndex]?.player1 || 0, p2: match.games[setIndex]?.player2 || 0 },
+            actualGamesInSet: match.sets.length === 1 ? gameHistory.length : (match.games[setIndex]?.player1 || 0) + (match.games[setIndex]?.player2 || 0),
             setGamesLength: setGames.length,
-            setGames,
-            totalGamesBeforeSet: setIndex === 0 ? 0 : 
-              match.sets.slice(0, setIndex).reduce((sum, s) => sum + s.player1 + s.player2, 0)
+            gameHistoryLength: gameHistory.length,
+            gameNumbers: gameHistory.map(g => g.gameNumber),
+            filteredGameNumbers: setGames.map(g => g.gameNumber)
           });
 
                       return {
@@ -1746,7 +1870,7 @@ const MatchTracker: React.FC = () => {
                   if (mappedScores.length > 0) {
                     const lastScore = mappedScores[mappedScores.length - 1];
                     mappedScores.push({ ...lastScore });
-                    console.log('🎯 [submitMatchResultToAPI] Duplicated last point for Level 1:', lastScore);
+                    // console.log('🎯 [submitMatchResultToAPI] Duplicated last point for Level 1:', lastScore);
                   }
                   
                   return mappedScores;
@@ -1762,7 +1886,7 @@ const MatchTracker: React.FC = () => {
                   if (mappedScores.length > 0) {
                     const lastScore = mappedScores[mappedScores.length - 1];
                     mappedScores.push({ ...lastScore });
-                    console.log('🎯 [submitMatchResultToAPI] Duplicated last point for Level 2/3:', lastScore);
+                    // console.log('🎯 [submitMatchResultToAPI] Duplicated last point for Level 2/3:', lastScore);
                   }
                   
                   return mappedScores;
@@ -1773,7 +1897,7 @@ const MatchTracker: React.FC = () => {
         })
       };
 
-      console.log('🎯 [submitMatchResultToAPI] Final API data prepared:', apiData);
+      // console.log('🎯 [submitMatchResultToAPI] Final API data prepared:', apiData);
 
       const response = await submitMatchResult(matchId, apiData);
       
@@ -1785,7 +1909,7 @@ const MatchTracker: React.FC = () => {
           duration: 4000,
           icon: '🎯',
         });
-        console.log('Match result submitted successfully');
+        // console.log('Match result submitted successfully');
         // Navigate back to matches list
         navigate('/admin/matchs');
       } else {
@@ -1807,7 +1931,7 @@ const MatchTracker: React.FC = () => {
 
   // Load match state from localStorage
   const loadMatchState = () => {
-    const savedState = localStorage.getItem('tennisMatchState');
+    const savedState = matchId ? localStorage.getItem(`tennisMatchState_${matchId}`) : localStorage.getItem('tennisMatchState');
     if (savedState) {
       try {
         const parsedState = JSON.parse(savedState);
@@ -1829,6 +1953,7 @@ const MatchTracker: React.FC = () => {
         setServingPosition(parsedState.servingPosition);
         setCourtRotation(parsedState.courtRotation || 0);
         setGameHistory(parsedState.gameHistory || []);
+        setUndoHistory(parsedState.undoHistory || []);
         setRedoHistory(parsedState.redoHistory || []);
         setShowServingModal(false);
         setMatchReadyToStart(false);
@@ -1870,13 +1995,13 @@ const MatchTracker: React.FC = () => {
     
     // Check if level was selected in match_details via URL parameter
     const levelFromUrl = searchParams.get('level');
-    console.log('🎯 [Debug] Level from URL:', levelFromUrl);
+    // console.log('🎯 [Debug] Level from URL:', levelFromUrl);
     
     if (levelFromUrl) {
       const level = parseInt(levelFromUrl);
-      console.log('🎯 [Debug] Parsed level:', level);
+      // console.log('🎯 [Debug] Parsed level:', level);
       if (level === 1 || level === 2 || level === 3) {
-        console.log('🎯 [Debug] Setting match level to:', level);
+        // console.log('🎯 [Debug] Setting match level to:', level);
         setMatch(prev => ({ ...prev, level }));
       }
     }
@@ -1967,7 +2092,7 @@ const MatchTracker: React.FC = () => {
       }
       
       // Check if match is in progress (has game history or points scored)
-      const hasProgress = gameHistory.length > 0 || player1.points > 0 || player2.points > 0 || isGameRunning;
+      const hasProgress = gameHistory.length > 0 || undoHistory.length > 0 || player1.points > 0 || player2.points > 0 || isGameRunning;
       
       if (hasProgress) {
         // Prevent default back navigation
@@ -1988,7 +2113,7 @@ const MatchTracker: React.FC = () => {
     return () => {
       window.removeEventListener('popstate', handleBackButton);
     };
-  }, [gameHistory.length, player1.points, player2.points, isGameRunning, allowNavigation]);
+  }, [gameHistory.length, undoHistory.length, player1.points, player2.points, isGameRunning, allowNavigation]);
 
   // Back navigation dialog handlers
   const handleSaveAndQuit = () => {
@@ -2025,7 +2150,7 @@ const MatchTracker: React.FC = () => {
 
   // Monitor level changes
   useEffect(() => {
-    console.log('🎯 [Debug] Match level changed to:', match.level);
+    // console.log('🎯 [Debug] Match level changed to:', match.level);
   }, [match.level]);
 
 
@@ -2072,20 +2197,20 @@ const MatchTracker: React.FC = () => {
       const isWBT = zone.type === 'W' || zone.type === 'B' || zone.type === 'T';
       const isNonFaultServe = isPointActive && isClickOnOpponentField && isCorrectHalf && isWBT;
       
-      console.log('🎯 [Court Click] Debug info:', {
-        courtRotation,
-        matchServer: match.server,
-        currentServer,
-        zonePlayer: zone.player,
-        isServerClickingOwnField,
-        player1Serving: player1.isServing,
-        player2Serving: player2.isServing,
-        isPointActive,
-        servingPosition,
-        zoneY: zone.y,
-        isCorrectHalf,
-        isNonFaultServe
-      });
+      // console.log('🎯 [Court Click] Debug info:', {
+      //   courtRotation,
+      //   matchServer: match.server,
+      //   currentServer,
+      //   zonePlayer: zone.player,
+      //   isServerClickingOwnField,
+      //   player1Serving: player1.isServing,
+      //   player2Serving: player2.isServing,
+      //   isPointActive,
+      //   servingPosition,
+      //   zoneY: zone.y,
+      //   isCorrectHalf,
+      //   isNonFaultServe
+      // });
       
       // During serve: any click NOT on the opponent's correct W/B/T half is a fault
       if (isPointActive && !isNonFaultServe) {
@@ -2121,7 +2246,7 @@ const MatchTracker: React.FC = () => {
         // Server clicked their own field (during rally) - opponent wins the point
         const opponent = currentServer === 1 ? 2 : 1;
         setLastPointWinner(opponent);
-        console.log('🎯 [Court Click] Server clicked own field, opponent wins:', opponent);
+        // console.log('🎯 [Court Click] Server clicked own field, opponent wins:', opponent);
         
         // Set serve placement based on zone type (W/B/T) for first serve
         if (faultCount === 0) {
@@ -2132,7 +2257,7 @@ const MatchTracker: React.FC = () => {
         }
       } else {
         // Server clicked opponent's field - don't set winner yet, let user choose outcome
-        console.log('🎯 [Court Click] Server clicked opponent field - winner will be determined by outcome selection');
+        // console.log('🎯 [Court Click] Server clicked opponent field - winner will be determined by outcome selection');
         
         // Set serve placement based on zone type (W/B/T) for first serve
         if (faultCount === 0) {
@@ -2287,11 +2412,11 @@ const MatchTracker: React.FC = () => {
         sessionStorage.setItem('ballInCourtChoice', 'true');
         
         // Debug: Check what flags are set before and after
-        console.log('🎯 [Debug] Ball In Court selected - before setting flags:', {
-          cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-          cameFromModal: sessionStorage.getItem('cameFromModal'),
-          ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
-        });
+        // console.log('🎯 [Debug] Ball In Court selected - before setting flags:', {
+        //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+        //   cameFromModal: sessionStorage.getItem('cameFromModal'),
+        //   ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
+        // });
         
         // Only set cameFromModal if we didn't come from outfield
         if (sessionStorage.getItem('cameFromOutfield') !== 'true') {
@@ -2299,11 +2424,11 @@ const MatchTracker: React.FC = () => {
         }
         
         // Debug: Check what flags are set after
-        console.log('🎯 [Debug] Ball In Court selected - after setting flags:', {
-          cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-          cameFromModal: sessionStorage.getItem('cameFromModal'),
-          ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
-        });
+        // console.log('🎯 [Debug] Ball In Court selected - after setting flags:', {
+        //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+        //   cameFromModal: sessionStorage.getItem('cameFromModal'),
+        //   ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
+        // });
         
         // Set default values for easier completion
         setSelectedOutcome('ball_in_court');
@@ -2332,7 +2457,7 @@ const MatchTracker: React.FC = () => {
       // For Level 2+, show shot details modal
       setLastPointWinner(opponent);
       setSelectedOutcome('returnWinner'); // Set the outcome type for proper recording
-      console.log('🎯 [Point Outcome] Return Winner selected, opponent wins:', opponent);
+      // console.log('🎯 [Point Outcome] Return Winner selected, opponent wins:', opponent);
       
       // Show shot details modal - point will be added when modal is completed
       sessionStorage.setItem('cameFromModal', 'true');
@@ -2614,7 +2739,7 @@ const MatchTracker: React.FC = () => {
     // If no notes exist, start with an empty state
     if (notes.length === 0) {
       // Don't add dummy notes - let users create real ones
-      console.log('No notes exist yet - starting fresh');
+      // console.log('No notes exist yet - starting fresh');
     }
     setShowNoteModal(true);
   };
@@ -2653,7 +2778,7 @@ const MatchTracker: React.FC = () => {
     
     // For Level 3, allow points to be added when called from completePointWithReactions
     if (match.level === 3) {
-      console.log('🎯 [Debug] Level 3 - proceeding with point addition');
+      // console.log('🎯 [Debug] Level 3 - proceeding with point addition');
       // Continue to add the point instead of returning early
     }
     
@@ -2673,7 +2798,7 @@ const MatchTracker: React.FC = () => {
     setServingPosition(prev => prev === 'up' ? 'down' : 'up');
 
     // Save current state for undo
-    setGameHistory(prev => [...prev, {
+    setUndoHistory(prev => [...prev, {
       player1: { ...player1 },
       player2: { ...player2 },
       match: { ...match },
@@ -2688,7 +2813,7 @@ const MatchTracker: React.FC = () => {
     if (player === 1) {
       setPlayer1(prev => {
         const newPoints = prev.points + 1;
-        console.log('🎯 [Debug] Updating Player 1 points:', prev.points, '->', newPoints);
+        // console.log('🎯 [Debug] Updating Player 1 points:', prev.points, '->', newPoints);
         return { ...prev, points: newPoints };
       });
       // For Level 1, use endPoint directly; for Level 2, use trackPointWithLevel
@@ -2703,7 +2828,7 @@ const MatchTracker: React.FC = () => {
     } else {
       setPlayer2(prev => {
         const newPoints = prev.points + 1;
-        console.log('🎯 [Debug] Updating Player 2 points:', prev.points, '->', newPoints);
+        // console.log('🎯 [Debug] Updating Player 2 points:', prev.points, '->', newPoints);
         return { ...prev, points: newPoints };
       });
       // For Level 1, use endPoint directly; for Level 2, use trackPointWithLevel
@@ -2729,11 +2854,11 @@ const MatchTracker: React.FC = () => {
         const totalPoints = p1Total + p2Total;
         if (totalPoints % 2 === 1) {
           switchServer();
-          console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
+          // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
       }
       
-      console.log('🎯 [Debug] Checking game winner with points:', { p1Total, p2Total });
+      // console.log('🎯 [Debug] Checking game winner with points:', { p1Total, p2Total });
       
       const gameWinner = checkGameWinner(p1Total, p2Total);
       
@@ -2758,9 +2883,9 @@ const MatchTracker: React.FC = () => {
   };
 
   const handleUndo = () => {
-    if (gameHistory.length === 0) return;
+    if (undoHistory.length === 0) return;
     
-    const lastState = gameHistory[gameHistory.length - 1];
+    const lastState = undoHistory[undoHistory.length - 1];
     const currentState = {
       player1: { ...player1 },
       player2: { ...player2 },
@@ -2778,7 +2903,7 @@ const MatchTracker: React.FC = () => {
     setMatch(lastState.match);
     setServingPosition(lastState.servingPosition);
     setCourtRotation(lastState.courtRotation || 0);
-    setGameHistory(prev => prev.slice(0, -1));
+    setUndoHistory(prev => prev.slice(0, -1));
     
     // Show undo toast
     toast.success('Action undone! ↩️', {
@@ -2793,12 +2918,12 @@ const MatchTracker: React.FC = () => {
   // Pause/Resume functions
   const handlePause = () => {
     setIsPaused(true);
-    console.log('🎯 [Pause] Game paused');
+    // console.log('🎯 [Pause] Game paused');
   };
 
   const handleResume = () => {
     setIsPaused(false);
-    console.log('🎯 [Resume] Game resumed');
+    // console.log('🎯 [Resume] Game resumed');
   };
 
   // Reset function to clear all match state
@@ -2807,7 +2932,7 @@ const MatchTracker: React.FC = () => {
   };
   const confirmReset = () => {
     setShowResetConfirmDialog(false);
-    console.log('🔄 [Reset] Resetting match state...');
+    // console.log('🔄 [Reset] Resetting match state...');
     
     // Clear session storage
     sessionStorage.removeItem('ballInCourtChoice');
@@ -2842,6 +2967,7 @@ const MatchTracker: React.FC = () => {
     setPlayer1(prev => ({ ...prev, sets: 0, games: 0, points: 0, isServing: false }));
     setPlayer2(prev => ({ ...prev, sets: 0, games: 0, points: 0, isServing: false }));
     setGameHistory([]);
+    setUndoHistory([]);
     setRedoHistory([]);
     setCurrentGameScores([]);
     setPointHistory([]);
@@ -2869,30 +2995,30 @@ const MatchTracker: React.FC = () => {
       icon: '🔄',
     });
     
-    console.log('✅ [Reset] Match state reset complete');
+    // console.log('✅ [Reset] Match state reset complete');
   };
 
   // Helper function to handle game win logic
   const handleGameWin = (gameWinner: 1 | 2, finalP1Points?: number, finalP2Points?: number) => {
-        console.log('🎯 handleGameWin called with winner:', gameWinner);
-        console.log('🎯 Current match state:', { currentSet: match.currentSet, games: match.games });
+        // console.log('🎯 handleGameWin called with winner:', gameWinner);
+        // console.log('🎯 Current match state:', { currentSet: match.currentSet, games: match.games });
         
         // Ensure we have enough games entries
         const newGames = [...match.games];
         if (newGames.length <= match.currentSet) {
-          console.log('🎯 Adding new games entry for set:', match.currentSet);
+          // console.log('🎯 Adding new games entry for set:', match.currentSet);
           newGames.push({ player1: 0, player2: 0, scores: [] });
         }
         
         // Safety check: ensure currentGames exists
         if (!newGames[match.currentSet]) {
-          console.log('🎯 Creating missing games entry for set:', match.currentSet);
+          // console.log('🎯 Creating missing games entry for set:', match.currentSet);
           newGames[match.currentSet] = { player1: 0, player2: 0, scores: [] };
         }
         
         // Update games for current set
         const currentGames = newGames[match.currentSet];
-        console.log('🎯 Current games for set:', match.currentSet, currentGames);
+        // console.log('🎯 Current games for set:', match.currentSet, currentGames);
         
         newGames[match.currentSet] = {
           player1: gameWinner === 1 ? currentGames.player1 + 1 : currentGames.player1,
@@ -2901,12 +3027,12 @@ const MatchTracker: React.FC = () => {
         };
 
         // Save current game scores to game history
-        console.log('🎯 [handleGameWin] Checking currentGameScores:', {
-          currentGameScoresLength: currentGameScores.length,
-          currentGameScores: currentGameScores,
-          gameWinner,
-          currentSet: match.currentSet
-        });
+        // console.log('🎯 [handleGameWin] Checking currentGameScores:', {
+        //   currentGameScoresLength: currentGameScores.length,
+        //   currentGameScores: currentGameScores,
+        //   gameWinner,
+        //   currentSet: match.currentSet
+        // });
         
         if (currentGameScores.length > 0) {
           const gameScore: GameScore = {
@@ -2915,22 +3041,40 @@ const MatchTracker: React.FC = () => {
             server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
           };
           
-          console.log('🎯 [handleGameWin] Creating gameScore for game history:', gameScore);
+          console.log('🎮 [handleGameWin] Tracking game completion:', {
+            set: match.currentSet,
+            gameWinner: gameWinner === 1 ? 'Player 1' : 'Player 2',
+            gameNumber: gameScore.gameNumber,
+            server: gameScore.server,
+            gamesInSet: `${newGames[match.currentSet].player1}-${newGames[match.currentSet].player2}`,
+            pointsInGame: currentGameScores.length,
+            gameScore: {
+              gameNumber: gameScore.gameNumber,
+              server: gameScore.server,
+              scoresCount: gameScore.scores?.length || 0,
+              firstPoint: gameScore.scores?.[0] || null,
+              lastPoint: gameScore.scores && gameScore.scores.length > 0 ? gameScore.scores[gameScore.scores.length - 1] : null
+            }
+          });
           
           setGameHistory(prev => {
             const newHistory = [...prev, gameScore];
-            console.log('🎯 [handleGameWin] Updated gameHistory:', {
-              previousLength: prev.length,
-              newLength: newHistory.length,
-              newGameScore: gameScore,
-              allGameScores: newHistory
+            console.log('🎮 [handleGameWin] Updated gameHistory:', {
+              previousGamesCount: prev.length,
+              newGamesCount: newHistory.length,
+              totalGames: newHistory.length,
+              allGames: newHistory.map(g => ({
+                gameNumber: g.gameNumber,
+                server: g.server,
+                scoresCount: g.scores?.length || 0
+              }))
             });
             return newHistory;
           });
           
           // Reset current game scores for next game
           setCurrentGameScores([]);
-          console.log('🎯 [handleGameWin] Reset currentGameScores to empty array');
+          // console.log('🎯 [handleGameWin] Reset currentGameScores to empty array');
           
           // For tiebreak-only formats, don't reset points yet - preserve them for winner modal
           const rules = getMatchRules(
@@ -2944,12 +3088,12 @@ const MatchTracker: React.FC = () => {
             // Reset player points to 0 for the new game (only for non-tiebreak formats)
             setPlayer1(prev => ({ ...prev, points: 0 }));
             setPlayer2(prev => ({ ...prev, points: 0 }));
-            console.log('🎯 [handleGameWin] Reset player points to 0 for new game');
+            // console.log('🎯 [handleGameWin] Reset player points to 0 for new game');
             
             // Start new point for next game
             startNewPoint();
           } else {
-            console.log('🎯 [handleGameWin] Preserving tiebreak points for winner modal');
+            // console.log('🎯 [handleGameWin] Preserving tiebreak points for winner modal');
           }
         } else {
           console.warn('⚠️ [handleGameWin] No currentGameScores to save! This might indicate a problem with point tracking.');
@@ -2961,12 +3105,12 @@ const MatchTracker: React.FC = () => {
         const setWinner = checkSetWinner(newGames[match.currentSet].player1, 
                                         newGames[match.currentSet].player2);
         
-        console.log('🎯 Set win check:', {
-          p1Games: newGames[match.currentSet].player1,
-          p2Games: newGames[match.currentSet].player2,
-          setWinner: setWinner,
-          currentSet: match.currentSet
-        });
+        // console.log('🎯 Set win check:', {
+        //   p1Games: newGames[match.currentSet].player1,
+        //   p2Games: newGames[match.currentSet].player2,
+        //   setWinner: setWinner,
+        //   currentSet: match.currentSet
+        // });
 
         if (setWinner) {
           // FIRST: Reset games to 0-0 for both players in the current set
@@ -2998,11 +3142,11 @@ const MatchTracker: React.FC = () => {
           const newP1Sets = newSets.reduce((sum, set) => sum + set.player1, 0);
           const newP2Sets = newSets.reduce((sum, set) => sum + set.player2, 0);
           
-          console.log('🎯 Updating player set counts:', {
-            p1Sets: newP1Sets,
-            p2Sets: newP2Sets,
-            newSets: newSets
-          });
+          // console.log('🎯 Updating player set counts:', {
+          //   p1Sets: newP1Sets,
+          //   p2Sets: newP2Sets,
+          //   newSets: newSets
+          // });
           
           setPlayer1(prev => ({ 
             ...prev, 
@@ -3029,18 +3173,18 @@ const MatchTracker: React.FC = () => {
             match.customTiebreakRules,
             match.noAdScoring
           );
-          console.log('🎯 [Set Win] Triggering winner modal with player points:', {
-            player1Points: player1.points,
-            player2Points: player2.points,
-            setWinner,
-            isTiebreakOnly: setWinRules.isTiebreakOnly
-          });
+          // console.log('🎯 [Set Win] Triggering winner modal with player points:', {
+          //   player1Points: player1.points,
+          //   player2Points: player2.points,
+          //   setWinner,
+          //   isTiebreakOnly: setWinRules.isTiebreakOnly
+          // });
           
           // For tiebreak-only formats, capture the final points before showing modal
           if (setWinRules.isTiebreakOnly) {
             const capturedP1Points = finalP1Points !== undefined ? finalP1Points : player1.points;
             const capturedP2Points = finalP2Points !== undefined ? finalP2Points : player2.points;
-            console.log('🎯 [Set Win] Capturing final tiebreak scores:', { p1Points: capturedP1Points, p2Points: capturedP2Points });
+            // console.log('🎯 [Set Win] Capturing final tiebreak scores:', { p1Points: capturedP1Points, p2Points: capturedP2Points });
             setFinalTiebreakScores({ p1Points: capturedP1Points, p2Points: capturedP2Points });
             setMatchWinner(setWinner);
             setShowWinnersModal(true);
@@ -3082,18 +3226,18 @@ const MatchTracker: React.FC = () => {
                 match.customTiebreakRules,
                 match.noAdScoring
               );
-              console.log('🎯 [Match Win] Triggering winner modal with player points:', {
-                player1Points: player1.points,
-                player2Points: player2.points,
-                matchWinner,
-                isTiebreakOnly: matchWinRules.isTiebreakOnly
-              });
+              // console.log('🎯 [Match Win] Triggering winner modal with player points:', {
+              //   player1Points: player1.points,
+              //   player2Points: player2.points,
+              //   matchWinner,
+              //   isTiebreakOnly: matchWinRules.isTiebreakOnly
+              // });
               
               // For tiebreak-only formats, capture the final points before showing modal
               if (matchWinRules.isTiebreakOnly) {
                 const capturedP1Points = finalP1Points !== undefined ? finalP1Points : player1.points;
                 const capturedP2Points = finalP2Points !== undefined ? finalP2Points : player2.points;
-                console.log('🎯 [Match Win] Capturing final tiebreak scores:', { p1Points: capturedP1Points, p2Points: capturedP2Points });
+                // console.log('🎯 [Match Win] Capturing final tiebreak scores:', { p1Points: capturedP1Points, p2Points: capturedP2Points });
                 setFinalTiebreakScores({ p1Points: capturedP1Points, p2Points: capturedP2Points });
               }
               
@@ -3150,12 +3294,12 @@ const MatchTracker: React.FC = () => {
           // Always update games state when no set winner
           setMatch(prev => ({ ...prev, games: newGames }));
           
-          console.log('🎯 Games updated (no set winner):', {
-            newGames: newGames,
-            currentSet: match.currentSet,
-            p1Games: newGames[match.currentSet]?.player1 || 0,
-            p2Games: newGames[match.currentSet]?.player2 || 0
-          });
+          // console.log('🎯 Games updated (no set winner):', {
+          //   newGames: newGames,
+          //   currentSet: match.currentSet,
+          //   p1Games: newGames[match.currentSet]?.player1 || 0,
+          //   p2Games: newGames[match.currentSet]?.player2 || 0
+          // });
           
           // Save state after updating games
           setTimeout(() => saveMatchState(), 100);
@@ -3233,8 +3377,8 @@ const MatchTracker: React.FC = () => {
       courtRotation
     };
     
-    // Add current state back to game history
-    setGameHistory(prev => [...prev, currentState]);
+    // Add current state back to undo history
+    setUndoHistory(prev => [...prev, currentState]);
     
     // Restore next state
     setPlayer1(nextState.player1);
@@ -3258,18 +3402,18 @@ const MatchTracker: React.FC = () => {
       return; // Don't proceed if not all selections are made
     }
 
-    console.log('🎯 [handlePointOutcomeComplete] Starting point completion...');
-    console.log('🎯 [handlePointOutcomeComplete] Current state:', {
-      lastPointWinner,
-      selectedPointOutcome,
-      player1Reaction,
-      player2Reaction,
-      currentPointData: currentPointData ? 'exists' : 'null'
-    });
+    // console.log('🎯 [handlePointOutcomeComplete] Starting point completion...');
+    // console.log('🎯 [handlePointOutcomeComplete] Current state:', {
+    //   lastPointWinner,
+    //   selectedPointOutcome,
+    //   player1Reaction,
+    //   player2Reaction,
+    //   currentPointData: currentPointData ? 'exists' : 'null'
+    // });
 
     // Ensure we have point data initialized - if not, start a new point
     if (!currentPointData) {
-      console.log('🎯 [handlePointOutcomeComplete] No currentPointData, starting new point...');
+      // console.log('🎯 [handlePointOutcomeComplete] No currentPointData, starting new point...');
       startNewPoint();
     }
 
@@ -3277,7 +3421,7 @@ const MatchTracker: React.FC = () => {
     setServingPosition(prev => prev === 'up' ? 'down' : 'up');
 
     // Save current state for undo
-    setGameHistory(prev => [...prev, {
+    setUndoHistory(prev => [...prev, {
       player1: { ...player1 },
       player2: { ...player2 },
       match: { ...match },
@@ -3318,7 +3462,7 @@ const MatchTracker: React.FC = () => {
         // Switch after point 1, point 2, then every 2 points after that (4, 6, 8, 10...)
         if (totalPoints === 1 || totalPoints === 2 || (totalPoints > 2 && totalPoints % 2 === 0)) {
           switchServer();
-          console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
+          // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
       }
       
@@ -3343,7 +3487,7 @@ const MatchTracker: React.FC = () => {
       }
       
       // Start new point for next point tracking
-      console.log('🎯 [handlePointOutcomeComplete] Starting new point for next point...');
+      // console.log('🎯 [handlePointOutcomeComplete] Starting new point for next point...');
       startNewPoint();
     }, 0);
   };
@@ -3351,19 +3495,42 @@ const MatchTracker: React.FC = () => {
   const resumeMatchWithExistingData = () => {
     if (!matchData) return;
 
-    console.log('🔄 Resuming match with data:', matchData);
+    // console.log('🔄 Resuming match with data:', matchData);
 
+    // Check if this is a tiebreak-only match - if so, always use API data
+    const rules = getMatchRules(
+      matchData.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      matchData.scoringVariation,
+      matchData.customTiebreakRules,
+      matchData.noAdScoring
+    );
+    const isTiebreakOnly = rules.isTiebreakOnly;
+
+    // For tiebreak-only matches, always use API data (ignore localStorage)
+    // For regular matches, try localStorage first
+    if (!isTiebreakOnly) {
     // First, try to load any existing state from localStorage
     const savedState = localStorage.getItem(`tennisMatchState_${matchId}`);
     if (savedState) {
       try {
         const parsedState = JSON.parse(savedState);
-        console.log('💾 Found saved state in localStorage:', parsedState);
+          // console.log('💾 Found saved state in localStorage:', parsedState);
         
         // Restore the saved state
         setMatch(parsedState.match);
         setPlayer1(parsedState.player1);
         setPlayer2(parsedState.player2);
+          setGameHistory(parsedState.gameHistory || []);
+          setUndoHistory(parsedState.undoHistory || []);
+          setRedoHistory(parsedState.redoHistory || []);
+          
+          console.log('🔄 [resumeMatch] Restored from localStorage:', {
+            match: parsedState.match,
+            player1: parsedState.player1,
+            player2: parsedState.player2,
+            gameHistory: parsedState.gameHistory?.length || 0,
+            gamesInSet: `${parsedState.match?.games?.[parsedState.match?.currentSet || 0]?.player1 || 0}-${parsedState.match?.games?.[parsedState.match?.currentSet || 0]?.player2 || 0}`
+          });
         
         // Don't auto-start the game - user must explicitly start
         setMatchReadyToStart(true);
@@ -3384,53 +3551,188 @@ const MatchTracker: React.FC = () => {
         console.error('Error parsing saved state:', error);
         // Continue with API data restoration if localStorage fails
       }
+      }
+    } else {
+      // For tiebreak-only matches, clear localStorage to ensure we use API data
+      console.log('🔄 [resumeMatch] Tiebreak-only match detected, clearing localStorage to use API data');
+      localStorage.removeItem(`tennisMatchState_${matchId}`);
     }
 
     try {
       // Extract existing match state from API data
       const existingSets = matchData.sets || [];
-      console.log('📊 Existing sets from API:', existingSets);
+      // console.log('📊 Existing sets from API:', existingSets);
+      
+      // isTiebreakOnly is already defined above
       
       // Convert API data to component state format
-      const convertedSets = existingSets.map(set => ({
-        player1: (set as any).p1TotalScore || 0,
-        player2: (set as any).p2TotalScore || 0
-      }));
-      console.log('🔄 Converted sets for component:', convertedSets);
+      // For sets, use the winner field to determine set scores
+      // If a set has a winner, that player won the set (1-0)
+      // Otherwise, use p1TotalScore and p2TotalScore for in-progress sets
+      // BUT: For tiebreak-only matches, p1TotalScore/p2TotalScore are tiebreak points, not set scores
+      const convertedSets = existingSets.map((set, index) => {
+        const setData = set as any;
+        
+        // If set has a winner, it's a completed set
+        if (setData.winner) {
+          if (setData.winner === 'playerOne') {
+            return { player1: 1, player2: 0 };
+          } else if (setData.winner === 'playerTwo') {
+            return { player1: 0, player2: 1 };
+          }
+        }
+        
+        // For tiebreak-only matches, sets are always 0-0 (no sets in tiebreak-only format)
+        if (isTiebreakOnly) {
+          return { player1: 0, player2: 0 };
+        }
+        
+        // For in-progress sets, use p1TotalScore and p2TotalScore
+        // But if they're both 0, count from games instead
+        if (setData.p1TotalScore === 0 && setData.p2TotalScore === 0) {
+          const setGames = setData.games || [];
+          let p1Wins = 0;
+          let p2Wins = 0;
+          
+          setGames.forEach((game: any) => {
+            if (game.winner === 'playerOne') p1Wins++;
+            else if (game.winner === 'playerTwo') p2Wins++;
+          });
+          
+          // For sets, we only track if the set is won (1-0 or 0-1)
+          // Games within a set are tracked separately
+          return { player1: 0, player2: 0 };
+        }
+        
+        return {
+          player1: setData.p1TotalScore || 0,
+          player2: setData.p2TotalScore || 0
+        };
+      });
+      // console.log('🔄 Converted sets for component:', convertedSets);
       
       // Log the actual set scores from API
       existingSets.forEach((set, index) => {
-        console.log(`🎯 Set ${index + 1}: P1=${(set as any).p1TotalScore}, P2=${(set as any).p2TotalScore}, Winner=${(set as any).winner}`);
+        // console.log(`🎯 Set ${index + 1}: P1=${(set as any).p1TotalScore}, P2=${(set as any).p2TotalScore}, Winner=${(set as any).winner}`);
       });
 
       // Get games from the last set if available
       const lastSet = existingSets[existingSets.length - 1];
       const existingGames = lastSet ? (lastSet as any).games || [] : [];
-      console.log('🎮 Existing games from API:', existingGames);
+      console.log('🔄 [resumeMatch] Existing games from API:', existingGames);
+      
+      // Restore gameHistory from API games
+      const restoredGameHistory: GameScore[] = existingGames.map((game: any) => ({
+        gameNumber: game.gameNumber,
+        server: game.server,
+        scores: game.scores || []
+      }));
+      
+      console.log('🔄 [resumeMatch] Restored gameHistory:', restoredGameHistory);
+      setGameHistory(restoredGameHistory);
+      
+      // Calculate games count for current set from API games
+      // Use the winner field directly from each game object
+      const currentSetIndex = existingSets.length > 0 ? existingSets.length - 1 : 0;
+      const currentSet = existingSets[currentSetIndex];
+      const totalGamesPlayed = existingGames.length;
+      
+      // Count games won by each player using the winner field from API
+      let p1GamesInCurrentSet = 0;
+      let p2GamesInCurrentSet = 0;
+      
+      // First, try to use p1TotalScore and p2TotalScore from the set if available and valid
+      if (currentSet && (currentSet as any).p1TotalScore !== undefined && (currentSet as any).p2TotalScore !== undefined) {
+        const setP1Games = (currentSet as any).p1TotalScore || 0;
+        const setP2Games = (currentSet as any).p2TotalScore || 0;
+        
+        // Verify the counts match by counting from games
+        let countedP1Games = 0;
+        let countedP2Games = 0;
+        
+        existingGames.forEach((game: any) => {
+          if (game.winner === 'playerOne') {
+            countedP1Games++;
+          } else if (game.winner === 'playerTwo') {
+            countedP2Games++;
+          }
+        });
+        
+        // Use the set scores if they match, otherwise use counted values
+        if (setP1Games === countedP1Games && setP2Games === countedP2Games) {
+          p1GamesInCurrentSet = setP1Games;
+          p2GamesInCurrentSet = setP2Games;
+          console.log('🔄 [resumeMatch] Using set scores (verified):', { p1Games: setP1Games, p2Games: setP2Games });
+        } else {
+          // Use counted values if set scores don't match
+          p1GamesInCurrentSet = countedP1Games;
+          p2GamesInCurrentSet = countedP2Games;
+          console.log('🔄 [resumeMatch] Set scores mismatch, using counted values:', {
+            setScores: { p1: setP1Games, p2: setP2Games },
+            counted: { p1: countedP1Games, p2: countedP2Games }
+          });
+        }
+      } else {
+        // If set scores not available, count from games using winner field
+        existingGames.forEach((game: any) => {
+          if (game.winner === 'playerOne') {
+            p1GamesInCurrentSet++;
+          } else if (game.winner === 'playerTwo') {
+            p2GamesInCurrentSet++;
+          }
+        });
+        console.log('🔄 [resumeMatch] Set scores not available, counted from games:', {
+          p1Games: p1GamesInCurrentSet,
+          p2Games: p2GamesInCurrentSet
+        });
+      }
+      
+      console.log('🔄 [resumeMatch] Calculated games:', {
+        p1Games: p1GamesInCurrentSet,
+        p2Games: p2GamesInCurrentSet,
+        totalGames: totalGamesPlayed
+      });
       
       // Create a games array with entries for all sets
-      // Each set needs a games entry, even if it's just 0-0
       const convertedGames = Array.from({ length: existingSets.length }, (_, index) => {
-        if (index === existingSets.length - 1) {
-          // For the current set, use the actual game data if available
-          if (existingGames.length > 0) {
+        if (index === currentSetIndex) {
+          // For the current set, use calculated games count
             return {
-              player1: (existingGames[existingGames.length - 1] as any)?.p1Score || 0,
-              player2: (existingGames[existingGames.length - 1] as any)?.p2Score || 0,
-              scores: [] // Include empty scores array for current set
-            };
-          }
+            player1: p1GamesInCurrentSet,
+            player2: p2GamesInCurrentSet,
+            scores: []
+          };
         }
         // For completed sets, use 0-0 (games are already counted in set scores)
         return { player1: 0, player2: 0, scores: [] };
       });
       
-      console.log('🔄 Converted games for component:', convertedGames);
+      console.log('🔄 [resumeMatch] Converted games:', convertedGames);
 
       // Determine current set and server
-      const currentSetIndex = existingSets.length > 0 ? existingSets.length - 1 : 0;
+      // If all games are completed, the next server should alternate from the last game
+      // For now, we'll use the last game's server as a starting point
+      // The actual server will be determined when the next point starts based on match logic
       const lastGame = existingGames[existingGames.length - 1];
-      const server = lastGame?.server === 'playerOne' ? 1 : 2;
+      let server: 1 | 2 = 1; // Default to player 1
+      
+      if (lastGame) {
+        // Use the last game's server, but if all games are completed, 
+        // the next server should alternate (so if last was playerOne, next is playerTwo)
+        if (lastGame.server === 'playerOne') {
+          // Last game: playerOne served, so next game: playerTwo serves
+          server = 2;
+        } else {
+          // Last game: playerTwo served, so next game: playerOne serves
+          server = 1;
+        }
+      }
+      
+      console.log('🔄 [resumeMatch] Server determination:', {
+        lastGameServer: lastGame?.server,
+        nextServer: server === 1 ? 'playerOne' : 'playerTwo',
+        totalGames: existingGames.length
+      });
 
       // Update match state with existing data
       setMatch(prev => ({
@@ -3445,22 +3747,91 @@ const MatchTracker: React.FC = () => {
       const totalP1Sets = convertedSets.reduce((sum, set) => sum + set.player1, 0);
       const totalP2Sets = convertedSets.reduce((sum, set) => sum + set.player2, 0);
       
-      console.log('📊 Calculated total scores - P1 Sets:', totalP1Sets, 'P2 Sets:', totalP2Sets);
+      // console.log('📊 Calculated total scores - P1 Sets:', totalP1Sets, 'P2 Sets:', totalP2Sets);
 
       // Update player scores with the restored data
-      setPlayer1(prev => ({
-        ...prev,
-        sets: totalP1Sets,
-        games: convertedGames.reduce((sum, game) => sum + game.player1, 0),
-        points: convertedGames[0]?.player1 || 0
-      }));
+      const totalP1Games = convertedGames.reduce((sum, game) => sum + (game.player1 || 0), 0);
+      const totalP2Games = convertedGames.reduce((sum, game) => sum + (game.player2 || 0), 0);
+      
+      // isTiebreakOnly is already defined above
+      
+      let p1Points = 0;
+      let p2Points = 0;
+      
+      if (isTiebreakOnly && lastSet) {
+        // For tiebreak-only matches, use p1TotalScore/p2TotalScore directly as they represent tiebreak points
+        // These are the current tiebreak scores, not set scores
+        const rawP1TotalScore = (lastSet as any).p1TotalScore;
+        const rawP2TotalScore = (lastSet as any).p2TotalScore;
+        
+        // Ensure we're using numbers, not strings
+        p1Points = typeof rawP1TotalScore === 'number' ? rawP1TotalScore : parseInt(rawP1TotalScore) || 0;
+        p2Points = typeof rawP2TotalScore === 'number' ? rawP2TotalScore : parseInt(rawP2TotalScore) || 0;
+        
+        console.log('🔄 [resumeMatch] Restoring tiebreak points from p1TotalScore/p2TotalScore:', {
+          rawP1TotalScore,
+          rawP2TotalScore,
+          p1Points,
+          p2Points,
+          p1PointsType: typeof p1Points,
+          p2PointsType: typeof p2Points,
+          lastSet: lastSet,
+          tieBreak: (lastSet as any).tieBreak ? 'exists' : 'missing'
+        });
+      }
+      
+      console.log('🔄 [resumeMatch] Updating player scores:', {
+        totalP1Sets,
+        totalP2Sets,
+        totalP1Games,
+        totalP2Games,
+        currentSetGames: `${p1GamesInCurrentSet}-${p2GamesInCurrentSet}`,
+        isTiebreakOnly,
+        p1Points,
+        p2Points
+      });
+      
+      console.log('🔄 [resumeMatch] Setting player points:', {
+        isTiebreakOnly,
+        p1Points,
+        p2Points,
+        totalP1Sets,
+        totalP2Sets,
+        totalP1Games,
+        totalP2Games
+      });
+      
+      setPlayer1(prev => {
+        const newPoints = isTiebreakOnly ? p1Points : 0;
+        console.log('🔄 [resumeMatch] Setting player1 points:', {
+          previous: prev.points,
+          new: newPoints,
+          isTiebreakOnly,
+          p1Points
+        });
+        return {
+          ...prev,
+          sets: totalP1Sets,
+          games: totalP1Games,
+          points: newPoints
+        };
+      });
 
-      setPlayer2(prev => ({
-        ...prev,
-        sets: totalP2Sets,
-        games: convertedGames.reduce((sum, game) => sum + game.player2, 0),
-        points: convertedGames[0]?.player2 || 0
-      }));
+      setPlayer2(prev => {
+        const newPoints = isTiebreakOnly ? p2Points : 0;
+        console.log('🔄 [resumeMatch] Setting player2 points:', {
+          previous: prev.points,
+          new: newPoints,
+          isTiebreakOnly,
+          p2Points
+        });
+        return {
+          ...prev,
+          sets: totalP2Sets,
+          games: totalP2Games,
+          points: newPoints
+        };
+      });
 
       // Set server positions
       if (server === 1) {
@@ -3476,6 +3847,11 @@ const MatchTracker: React.FC = () => {
       setIsGameRunning(true);
       setIsPaused(false);
 
+      // Initialize point tracking for next point
+      // This ensures currentPointData is available when user starts tracking points
+      startNewPoint();
+      setLastPointEndTime(Date.now());
+
       // Show resume success toast
       toast.success('Match resumed successfully! 🎾', {
         duration: 4000,
@@ -3483,29 +3859,29 @@ const MatchTracker: React.FC = () => {
       });
 
       // Log the final restored state
-      console.log('✅ Final restored state:', {
-        sets: convertedSets,
-        games: convertedGames,
-        currentSet: currentSetIndex,
-        server: server,
-        player1: { 
-          sets: totalP1Sets, 
-          games: convertedGames.reduce((sum, game) => sum + game.player1, 0), 
-          points: convertedGames[0]?.player1 || 0 
-        },
-        player2: { 
-          sets: totalP2Sets, 
-          games: convertedGames.reduce((sum, game) => sum + game.player2, 0), 
-          points: convertedGames[0]?.player2 || 0 
-        }
-      });
+      // console.log('✅ Final restored state:', {
+      //   sets: convertedSets,
+      //   games: convertedGames,
+      //   currentSet: currentSetIndex,
+      //   server: server,
+      //   player1: { 
+      //     sets: totalP1Sets, 
+      //     games: convertedGames.reduce((sum, game) => sum + game.player1, 0), 
+      //     points: convertedGames[0]?.player1 || 0 
+      //   },
+      //   player2: { 
+      //     sets: totalP2Sets, 
+      //     games: convertedGames.reduce((sum, game) => sum + game.player2, 0), 
+      //     points: convertedGames[0]?.player2 || 0 
+      //   }
+      // });
       
       // Also log the current match state to verify
-      console.log('🎾 Current match state after restoration:', {
-        match: match,
-        player1: player1,
-        player2: player2
-      });
+      // console.log('🎾 Current match state after restoration:', {
+      //   match: match,
+      //   player1: player1,
+      //   player2: player2
+      // });
 
       // Save the resumed state
       setTimeout(() => saveMatchState(), 100);
@@ -3542,14 +3918,14 @@ const MatchTracker: React.FC = () => {
 
   // Debug function to show current match state
   const debugCurrentState = () => {
-    console.log('🔍 Current Match State:', {
-      match: match,
-      player1: player1,
-      player2: player2,
-      isGameRunning,
-      matchReadyToStart,
-      showServingModal
-    });
+    // console.log('🔍 Current Match State:', {
+    //   match: match,
+    //   player1: player1,
+    //   player2: player2,
+    //   isGameRunning,
+    //   matchReadyToStart,
+    //   showServingModal
+    // });
   };
   // Function to complete point after reactions are captured
   const completePointWithReactions = () => {
@@ -3565,28 +3941,28 @@ const MatchTracker: React.FC = () => {
     }
 
     // Debug: Check session storage values right before point completion
-    console.log('🎯 [Debug] RIGHT BEFORE point completion - session storage:', {
-      cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-      cameFromModal: sessionStorage.getItem('cameFromModal'),
-      ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
-    });
+    // console.log('🎯 [Debug] RIGHT BEFORE point completion - session storage:', {
+    //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+    //   cameFromModal: sessionStorage.getItem('cameFromModal'),
+    //   ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
+    // });
 
-    console.log('🎯 [Debug] Starting point completion:', {
-      lastPointWinner,
-      selectedOutcome,
-      selectedBallOutcome,
-      selectedCourtZone,
-      cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-      cameFromModal: sessionStorage.getItem('cameFromModal')
-    });
+    // console.log('🎯 [Debug] Starting point completion:', {
+    //   lastPointWinner,
+    //   selectedOutcome,
+    //   selectedBallOutcome,
+    //   selectedCourtZone,
+    //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+    //   cameFromModal: sessionStorage.getItem('cameFromModal')
+    // });
 
     // Debug: Check session storage values throughout the function
     const debugSessionStorage = () => {
-      console.log('🎯 [Debug] Session storage check:', {
-        cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-        cameFromModal: sessionStorage.getItem('cameFromModal'),
-        ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
-      });
+      // console.log('🎯 [Debug] Session storage check:', {
+      //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+      //   cameFromModal: sessionStorage.getItem('cameFromModal'),
+      //   ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
+      // });
     };
 
     debugSessionStorage();
@@ -3598,11 +3974,11 @@ const MatchTracker: React.FC = () => {
     if (lastPointWinner === 1) {
       newP1Points = player1.points + 1;
       addPoint(1);
-      console.log('🎯 [Debug] Added point to Player 1, new score:', newP1Points);
+      // console.log('🎯 [Debug] Added point to Player 1, new score:', newP1Points);
     } else {
       newP2Points = player2.points + 1;
       addPoint(2);
-      console.log('🎯 [Debug] Added point to Player 2, new score:', newP2Points);
+      // console.log('🎯 [Debug] Added point to Player 2, new score:', newP2Points);
     }
 
     // Use the actual selected values from the Ball In Court modal
@@ -3615,17 +3991,17 @@ const MatchTracker: React.FC = () => {
     
           // If this came from outfield (Ball In Court flow), we should have proper data
       if (sessionStorage.getItem('cameFromOutfield') === 'true') {
-        console.log('🎯 [Debug] Processing outfield point with data:', {
-          selectedOutcome,
-          selectedBallOutcome,
-          selectedCourtZone,
-          selectedRallyLength,
-          selectedShotWay,
-          selectedMissedShot,
-          selectedPlacement,
-          cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-          cameFromModal: sessionStorage.getItem('cameFromModal')
-        });
+        // console.log('🎯 [Debug] Processing outfield point with data:', {
+        //   selectedOutcome,
+        //   selectedBallOutcome,
+        //   selectedCourtZone,
+        //   selectedRallyLength,
+        //   selectedShotWay,
+        //   selectedMissedShot,
+        //   selectedPlacement,
+        //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+        //   cameFromModal: sessionStorage.getItem('cameFromModal')
+        // });
       
       // For outfield clicks, we should have selectedOutcome and selectedRallyLength
       // The type should be what was selected in the Ball In Court modal
@@ -3636,19 +4012,19 @@ const MatchTracker: React.FC = () => {
       placement = selectedPlacement || 'downTheLine';
       
       // Use the selected ball outcome to determine court position
-      console.log('🎯 [Debug] About to determine court position:', {
-        selectedCourtZone,
-        selectedCourtZoneType: selectedCourtZone?.type,
-        isOutfield: selectedCourtZone?.type === 'O'
-      });
+      // console.log('🎯 [Debug] About to determine court position:', {
+      //   selectedCourtZone,
+      //   selectedCourtZoneType: selectedCourtZone?.type,
+      //   isOutfield: selectedCourtZone?.type === 'O'
+      // });
       
       if (selectedCourtZone && selectedCourtZone.type === 'O') {
         // Outfield zone clicked = ball went out of bounds
         courtPosition = 'out';
-        console.log('🎯 [Debug] Outfield zone detected - setting courtPosition to "out"', {
-          selectedCourtZone,
-          courtPosition
-        });
+        // console.log('🎯 [Debug] Outfield zone detected - setting courtPosition to "out"', {
+        //   selectedCourtZone,
+        //   courtPosition
+        // });
       } else if (selectedBallOutcome === 'out') {
         courtPosition = 'out'; // Ball went out of bounds
       } else if (selectedBallOutcome === 'net') {
@@ -3673,24 +4049,24 @@ const MatchTracker: React.FC = () => {
         }
       }
       
-      console.log('🎯 [Debug] Outfield point processed:', {
-        pointType,
-        courtPosition,
-        rallies,
-        missedShotWay,
-        missedShot,
-        placement
-      });
+      // console.log('🎯 [Debug] Outfield point processed:', {
+      //   pointType,
+      //   courtPosition,
+      //   rallies,
+      //   missedShotWay,
+      //   missedShot,
+      //   placement
+      // });
     } else {
       debugSessionStorage(); // Debug session storage when outfield detection fails
-      console.log('🎯 [Debug] NOT processing outfield point - cameFromOutfield is not true');
+      // console.log('🎯 [Debug] NOT processing outfield point - cameFromOutfield is not true');
     }
     
     // If this came from a specific outcome modal (ace, return_error, etc.), use that
     // Only process if we didn't already process outfield data
     if (sessionStorage.getItem('cameFromModal') === 'true' && !sessionStorage.getItem('cameFromOutfield')) {
       debugSessionStorage(); // Debug session storage when modal outcome logic runs
-      console.log('🎯 [Debug] Processing modal outcome point:', { selectedOutcome });
+      // console.log('🎯 [Debug] Processing modal outcome point:', { selectedOutcome });
       // For direct outcomes like ace, return_error, etc.
       pointType = selectedOutcome || 'ace';
       // These outcomes don't have shot details, so use defaults
@@ -3712,13 +4088,13 @@ const MatchTracker: React.FC = () => {
       finalP1Score = pointToScore(previousP1Points);
       finalP2Score = pointToScore(previousP2Points);
       
-      console.log('🎯 [Game Win] Using previous score for final point:', { 
-        previousScore: `${finalP1Score}-${finalP2Score}`, 
-        newScore: `${pointToScore(newP1Points)}-${pointToScore(newP2Points)}`,
-        isGameWinningPoint,
-        previousPoints: `${previousP1Points}-${previousP2Points}`,
-        newPoints: `${newP1Points}-${newP2Points}`
-      });
+      // console.log('🎯 [Game Win] Using previous score for final point:', { 
+      //   previousScore: `${finalP1Score}-${finalP2Score}`, 
+      //   newScore: `${pointToScore(newP1Points)}-${pointToScore(newP2Points)}`,
+      //   isGameWinningPoint,
+      //   previousPoints: `${previousP1Points}-${previousP2Points}`,
+      //   newPoints: `${newP1Points}-${newP2Points}`
+      // });
     } else {
       // Use the new score for regular points
       finalP1Score = pointToScore(newP1Points);
@@ -3743,21 +4119,21 @@ const MatchTracker: React.FC = () => {
       p2Reaction: player2Reaction || 'noResponse'
     };
 
-    console.log('🎯 [Debug] Created completed point with scores:', {
-      newP1Points,
-      newP2Points,
-      p1Score: finalP1Score,
-      p2Score: finalP2Score,
-      isGameWinningPoint,
-      completedPoint
-    });
-    console.log('🎯 [Debug] Final court position determination:', {
-      selectedCourtZone,
-      selectedCourtZoneType: selectedCourtZone?.type,
-      isOutfield: selectedCourtZone?.type === 'O',
-      finalCourtPosition: courtPosition,
-      cameFromOutfield: sessionStorage.getItem('cameFromOutfield')
-    });
+    // console.log('🎯 [Debug] Created completed point with scores:', {
+    //   newP1Points,
+    //   newP2Points,
+    //   p1Score: finalP1Score,
+    //   p2Score: finalP2Score,
+    //   isGameWinningPoint,
+    //   completedPoint
+    // });
+    // console.log('🎯 [Debug] Final court position determination:', {
+    //   selectedCourtZone,
+    //   selectedCourtZoneType: selectedCourtZone?.type,
+    //   isOutfield: selectedCourtZone?.type === 'O',
+    //   finalCourtPosition: courtPosition,
+    //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield')
+    // });
 
     // Add to current game scores
     setCurrentGameScores(prev => [...prev, completedPoint]);
@@ -3771,7 +4147,7 @@ const MatchTracker: React.FC = () => {
     // Reset second service flag
     setIsSecondService(false);
 
-    console.log('🎯 [Debug] Point completed with reactions:', completedPoint);
+    // console.log('🎯 [Debug] Point completed with reactions:', completedPoint);
     
    
 
@@ -3982,7 +4358,7 @@ const MatchTracker: React.FC = () => {
          
           
           // Auto-submit match result when clicking Done
-          console.log('🎯 [Winner Modal] Done clicked - Auto-submitting match result...');
+          // console.log('🎯 [Winner Modal] Done clicked - Auto-submitting match result...');
           submitMatchResultToAPI();
           setFinalTiebreakScores(null); // Reset tiebreak scores when modal is closed
         }}
@@ -4018,7 +4394,7 @@ const MatchTracker: React.FC = () => {
           <button 
             className="p-1.5 md:p-2 bg-[var(--bg-primary)] rounded-lg shadow-md hover:shadow-lg border border-[var(--border-primary)] transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleUndo}
-            disabled={gameHistory.length === 0}
+            disabled={undoHistory.length === 0}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -4127,7 +4503,7 @@ const MatchTracker: React.FC = () => {
                   x="0"
                   y="0"
                   width="600"
-                  height="640"
+                  height="600"
                   fill="#000000"
                   opacity="0.4"
                   stroke="none"
@@ -4137,7 +4513,7 @@ const MatchTracker: React.FC = () => {
                     sessionStorage.setItem('cameFromOutfield', 'true');
                     
                     // Set the court position for this outfield zone
-                    setSelectedCourtZone({ id: 'left_outfield', x: 0, y: 0, width: 600, height: 640, type: 'O', label: 'Left Outfield', player: courtRotation === 0 ? 1 : 2 });
+                    setSelectedCourtZone({ id: 'left_outfield', x: 0, y: 0, width: 600, height: 600, type: 'O', label: 'Left Outfield', player: courtRotation === 0 ? 1 : 2 });
                     
                     // Set default values for easier completion
                     setSelectedOutcome('ball_in_court');
@@ -4150,14 +4526,14 @@ const MatchTracker: React.FC = () => {
                     setLevel3ModalType('ball_in_court');
                     setShowLevel3Modal(true);
                     
-                    console.log('Left outfield clicked - showing Ball In Court modal for user to decide winner');
+                    // console.log('Left outfield clicked - showing Ball In Court modal for user to decide winner');
                     
                     // Debug: Verify session storage was set
-                    console.log('🎯 [Debug] After left outfield click - session storage:', {
-                      cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-                      cameFromModal: sessionStorage.getItem('cameFromModal'),
-                      ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
-                    });
+                    // console.log('🎯 [Debug] After left outfield click - session storage:', {
+                    //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+                    //   cameFromModal: sessionStorage.getItem('cameFromModal'),
+                    //   ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
+                    // });
                   }}
                 />
                 
@@ -4166,7 +4542,7 @@ const MatchTracker: React.FC = () => {
                   x="600"
                   y="0"
                   width="650"
-                  height="40"
+                  height="600"
                   fill="#000000"
                   opacity="0.4"
                   stroke="none"
@@ -4175,12 +4551,8 @@ const MatchTracker: React.FC = () => {
                     // Set flag that modal came from outfield click
                     sessionStorage.setItem('cameFromOutfield', 'true');
                     
-                    // Set flag that modal came from outfield click
-                    sessionStorage.setItem('cameFromOutfield', 'true');
-                    console.log('🎯 [Debug] Set cameFromOutfield to true in right outfield click');
-                    
                     // Set the court position for this outfield zone
-                    setSelectedCourtZone({ id: 'right_outfield', x: 600, y: 0, width: 650, height: 640, type: 'O', label: 'Right Outfield', player: courtRotation === 0 ? 2 : 1 });
+                    setSelectedCourtZone({ id: 'right_outfield', x: 600, y: 0, width: 650, height: 600, type: 'O', label: 'Right Outfield', player: courtRotation === 0 ? 2 : 1 });
                     
                     // Set default values for easier completion
                     setSelectedOutcome('ball_in_court');
@@ -4193,14 +4565,14 @@ const MatchTracker: React.FC = () => {
                     setLevel3ModalType('ball_in_court');
                     setShowLevel3Modal(true);
                     
-                    console.log('Right outfield clicked - showing Ball In Court modal for user to decide winner');
+                    // console.log('Right outfield clicked - showing Ball In Court modal for user to decide winner');
                     
                     // Debug: Verify session storage was set and preserved
-                    console.log('🎯 [Debug] After right outfield click - session storage:', {
-                      cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
-                      cameFromModal: sessionStorage.getItem('cameFromModal'),
-                      ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
-                    });
+                    // console.log('🎯 [Debug] After right outfield click - session storage:', {
+                    //   cameFromOutfield: sessionStorage.getItem('cameFromOutfield'),
+                    //   cameFromModal: sessionStorage.getItem('cameFromModal'),
+                    //   ballInCourtChoice: sessionStorage.getItem('ballInCourtChoice')
+                    // });
                   }}
                 />
                 
@@ -4500,6 +4872,99 @@ const MatchTracker: React.FC = () => {
                         <rect x={receiverX} y={40} width={240} height={258} fill="#000000" opacity="0.28" style={{ pointerEvents: 'none' }} />
                       ) : (
                         <rect x={receiverX} y={298} width={240} height={258} fill="#000000" opacity="0.28" style={{ pointerEvents: 'none' }} />
+                      );
+                    })()}
+                    
+                    {/* Receiver side alley overlays (left and right outer zones) */}
+                    {(() => {
+                      const currentServer = player1.isServing ? 1 : 2;
+                      const serverOnLeft = (courtRotation === 0 ? currentServer === 1 : currentServer === 2);
+                      const receiverOnLeft = !serverOnLeft;
+                      
+                      // Left alley and outzone
+                      const leftAlleyX = 70;
+                      const leftAlleyWidth = 40; // 70-110
+                      const leftOutzoneX = 110;
+                      const leftOutzoneWidth = 160; // 110-270
+                      
+                      // Right alley and outzone  
+                      const rightOutzoneX = 830;
+                      const rightOutzoneWidth = 160; // 830-990
+                      const rightAlleyX = 990;
+                      const rightAlleyWidth = 40; // 990-1030
+                      
+                      return (
+                        <>
+                          {/* Left alley and outzone overlays - only when receiver is on left side */}
+                          {receiverOnLeft && (
+                            <>
+                              {/* Left alley */}
+                              <rect 
+                                x={leftAlleyX} 
+                                y={40} 
+                                width={leftAlleyWidth} 
+                                height={520} 
+                                fill="#000000" 
+                                opacity="0.28" 
+                                style={{ pointerEvents: 'none' }} 
+                              />
+                              {/* Left outzone */}
+                              <rect 
+                                x={leftOutzoneX} 
+                                y={40} 
+                                width={leftOutzoneWidth} 
+                                height={520} 
+                                fill="#000000" 
+                                opacity="0.28" 
+                                style={{ pointerEvents: 'none' }} 
+                              />
+                            </>
+                          )}
+                          {/* Right alley and outzone overlays - only when receiver is on right side */}
+                          {!receiverOnLeft && (
+                            <>
+                              {/* Right outzone */}
+                              <rect 
+                                x={rightOutzoneX} 
+                                y={40} 
+                                width={rightOutzoneWidth} 
+                                height={520} 
+                                fill="#000000" 
+                                opacity="0.28" 
+                                style={{ pointerEvents: 'none' }} 
+                              />
+                              {/* Right alley */}
+                              <rect 
+                                x={rightAlleyX} 
+                                y={40} 
+                                width={rightAlleyWidth} 
+                                height={520} 
+                                fill="#000000" 
+                                opacity="0.28" 
+                                style={{ pointerEvents: 'none' }} 
+                              />
+                            </>
+                          )}
+                          {/* Horizontal outfield overlays (top and bottom) */}
+                          <rect 
+                            x={70} 
+                            y={0} 
+                            width={960} 
+                            height={40} 
+                            fill="#000000" 
+                            opacity="0.28" 
+                            style={{ pointerEvents: 'none' }} 
+                          />
+                          <rect 
+                            x={70} 
+                            y={560} 
+                            width={960} 
+                            height={40} 
+                            fill="#000000" 
+                            opacity="0.28" 
+                            style={{ pointerEvents: 'none' }} 
+                          />
+                        </>
                       );
                     })()}
                     {/* Net intentionally excluded from overlay */}
@@ -5451,8 +5916,8 @@ const MatchTracker: React.FC = () => {
           )}
           {/* Ball In Court Modal */}
           {level3ModalType === 'ball_in_court' && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-1">
-              <div className="bg-[var(--bg-card)] rounded-lg shadow-lg border border-[var(--border-primary)] w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm p-4">
+              <div className="bg-[var(--bg-card)] rounded-lg shadow-lg border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className={`p-3 md:p-6 text-white ${
                   lastPointWinner === 1 
@@ -5464,7 +5929,13 @@ const MatchTracker: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <button 
-                        onClick={() => setShowLevel3Modal(false)}
+                        onClick={() => {
+                          // Clear the ball in court flag when closing
+                          sessionStorage.removeItem('ballInCourtChoice');
+                          sessionStorage.removeItem('cameFromOutfield');
+                          sessionStorage.removeItem('cameFromModal');
+                          setShowLevel3Modal(false);
+                        }}
                         className={`mr-2 md:mr-4 p-2 rounded-full transition-colors ${
                           lastPointWinner === 1 
                             ? 'hover:bg-gray-800/20' 
@@ -5492,29 +5963,29 @@ const MatchTracker: React.FC = () => {
                 </div>
 
                 {/* Content - Scrollable */}
-                <div className="p-1 md:p-2 overflow-y-auto flex-1">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="p-4 md:p-6 overflow-y-auto flex-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Left Column - Winner Selection (Only show when coming from outfield) */}
                     {sessionStorage.getItem('cameFromOutfield') === 'true' && (
-                      <section className="space-y-1 bg-gray-50 p-2 rounded-md">
-                        <h3 className="text-sm font-semibold text-gray-700">Who Won This Point?</h3>
-                        <div className="space-y-1">
+                      <section className="space-y-2 bg-gray-50 p-4 rounded-md">
+                        <h3 className="text-base font-semibold text-gray-700">Who Won This Point?</h3>
+                        <div className="space-y-2">
                           {/* Player 1 Option */}
                       <button
                             onClick={() => setLastPointWinner(1)}
-                            className={`w-full p-1 rounded-md border transition-all ${
+                            className={`w-full p-3 rounded-md border transition-all ${
                   lastPointWinner === 1 
                                 ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
                                 : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                             }`}
                           >
-                            <div className="flex items-center space-x-1">
+                            <div className="flex items-center space-x-2">
                           <img 
                             src={player1.image} 
                             alt={player1.name} 
-                                className="w-4 h-4 rounded-full"
+                                className="w-6 h-6 rounded-full"
                               />
-                              <span className="font-medium px-1 py-0.5 rounded-full bg-[#D4FF5A] text-gray-800 text-xs">
+                              <span className="font-medium px-2 py-0.5 rounded-full bg-[#D4FF5A] text-gray-800 text-sm">
                                 {player1.name}
                               </span>
                           </div>
@@ -5523,19 +5994,19 @@ const MatchTracker: React.FC = () => {
                           {/* Player 2 Option */}
                             <button
                             onClick={() => setLastPointWinner(2)}
-                            className={`w-full p-1 rounded-md border transition-all ${
+                            className={`w-full p-3 rounded-md border transition-all ${
                               lastPointWinner === 2
                                 ? 'bg-[#4C6BFF]/20 border-[#4C6BFF] text-white' 
                                 : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                             }`}
                           >
-                            <div className="flex items-center space-x-1">
+                            <div className="flex items-center space-x-2">
                           <img 
                             src={player2.image} 
                             alt={player2.name} 
-                                className="w-4 h-4 rounded-full"
+                                className="w-6 h-6 rounded-full"
                               />
-                              <span className="font-medium px-1 py-0.5 rounded-full bg-[#4C6BFF] text-white text-xs">
+                              <span className="font-medium px-2 py-0.5 rounded-full bg-[#4C6BFF] text-white text-sm">
                                 {player2.name}
                               </span>
                           </div>
@@ -5546,15 +6017,15 @@ const MatchTracker: React.FC = () => {
 
                     {/* Right Column - Outcome (Only show when winner is selected) */}
                     {lastPointWinner && (
-                    <section className="space-y-1 bg-gray-50 p-2 rounded-md">
-                      <h3 className={`text-sm font-semibold ${
+                    <section className="space-y-2 bg-gray-50 p-4 rounded-md">
+                      <h3 className={`text-base font-semibold ${
                         lastPointWinner === 1 ? 'text-gray-800' : 'text-gray-700'
                       }`}>Outcome</h3>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         {/* Winner based on which side was clicked - SELECTABLE */}
                         <button
                           onClick={() => setSelectedOutcome('winner')}
-                          className={`w-full p-1 rounded-md border transition-all ${
+                          className={`w-full p-3 rounded-md border transition-all ${
                             (selectedOutcome === 'winner') || (!selectedOutcome)
                               ? (lastPointWinner === 1 
                                   ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
@@ -5562,13 +6033,13 @@ const MatchTracker: React.FC = () => {
                               : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-2">
                             <img 
                               src={lastPointWinner === 1 ? player1.image : player2.image} 
                               alt={lastPointWinner === 1 ? player1.name : player2.name} 
-                              className="w-4 h-4 rounded-full"
+                              className="w-6 h-6 rounded-full"
                             />
-                            <span className={`font-medium px-1 py-0.5 rounded-full text-xs ${
+                            <span className={`font-medium px-2 py-0.5 rounded-full text-sm ${
                               lastPointWinner === 1 
                                 ? 'bg-[#D4FF5A] text-gray-800' 
                                 : 'bg-[#4C6BFF] text-white'
@@ -5581,7 +6052,7 @@ const MatchTracker: React.FC = () => {
                         {/* Winner forced error - SELECTABLE */}
                         <button
                           onClick={() => setSelectedOutcome('forced_error')}
-                          className={`w-full p-1 rounded-md border transition-all ${
+                          className={`w-full p-3 rounded-md border transition-all ${
                             selectedOutcome === 'forced_error'
                               ? (lastPointWinner === 1 
                                   ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
@@ -5589,13 +6060,13 @@ const MatchTracker: React.FC = () => {
                               : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
-                          <span className="font-medium text-xs">{lastPointWinner === 1 ? player1.name : player2.name} Forced an Error</span>
+                          <span className="font-medium text-sm">{lastPointWinner === 1 ? player1.name : player2.name} Forced an Error</span>
                         </button>
                         
                         {/* Opponent unforced error - SELECTABLE */}
                         <button
                           onClick={() => setSelectedOutcome('unforced_error')}
-                          className={`w-full p-1 rounded-md border transition-all ${
+                          className={`w-full p-3 rounded-md border transition-all ${
                             selectedOutcome === 'unforced_error'
                               ? (lastPointWinner === 1 
                                   ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
@@ -5603,23 +6074,23 @@ const MatchTracker: React.FC = () => {
                               : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                           }`}
                         >
-                          <span className="font-medium text-xs">{lastPointWinner === 1 ? player2.name : player1.name} Unforced Error</span>
+                          <span className="font-medium text-sm">{lastPointWinner === 1 ? player2.name : player1.name} Unforced Error</span>
                         </button>
                       </div>
                     </section>
                     )}
 
                     {/* Rally Length Section */}
-                    <section className="space-y-1">
-                      <h3 className={`text-sm font-semibold ${
+                    <section className="space-y-2">
+                      <h3 className={`text-base font-semibold ${
                         lastPointWinner === 1 ? 'text-gray-800' : lastPointWinner === 2 ? 'text-gray-700' : 'text-gray-600'
                       }`}>Number of Rally</h3>
-                      <div className="grid grid-cols-2 gap-1">
+                      <div className="grid grid-cols-2 gap-2">
                         {rallyLengths.map((rally, index) => (
                           <button
                             key={rally.type}
                             onClick={() => setSelectedRallyLength(rally.type)}
-                            className={`p-1 rounded-md border transition-all ${
+                            className={`p-3 rounded-md border transition-all ${
                               (selectedRallyLength === rally.type) || (rally.type === 'oneToFour' && !selectedRallyLength)
                                 ? (lastPointWinner === 1 
                                     ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
@@ -5629,21 +6100,21 @@ const MatchTracker: React.FC = () => {
                                 : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                             }`}
                           >
-                            <span className="font-medium text-xs">{rally.label}</span>
+                            <span className="font-medium text-sm">{rally.label}</span>
                           </button>
                         ))}
                       </div>
                     </section>
 
                                         {/* Court Visualization Section */}
-                    <section className="space-y-1">
-                      <h3 className={`text-sm font-semibold ${
+                    <section className="space-y-2">
+                      <h3 className={`text-base font-semibold ${
                         lastPointWinner === 1 ? 'text-gray-800' : lastPointWinner === 2 ? 'text-gray-700' : 'text-gray-600'
                       }`}>Court Visualization</h3>
                       
                       {/* Ball In Court Tennis Court Visualization */}
-                      <div className="flex justify-center px-1">
-                        <div className="relative w-full max-w-md h-24 bg-white rounded-lg border-2 border-gray-300 overflow-hidden">
+                      <div className="flex justify-center px-2">
+                        <div className="relative w-full max-w-md h-32 bg-white rounded-lg border-2 border-gray-300 overflow-hidden">
                           {/* Top Court - Respects court rotation */}
                           <div className="absolute left-0 top-0 w-full h-1/2">
                             {/* Court Background - Dynamic based on court rotation */}
@@ -5740,20 +6211,20 @@ const MatchTracker: React.FC = () => {
                       </div>
                     </section>
                     {/* Shot Details Section */}
-                    <section className="space-y-1">
-                      <h3 className={`text-sm font-semibold ${
+                    <section className="space-y-2">
+                      <h3 className={`text-base font-semibold ${
                         lastPointWinner === 1 ? 'text-gray-800' : lastPointWinner === 2 ? 'text-gray-700' : 'text-gray-600'
                       }`}>Shot Details</h3>
                       
                       {/* Shot Type */}
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-gray-700 text-xs">Shot Type</h4>
-                        <div className="grid grid-cols-2 gap-1">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-gray-700 text-sm">Shot Type</h4>
+                        <div className="grid grid-cols-2 gap-2">
                           {shotTypes.map((shotType) => (
                             <button
                               key={shotType.type}
                               onClick={() => setSelectedShotWay(shotType.type)}
-                              className={`p-1 rounded-md border transition-all ${
+                              className={`p-3 rounded-md border transition-all ${
                                 (selectedShotWay === shotType.type) || (shotType.type === 'forehand' && !selectedShotWay)
                                   ? (lastPointWinner === 1 
                                       ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
@@ -5761,21 +6232,21 @@ const MatchTracker: React.FC = () => {
                                   : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                               }`}
                             >
-                              <span className="font-medium text-xs">{shotType.label}</span>
+                              <span className="font-medium text-sm">{shotType.label}</span>
                             </button>
                           ))}
                         </div>
                 </div>
 
                       {/* Missed Shot */}
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-gray-700 text-xs">Error Zone</h4>
-                        <div className="grid grid-cols-3 gap-1">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-gray-700 text-sm">Error Zone</h4>
+                        <div className="grid grid-cols-3 gap-2">
                           {['wide', 'long', 'net'].map((shot) => (
                 <button 
                               key={shot}
                               onClick={() => setSelectedMissedShot(shot)}
-                              className={`p-1 rounded-md border transition-all ${
+                              className={`p-3 rounded-md border transition-all ${
                                 (selectedMissedShot === shot) || (shot === 'wide' && !selectedMissedShot)
                                   ? (lastPointWinner === 1 
                                       ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
@@ -5783,16 +6254,16 @@ const MatchTracker: React.FC = () => {
                                   : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                               }`}
                             >
-                              <span className="font-medium capitalize text-xs">{shot}</span>
+                              <span className="font-medium capitalize text-sm">{shot}</span>
                 </button>
                           ))}
               </div>
             </div>
 
                       {/* Placement */}
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-gray-700 text-xs">Shot Placement</h4>
-                        <div className={`grid gap-1 ${selectedMissedShot === 'long' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-gray-700 text-sm">Shot Placement</h4>
+                        <div className={`grid gap-2 ${selectedMissedShot === 'long' ? 'grid-cols-2' : 'grid-cols-2'}`}>
                           {['downTheLine', 'crossCourt', 'downTheMiddle', 'shortAngle', 'dropShot']
                             .filter(place => {
                               // Remove dropShot when error zone is 'long'
@@ -5805,7 +6276,7 @@ const MatchTracker: React.FC = () => {
                     <button
                               key={place}
                               onClick={() => setSelectedPlacement(place)}
-                              className={`p-1 rounded-md border transition-all ${
+                                className={`p-3 rounded-md border transition-all ${
                                 (selectedPlacement === place) || (place === 'downTheLine' && !selectedPlacement)
                                   ? (lastPointWinner === 1 
                                       ? 'bg-[#D4FF5A]/20 border-[#D4FF5A] text-gray-800' 
@@ -5813,27 +6284,26 @@ const MatchTracker: React.FC = () => {
                                   : 'bg-[var(--bg-primary)] border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                               }`}
                             >
-                              <span className="font-medium capitalize text-xs">{place.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                <span className="font-medium capitalize text-sm">{place.replace(/([A-Z])/g, ' $1').trim()}</span>
                     </button>
                           ))}
                 </div>
                       </div>
                     </section>
+                  </div>
               </div>
 
-                    {/* Continue Button - Only show when winner and outcome are selected */}
+                {/* Footer - Buttons */}
                     {lastPointWinner && selectedOutcome && selectedRallyLength && selectedShotWay && selectedMissedShot && selectedPlacement && (
-                    <div className="mt-2 flex flex-col sm:flex-row gap-1 justify-center">
+                  <div className="p-4 border-t border-[var(--border-primary)] bg-[var(--bg-card)]">
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       {/* Done Button - Complete point directly */}
                           <button
                         onClick={() => {
-                          // Don't clear outfield flag here - let completePointWithReactions handle it
-                          // sessionStorage.removeItem('cameFromOutfield');
-                          
                           // Complete the point directly
                           completePointWithReactions();
                         }}
-                        className={`px-2 py-1 rounded-md font-bold transition-all shadow-md hover:shadow-lg text-xs ${
+                        className={`px-6 py-3 rounded-md font-bold transition-all shadow-md hover:shadow-lg text-base ${
                           lastPointWinner === 1 
                             ? 'bg-[#D4FF5A] hover:bg-[#9ACD32] text-gray-800' 
                             : 'bg-[#4C6BFF] hover:bg-[#3B5BDB] text-white'
@@ -5845,9 +6315,6 @@ const MatchTracker: React.FC = () => {
                       {/* Continue Button - Go to reaction modal */}
                           <button
                         onClick={() => {
-                          // Don't clear outfield flag here - let completePointWithReactions handle it
-                          // sessionStorage.removeItem('cameFromOutfield');
-                          
                           // Close ball in court modal
                           setShowLevel3Modal(false);
                           
@@ -5869,16 +6336,15 @@ const MatchTracker: React.FC = () => {
                           setLevel3ModalType('reaction');
                           setShowLevel3Modal(true);
                         }}
-                        className={`px-2 py-1 rounded-md font-bold transition-all shadow-md hover:shadow-lg text-xs bg-gray-600 hover:bg-gray-700 text-white`}
+                        className="px-6 py-3 rounded-md font-bold transition-all shadow-md hover:shadow-lg text-base bg-gray-600 hover:bg-gray-700 text-white"
                       >
                         {match.level === 1 ? 'Complete Point' : 'Continue to Reactions'}
                           </button>
+                    </div>
                         </div>
                     )}
                       </div>
                     </div>
-                </div>
-            
           )}
 
           {/* Reaction Modal - Only show for Level 2+ */}

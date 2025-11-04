@@ -83,7 +83,13 @@ interface MatchData {
   courtSurface?: string;
   matchType?: string;
   matchCategory?: string;
+  matchFormat?: string;
 }
+
+// Helper function to check if match format is tiebreak-only
+const isTiebreakOnlyFormat = (matchFormat?: string): boolean => {
+  return matchFormat ? matchFormat.startsWith('tiebreak') : false;
+};
 
 interface SetsTabProps {
   matchData: MatchData;
@@ -265,8 +271,9 @@ const SetsTab: React.FC<SetsTabProps> = ({ matchData }) => {
               </div>
             </div>
             
-            {/* Set Winner Badge */}
-            {set.p1TotalScore !== null && set.p2TotalScore !== null && (
+            {/* Set Winner Badge - Only show for non-tiebreak-only matches */}
+            {set.p1TotalScore !== null && set.p2TotalScore !== null && 
+             !isTiebreakOnlyFormat(matchData.matchFormat) && (
               <div className="mb-4 text-center">
                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                   set.p1TotalScore > set.p2TotalScore

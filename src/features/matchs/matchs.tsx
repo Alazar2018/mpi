@@ -514,10 +514,22 @@ export default function Matches() {
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {currentMatchesPage.map((match) => {
+                                // Check if this is a tiebreak-only match
+                                const isTiebreakOnly = match.matchFormat && match.matchFormat.startsWith('tiebreak');
+                                
                                 // Calculate actual match statistics from the data
                                 const totalSets = match.sets?.length || 0;
-                                const p1WonSets = match.sets?.filter(set => set.p1Score > set.p2Score).length || 0;
-                                const p2WonSets = match.sets?.filter(set => set.p2Score > set.p1Score).length || 0;
+                                // For tiebreak-only matches, use p1TotalScore/p2TotalScore, otherwise use p1Score/p2Score
+                                const p1WonSets = match.sets?.filter(set => {
+                                    const p1Score = set.p1TotalScore ?? set.p1Score ?? 0;
+                                    const p2Score = set.p2TotalScore ?? set.p2Score ?? 0;
+                                    return p1Score > p2Score;
+                                }).length || 0;
+                                const p2WonSets = match.sets?.filter(set => {
+                                    const p1Score = set.p1TotalScore ?? set.p1Score ?? 0;
+                                    const p2Score = set.p2TotalScore ?? set.p2Score ?? 0;
+                                    return p2Score > p1Score;
+                                }).length || 0;
                                 
                                 // Get actual statistics from match sets (if available)
                                 let p1TotalAces = 0;
@@ -622,7 +634,7 @@ export default function Matches() {
                                                     <span className="font-medium">{p1TotalDoubleFaults}-{p2TotalDoubleFaults}</span>
                                                 </div>
                                             )}
-                                            {totalSets > 0 && (
+                                            {totalSets > 0 && !isTiebreakOnly && (
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-[var(--text-secondary)] dark:text-gray-400">Sets</span>
                                                     <span className="font-medium">{p1WonSets}-{p2WonSets}</span>
@@ -630,17 +642,38 @@ export default function Matches() {
                                             )}
                                         </div>
 
-                                        {/* Only show set scores section if there are meaningful scores */}
-                                        {match.sets && match.sets.length > 0 && match.sets.some(set => set.p1Score > set.p2Score || set.p2Score > set.p1Score) && (
+                                        {/* Only show set scores section if there are meaningful scores and not tiebreak-only */}
+                                        {!isTiebreakOnly && match.sets && match.sets.length > 0 && match.sets.some(set => {
+                                            const p1Score = set.p1TotalScore ?? set.p1Score ?? 0;
+                                            const p2Score = set.p2TotalScore ?? set.p2Score ?? 0;
+                                            return p1Score > p2Score || p2Score > p1Score;
+                                        }) && (
                                             <div className="mb-4">
                                                                                         <p className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mb-1">Set Scores:</p>
                                         <div className="text-xs text-[var(--text-tertiary)] dark:text-gray-500 space-y-1">
-                                                    {match.sets.map((set, index) => (
-                                                        <div key={set._id || index} className="flex justify-between">
-                                                            <span>Set {index + 1}:</span>
-                                                            <span>{set.p1Score}-{set.p2Score}</span>
+                                                    {match.sets.map((set, index) => {
+                                                        const p1Score = set.p1TotalScore ?? set.p1Score ?? 0;
+                                                        const p2Score = set.p2TotalScore ?? set.p2Score ?? 0;
+                                                        return (
+                                                            <div key={set._id || index} className="flex justify-between">
+                                                                <span>Set {index + 1}:</span>
+                                                                <span>{p1Score}-{p2Score}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Show tiebreak score for tiebreak-only matches */}
+                                        {isTiebreakOnly && match.sets && match.sets.length > 0 && match.sets[0] && (
+                                            <div className="mb-4">
+                                                <p className="text-sm text-[var(--text-secondary)] dark:text-gray-400 mb-1">Score:</p>
+                                                <div className="text-xs text-[var(--text-tertiary)] dark:text-gray-500">
+                                                    <div className="flex justify-between">
+                                                        <span>Tiebreak:</span>
+                                                        <span>{match.sets[0].p1TotalScore ?? 0}-{match.sets[0].p2TotalScore ?? 0}</span>
                                                     </div>
-                                                    ))}
                                                 </div>
                                             </div>
                                         )}
@@ -664,7 +697,7 @@ export default function Matches() {
                                                             <span>{p1TotalDoubleFaults}-{p2TotalDoubleFaults}</span>
                                                         </div>
                                                     ) : null}
-                                                    {totalSets > 0 ? (
+                                                    {totalSets > 0 && !isTiebreakOnly ? (
                                                         <div className="flex justify-between">
                                                             <span>Sets Won:</span>
                                                             <span>{p1WonSets}-{p2WonSets}</span>
