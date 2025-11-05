@@ -828,6 +828,10 @@ const MatchTracker: React.FC = () => {
       // Update last point end time
       setLastPointEndTime(pointEndTime);
       
+      // Toggle serving position transversely (alternate sides) after each point
+      // Server changes position from one side to the other after each point
+      setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+      
       // For Level 1, keep currentPointData for multiple points per game
       // For other levels, reset current point data
       if (match.level !== 1) {
@@ -842,7 +846,7 @@ const MatchTracker: React.FC = () => {
         setIsSecondService(false);
       // console.log('🎯 [endPoint] Toggled to first service');
       }
-      
+    
     // If we didn't have currentPointData initially, initialize it for next point
     if (!currentPointData) {
       startNewPoint();
@@ -1078,6 +1082,10 @@ const MatchTracker: React.FC = () => {
     
     // Update last point end time
     setLastPointEndTime(Date.now());
+    
+    // Toggle serving position transversely (alternate sides) after each point
+    // Server changes position from one side to the other after each point
+    setServingPosition(prev => prev === 'up' ? 'down' : 'up');
     
     // Toggle second service if it was first service
     if (!isSecondService) {
@@ -2975,11 +2983,11 @@ const MatchTracker: React.FC = () => {
       const p1Total = (player === 1 ? player1.points + 1 : player1.points);
       const p2Total = (player === 2 ? player2.points + 1 : player2.points);
       
-      // Tiebreak serving order: A (1), B (2), A (2), B (2), ...
-      // Switch server after point 1 and then after every odd-numbered point (1,3,5,7,...)
+      // Tiebreak serving order: 1, 2, 2, 1, 2, 2, 1, 2, 2, ...
+      // Switch server after point 1, then after every odd point (1, 3, 5, 7, 9, ...)
       if (match.isTieBreak) {
         const totalPoints = p1Total + p2Total;
-        if (totalPoints % 2 === 1) {
+        if (totalPoints === 1 || (totalPoints > 1 && totalPoints % 2 === 1)) {
           switchServer();
           // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
@@ -3590,11 +3598,11 @@ const MatchTracker: React.FC = () => {
       const p1Total = (lastPointWinner === 1 ? player1.points + 1 : player1.points);
       const p2Total = (lastPointWinner === 2 ? player2.points + 1 : player2.points);
       
-      // Handle tiebreak server switching: 1-1-2-2-2-2 pattern
+      // Handle tiebreak server switching: 1, 2, 2, 1, 2, 2, 1, 2, 2, ...
+      // Switch server after point 1, then after every odd point (1, 3, 5, 7, 9, ...)
       if (match.isTieBreak) {
         const totalPoints = p1Total + p2Total;
-        // Switch after point 1, point 2, then every 2 points after that (4, 6, 8, 10...)
-        if (totalPoints === 1 || totalPoints === 2 || (totalPoints > 2 && totalPoints % 2 === 0)) {
+        if (totalPoints === 1 || (totalPoints > 1 && totalPoints % 2 === 1)) {
           switchServer();
           // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
@@ -4287,6 +4295,10 @@ const MatchTracker: React.FC = () => {
     // Update last point end time
     setLastPointEndTime(Date.now());
     
+    // Toggle serving position transversely (alternate sides) after each point
+    // Server changes position from one side to the other after each point
+    setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    
     // Reset second service flag
     setIsSecondService(false);
 
@@ -4298,11 +4310,11 @@ const MatchTracker: React.FC = () => {
       const p1Total = newP1Points;
       const p2Total = newP2Points;
       
-      // Handle tiebreak server switching: 1-1-2-2-2-2 pattern
+      // Handle tiebreak server switching: 1, 2, 2, 1, 2, 2, 1, 2, 2, ...
+      // Switch server after point 1, then after every odd point (1, 3, 5, 7, 9, ...)
       if (match.isTieBreak) {
         const totalPoints = p1Total + p2Total;
-        // Switch after point 1, point 2, then every 2 points after that (4, 6, 8, 10...)
-        if (totalPoints === 1 || totalPoints === 2 || (totalPoints > 2 && totalPoints % 2 === 0)) {
+        if (totalPoints === 1 || (totalPoints > 1 && totalPoints % 2 === 1)) {
           switchServer();
           // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
@@ -6510,10 +6522,6 @@ const MatchTracker: React.FC = () => {
                     </section>
                     {/* Shot Details Section */}
                     <section className="space-y-2">
-                      <h3 className={`text-base font-semibold ${
-                        lastPointWinner === 1 ? 'text-gray-800' : lastPointWinner === 2 ? 'text-gray-700' : 'text-gray-600'
-                      }`}>Shot Details</h3>
-                      
                       {/* Shot Type */}
                       <div className="space-y-2">
                         <h4 className="font-medium text-gray-700 text-sm">Shot Type</h4>
