@@ -787,8 +787,8 @@ class MatchesService {
       oneSet: 'One Set',
       bestOfThree: 'Best of 3 Sets',
       bestOfFive: 'Best of 5 Sets',
-      shortSets: 'Short Sets (4/7)',
-      proSet8: '8-Game Pro Set',
+      shortSets: 'Short Set To 4',
+      proSet8: 'Pro Set To 8',
       tiebreak7: '7-Point Tiebreak',
       tiebreak10: '10-Point Tiebreak',
       tiebreak21: '21-Point Tiebreak'

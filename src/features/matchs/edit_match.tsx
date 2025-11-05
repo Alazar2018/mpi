@@ -36,7 +36,7 @@ const MATCH_FORMAT_OPTIONS = [
   { value: 'oneSet', label: 'One Set', description: 'One set with 7-point tiebreak at 6-6' },
   { value: 'bestOfThree', label: '2/3 Sets', description: '2 out of 3 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
   { value: 'bestOfFive', label: '3/5 Sets', description: '3 out of 5 sets with 7-point tiebreak at 6-6, final set 10-point tiebreak' },
-  { value: 'shortSets', label: 'Short Sets (4/7)', description: '4 out of 7 sets (no-ad scoring and 7-point tiebreak at 3-3)' },
+  { value: 'shortSets', label: 'Short Set To 4', description: '4 out of 7 sets (no-ad scoring and 7-point tiebreak at 3-3)' },
   { value: 'proSet8', label: '8-Game Pro Set', description: '8-game pro set with 7-point tiebreak at 8-8' },
   { value: 'tiebreak7', label: '7-Point Tiebreak Only', description: 'Single 7-point tiebreaker' },
   { value: 'tiebreak10', label: '10-Point Tiebreak Only', description: 'Single 10-point tiebreaker' },

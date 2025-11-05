@@ -126,12 +126,15 @@ export type MissedShotType = "net" | "long" | "wide" | "let";
 export type MissedShotWay =
   | "forehand"
   | "backhand"
+  | "forehandVolley"
+  | "backhandVolley"
   | "forehandSlice"
   | "backhandSlice"
   | "forehandDropShot"
   | "backhandDropShot"
-  | "overhead"
-  | "volley";
+  | "forehandSwingingVolley"
+  | "backhandSwingingVolley"
+  | "overhead";
 
 export type PointType =
   | "ace"

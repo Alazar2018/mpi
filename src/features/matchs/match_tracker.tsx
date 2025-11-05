@@ -75,7 +75,7 @@ interface ShotPlacement {
 }
 
 interface ShotType {
-  type: 'forehand' | 'backhand' | 'volley' | 'forehandSlice' | 'backhandSlice' | 'overhead' | 'forehandDropShot' | 'backhandDropShot';
+  type: 'forehand' | 'backhand' | 'forehandVolley' | 'backhandVolley' | 'forehandSlice' | 'backhandSlice' | 'forehandDropShot' | 'backhandDropShot' | 'forehandSwingingVolley' | 'backhandSwingingVolley' | 'overhead';
   label: string;
 }
 
@@ -783,8 +783,8 @@ const MatchTracker: React.FC = () => {
       // For Level 1, set default reactions and skip reaction modal
       if (match.level === 1) {
         completedPoint.pointWinner = winner === 1 ? "playerOne" : "playerTwo";
-        completedPoint.p1Reaction = null;
-        completedPoint.p2Reaction = null;   
+        completedPoint.p1Reaction = 'noResponse';
+        completedPoint.p2Reaction = 'noResponse';   
         completedPoint.missedShot = null;
         completedPoint.placement = null;
         completedPoint.missedShotWay = null;
@@ -841,8 +841,8 @@ const MatchTracker: React.FC = () => {
       } else {
         setIsSecondService(false);
       // console.log('🎯 [endPoint] Toggled to first service');
-    }
-    
+      }
+      
     // If we didn't have currentPointData initially, initialize it for next point
     if (!currentPointData) {
       startNewPoint();
@@ -953,24 +953,65 @@ const MatchTracker: React.FC = () => {
     // Get the score state after this point
     const scoreAfterPoint = getCurrentGameScoreAfterPoint(newP1Points, newP2Points);
 
+    // Check if there's ball in court play (not just an ace or fault)
+    // Ball in court play means there was actual rally between players
+    const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+    const isBallInCourtPlay = hasChosenBallInCourt || (pointType && pointType !== 'ace' && pointType !== 'fault' && pointType !== 'doubleFault');
+    
+    // Rallies should be set for Level 3 (default to 'oneToFour' if null)
+    // For Level 3, rallies is required by backend, so always set a value
+    const ralliesValue = level === 3 
+      ? (selectedRallyLength || "oneToFour") 
+      : null;
+
     const baseData = {
       p1Score: scoreAfterPoint.p1Score,
       p2Score: scoreAfterPoint.p2Score,
       isSecondService: isSecondService,
       betweenPointDuration: Math.max(1, Math.floor((Date.now() - lastPointEndTime) / 1000)),
-      rallies: level === 3 ? (selectedRallyLength || "oneToFour") : null // Only for Level 3
+      rallies: ralliesValue
     };
+
+    // Validate reaction values - reactions cannot be null, must be one of the valid values
+    // Default to 'noResponse' if not provided or invalid
+    const validReactions = ['negativeResponse', 'positiveResponse', 'negativeSelfTalk', 'positiveSelfTalk', 'noResponse'];
+    const validatedP1Reaction = player1Reaction && validReactions.includes(player1Reaction) ? player1Reaction : 'noResponse';
+    const validatedP2Reaction = player2Reaction && validReactions.includes(player2Reaction) ? player2Reaction : 'noResponse';
+    
+    // Validate missedShot - must be one of ['net', 'wide', 'long', null]
+    const validMissedShots = ['net', 'wide', 'long'];
+    const validatedMissedShot = selectedMissedShot && validMissedShots.includes(selectedMissedShot) ? selectedMissedShot : null;
+    
+    // Placement should only be set when there's no error (missedShot is null)
+    // If there's an error (missedShot is set), placement must be null
+    const hasError = validatedMissedShot !== null && validatedMissedShot !== undefined;
+    const validPlacements = ['downTheLine', 'crossCourt', 'dropShot', 'downTheMiddle', 'shortAngle'];
+    const validatedPlacement = hasError ? null : (selectedPlacement && validPlacements.includes(selectedPlacement) ? selectedPlacement : null);
+    
+    // Validate missedShotWay - must be a valid shot type or null
+    // If null, keep it null (no default value)
+    // Valid shot types: 'forehand', 'backhand', 'forehandVolley', 'backhandVolley', 'forehandSlice', 'backhandSlice', 'forehandDropShot', 'backhandDropShot', 'forehandSwingingVolley', 'backhandSwingingVolley', 'overhead'
+    const validShotTypes = ['forehand', 'backhand', 'forehandVolley', 'backhandVolley', 'forehandSlice', 'backhandSlice', 'forehandDropShot', 'backhandDropShot', 'forehandSwingingVolley', 'backhandSwingingVolley', 'overhead'];
+    const validatedMissedShotWay = selectedShotType && validShotTypes.includes(selectedShotType) ? selectedShotType : null;
+    
+    // Validate servePlacement - for Level 3, this is required and must be one of ['wide', 'body', 't']
+    // Valid serve placements: 'wide', 'body', 't'
+    const validServePlacements = ['wide', 'body', 't'];
+    // For Level 3, servePlacement is required, so default to 'wide' if not provided
+    const validatedServePlacement = level === 3 
+      ? (selectedServePlacement && validServePlacements.includes(selectedServePlacement) ? selectedServePlacement : 'wide')
+      : (selectedServePlacement && validServePlacements.includes(selectedServePlacement) ? selectedServePlacement : null);
 
     // Use actual user selections instead of dummy data
     const pointData = {
       pointWinner: winner === 1 ? "playerOne" : "playerTwo",
-      p1Reaction: player1Reaction || null,
-      p2Reaction: player2Reaction || null,
-      missedShot: selectedShotPlacement || null,
-      placement: selectedShotPlacement || null,
-      missedShotWay: selectedShotType || null,
+      p1Reaction: validatedP1Reaction,
+      p2Reaction: validatedP2Reaction,
+      missedShot: validatedMissedShot,
+      placement: validatedPlacement,
+      missedShotWay: validatedMissedShotWay,
       type: pointType || null,
-      servePlacement: selectedServePlacement || null, // Use selected serve placement from zone click
+      servePlacement: validatedServePlacement,
       courtPosition: level === 3 ? 
                    (selectedCourtZone ? zoneTypeToCourtPosition(selectedCourtZone.type) : "leftCourt") : 
                    null // Always provide court position for Level 3, null for other levels
@@ -1131,7 +1172,6 @@ const MatchTracker: React.FC = () => {
     { type: 'crossCourt', label: 'Cross Court' },
     { type: 'downTheLine', label: 'Down The Line' },
     { type: 'downTheMiddle', label: 'Down The Middle' },
-    { type: 'wide', label: 'Wide' },
     { type: 'dropShot', label: 'Drop Shot' }
   ];
 
@@ -1140,13 +1180,15 @@ const MatchTracker: React.FC = () => {
   const shotTypes: ShotType[] = [
     { type: 'forehand', label: 'Forehand' },
     { type: 'backhand', label: 'Backhand' },
-            { type: 'volley', label: 'Volley' },
-    { type: 'forehandSlice', label: 'Forehand Slice' },
-    { type: 'backhandSlice', label: 'Backhand Slice' },
-    { type: 'overhead', label: 'Overhead' },
-    { type: 'forehandDropShot', label: 'Forehand Drop Shot' },
-    
-    { type: 'backhandDropShot', label: 'Backhand Drop Shot' }
+    { type: 'forehandVolley', label: 'Forehand Volley' },
+    { type: 'backhandVolley', label: 'Backhand Volley' },
+    { type: 'forehandSlice', label: 'Forehand slice' },
+    { type: 'backhandSlice', label: 'Backhand slice' },
+    { type: 'forehandDropShot', label: 'Forehand drop shot' },
+    { type: 'backhandDropShot', label: 'Backhand drop Shot' },
+    { type: 'forehandSwingingVolley', label: 'Forehand Swinging Volley' },
+    { type: 'backhandSwingingVolley', label: 'Backhand Swinging Volley' },
+    { type: 'overhead', label: 'Overhead' }
   ];
 
   const rallyLengths: RallyLength[] = [
@@ -1566,7 +1608,7 @@ const MatchTracker: React.FC = () => {
                     const mappedScores = game.scores.map((score: any) => ({
                       p1Score: score.p1Score,
                       p2Score: score.p2Score,
-                      pointWinner: score.pointWinner,
+                      winner: score.pointWinner,
                       isSecondService: score.isSecondService
                     }));
                     
@@ -1580,7 +1622,14 @@ const MatchTracker: React.FC = () => {
                   return mappedScores;
                 } else {
                   // For Level 2 & 3, send all data and duplicate last point
-                  const mappedScores = game.scores.map((score: any) => score);
+                  // Convert pointWinner to winner for API
+                  const mappedScores = game.scores.map((score: any) => {
+                    const { pointWinner, ...restScore } = score;
+                    return {
+                      ...restScore,
+                      winner: pointWinner
+                    };
+                  });
                   
                   // Duplicate the last point if there are scores
                   if (mappedScores.length > 0) {
@@ -1851,9 +1900,28 @@ const MatchTracker: React.FC = () => {
             filteredGameNumbers: setGames.map(g => g.gameNumber)
           });
 
+                      // Determine set winner based on scores
+                      // For tiebreak-only matches, winner is determined by tiebreak points (p1TotalScore/p2TotalScore)
+                      // For regular matches, winner is determined by set scores (player1/player2)
+                      const rules = getMatchRules(
+                        match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+                        match.scoringVariation,
+                        match.customTiebreakRules,
+                        match.noAdScoring
+                      );
+                      const isTiebreakOnly = rules.isTiebreakOnly;
+                      
+                      // For tiebreak-only matches, use p1TotalScore/p2TotalScore for winner determination
+                      // For regular matches, use set.player1/set.player2
+                      const p1Score = isTiebreakOnly ? set.p1TotalScore : set.player1;
+                      const p2Score = isTiebreakOnly ? set.p2TotalScore : set.player2;
+                      const setWinner = p1Score > p2Score ? 'playerOne' : 
+                                       p2Score > p1Score ? 'playerTwo' : null;
+
                       return {
               p1TotalScore: set.player1,
               p2TotalScore: set.player2,
+              winner: setWinner,
             games: setGames.length > 0 ? setGames.map(game => ({
               ...game,
               scores: (() => {
@@ -1862,7 +1930,7 @@ const MatchTracker: React.FC = () => {
                   const mappedScores = game.scores.map((score: any) => ({
                     p1Score: score.p1Score,
                     p2Score: score.p2Score,
-                    pointWinner: score.pointWinner,
+                    winner: score.pointWinner,
                     isSecondService: score.isSecondService
                   }));
                   
@@ -1876,11 +1944,71 @@ const MatchTracker: React.FC = () => {
                   return mappedScores;
                 } else {
                   // For Level 2 & 3, send all data and duplicate last point
-                  const mappedScores = game.scores.map((score: any) => ({
-                ...score,
-                type: convertPointType(score.type),
-                rallies: match.level === 3 ? convertRallyFormat(score.rallies) : score.rallies
-                  }));
+                  const mappedScores = game.scores.map((score: any) => {
+                    // Validate reaction values - reactions cannot be null, must be one of the valid values
+                    // Default to 'noResponse' if not provided or invalid
+                    const validReactions = ['negativeResponse', 'positiveResponse', 'negativeSelfTalk', 'positiveSelfTalk', 'noResponse'];
+                    const validatedP1Reaction = score.p1Reaction && validReactions.includes(score.p1Reaction) ? score.p1Reaction : 'noResponse';
+                    const validatedP2Reaction = score.p2Reaction && validReactions.includes(score.p2Reaction) ? score.p2Reaction : 'noResponse';
+                    
+                    // Validate missedShot - must be one of ['net', 'wide', 'long', null]
+                    // If null, keep it null (no default value)
+                    const validMissedShots = ['net', 'wide', 'long'];
+                    const validatedMissedShot = score.missedShot && validMissedShots.includes(score.missedShot) ? score.missedShot : null;
+                    
+                    // Placement should only be set when there's no error (missedShot is null)
+                    // If there's an error (missedShot is set), placement must be null
+                    // If null, keep it null (no default value)
+                    const validPlacements = ['downTheLine', 'crossCourt', 'dropShot', 'downTheMiddle', 'shortAngle'];
+                    const hasError = validatedMissedShot !== null && validatedMissedShot !== undefined;
+                    const validatedPlacement = hasError ? null : (score.placement && validPlacements.includes(score.placement) ? score.placement : null);
+                    
+                    // Validate missedShotWay - must be a valid shot type or null
+                    // If null, keep it null (no default value)
+                    // Valid shot types: 'forehand', 'backhand', 'forehandVolley', 'backhandVolley', 'forehandSlice', 'backhandSlice', 'forehandDropShot', 'backhandDropShot', 'forehandSwingingVolley', 'backhandSwingingVolley', 'overhead'
+                    const validShotTypes = ['forehand', 'backhand', 'forehandVolley', 'backhandVolley', 'forehandSlice', 'backhandSlice', 'forehandDropShot', 'backhandDropShot', 'forehandSwingingVolley', 'backhandSwingingVolley', 'overhead'];
+                    const validatedMissedShotWay = score.missedShotWay && validShotTypes.includes(score.missedShotWay) ? score.missedShotWay : null;
+                    
+                    // Validate servePlacement - for Level 3, this is required and must be one of ['wide', 'body', 't']
+                    // Valid serve placements: 'wide', 'body', 't'
+                    const validServePlacements = ['wide', 'body', 't'];
+                    // For Level 3, servePlacement is required, so default to 'wide' if not provided or invalid
+                    const validatedServePlacement = match.level === 3 
+                      ? (score.servePlacement && validServePlacements.includes(score.servePlacement) ? score.servePlacement : 'wide')
+                      : (score.servePlacement && validServePlacements.includes(score.servePlacement) ? score.servePlacement : null);
+                    
+                    // Validate rallies - for Level 3, rallies must always be set (default to 'oneToFour' if null)
+                    // Valid rally values: 'oneToFour', 'fiveToEight', 'nineToTwelve', 'thirteenToTwenty', 'twentyOnePlus'
+                    const validRallies = ['oneToFour', 'fiveToEight', 'nineToTwelve', 'thirteenToTwenty', 'twentyOnePlus'];
+                    let validatedRallies = null;
+                    
+                    if (match.level === 3) {
+                      // For Level 3, rallies is required - default to 'oneToFour' if null or invalid
+                      if (score.rallies && validRallies.includes(convertRallyFormat(score.rallies))) {
+                        validatedRallies = convertRallyFormat(score.rallies);
+                      } else {
+                        validatedRallies = 'oneToFour'; // Default to 'oneToFour' if null or invalid
+                      }
+                    } else {
+                      // For non-Level 3, rallies can be null
+                      validatedRallies = score.rallies ? convertRallyFormat(score.rallies) : null;
+                    }
+                    
+                    // Destructure to exclude pointWinner and add winner instead
+                    const { pointWinner, ...restScore } = score;
+                    return {
+                      ...restScore,
+                      winner: pointWinner,
+                      type: convertPointType(score.type),
+                      rallies: validatedRallies,
+                      p1Reaction: validatedP1Reaction,
+                      p2Reaction: validatedP2Reaction,
+                      missedShot: validatedMissedShot,
+                      placement: validatedPlacement,
+                      missedShotWay: validatedMissedShotWay,
+                      servePlacement: validatedServePlacement
+                    };
+                  });
                   
                   // Duplicate the last point if there are scores
                   if (mappedScores.length > 0) {
@@ -2175,9 +2303,6 @@ const MatchTracker: React.FC = () => {
       // Blue side (Player 2) clicked means Green (Player 1) wins
       const winner = zone.player === 1 ? 2 : 1;
       setLastPointWinner(winner);
-      
-      // Set ball placement based on zone type (W/B/T)
-      setSelectedShotPlacement(zone.type === 'W' ? 'wide' : zone.type === 'B' ? 'long' : 'short');
       
       // Set default selections
       setSelectedOutcome('winner');
@@ -2574,6 +2699,8 @@ const MatchTracker: React.FC = () => {
     setSelectedServePlacement(null);
     // Reset fault count for new point
     setFaultCount(0);
+    // Start tracking the new point
+    startNewPoint();
     // The in-between timer will automatically stop when isPointActive becomes true
   };
 
@@ -3433,14 +3560,21 @@ const MatchTracker: React.FC = () => {
     setRedoHistory([]);
 
     // Update points
+    // Use selectedOutcome if available (from ace/fault modals), otherwise use selectedPointOutcome
+    const pointTypeForTracking = selectedOutcome || selectedPointOutcome || (lastPointWinner === 1 ? "p1Winner" : "p2Winner");
+    
     if (lastPointWinner === 1) {
       setPlayer1(prev => ({ ...prev, points: prev.points + 1 }));
-              // Track point for API submission
-        trackPointWithLevel(1, selectedPointOutcome || "p1Winner", match.level);
+      // Track point for API submission - but only if we're not using the reaction modal completion flow
+      // The reaction modal completion flow (handleBallInCourtComplete) will handle tracking separately
+      // For handlePointOutcomeComplete, we should not track here to avoid double tracking
+      // trackPointWithLevel(1, pointTypeForTracking, match.level);
     } else {
       setPlayer2(prev => ({ ...prev, points: prev.points + 1 }));
-        // Track point for API submission
-        trackPointWithLevel(2, selectedPointOutcome || "p2Winner", match.level);
+      // Track point for API submission - but only if we're not using the reaction modal completion flow
+      // The reaction modal completion flow (handleBallInCourtComplete) will handle tracking separately
+      // For handlePointOutcomeComplete, we should not track here to avoid double tracking
+      // trackPointWithLevel(2, pointTypeForTracking, match.level);
     }
 
     // Reset modal state
@@ -3701,7 +3835,7 @@ const MatchTracker: React.FC = () => {
             player1: p1GamesInCurrentSet,
             player2: p2GamesInCurrentSet,
             scores: []
-          };
+            };
         }
         // For completed sets, use 0-0 (games are already counted in set scores)
         return { player1: 0, player2: 0, scores: [] };
@@ -3810,8 +3944,8 @@ const MatchTracker: React.FC = () => {
           p1Points
         });
         return {
-          ...prev,
-          sets: totalP1Sets,
+        ...prev,
+        sets: totalP1Sets,
           games: totalP1Games,
           points: newPoints
         };
@@ -3826,8 +3960,8 @@ const MatchTracker: React.FC = () => {
           p2Points
         });
         return {
-          ...prev,
-          sets: totalP2Sets,
+        ...prev,
+        sets: totalP2Sets,
           games: totalP2Games,
           points: newPoints
         };
@@ -3971,22 +4105,26 @@ const MatchTracker: React.FC = () => {
     let newP1Points = player1.points;
     let newP2Points = player2.points;
     
+    // Update player points (but don't call addPoint here - we'll track the point below)
     if (lastPointWinner === 1) {
       newP1Points = player1.points + 1;
-      addPoint(1);
+      setPlayer1(prev => ({ ...prev, points: prev.points + 1 }));
       // console.log('🎯 [Debug] Added point to Player 1, new score:', newP1Points);
     } else {
       newP2Points = player2.points + 1;
-      addPoint(2);
+      setPlayer2(prev => ({ ...prev, points: prev.points + 1 }));
       // console.log('🎯 [Debug] Added point to Player 2, new score:', newP2Points);
     }
 
     // Use the actual selected values from the Ball In Court modal
     let pointType = selectedOutcome || 'winner';
     let courtPosition = 'leftCourt'; // Default, but should be set based on actual zone clicked
-    let missedShotWay = selectedShotWay || 'forehand';
-    let missedShot = selectedMissedShot || 'wide';
-    let placement = selectedPlacement || 'downTheLine';
+    let missedShotWay = selectedShotWay || null;
+    let missedShot = selectedMissedShot || null;
+    let placement = selectedPlacement || null;
+    
+    // For Level 3, rallies is required by backend (default to 'oneToFour' if null)
+    // Always set rallies for Level 3, even for aces/faults
     let rallies = match.level === 3 ? (selectedRallyLength || 'oneToFour') : null;
     
           // If this came from outfield (Ball In Court flow), we should have proper data
@@ -4006,10 +4144,11 @@ const MatchTracker: React.FC = () => {
       // For outfield clicks, we should have selectedOutcome and selectedRallyLength
       // The type should be what was selected in the Ball In Court modal
       pointType = selectedOutcome || 'winner';
+      // For Level 3, rallies is required by backend (default to 'oneToFour' if null)
       rallies = match.level === 3 ? (selectedRallyLength || 'oneToFour') : null;
-      missedShotWay = selectedShotWay || 'forehand';
-      missedShot = selectedMissedShot || 'wide';
-      placement = selectedPlacement || 'downTheLine';
+      missedShotWay = selectedShotWay || null;
+      missedShot = selectedMissedShot || null;
+      placement = selectedPlacement || null;
       
       // Use the selected ball outcome to determine court position
       // console.log('🎯 [Debug] About to determine court position:', {
@@ -4070,6 +4209,10 @@ const MatchTracker: React.FC = () => {
       // For direct outcomes like ace, return_error, etc.
       pointType = selectedOutcome || 'ace';
       // These outcomes don't have shot details, so use defaults
+      // For Level 3, rallies is required by backend (default to 'oneToFour' if null)
+      if (match.level === 3 && !rallies) {
+        rallies = 'oneToFour';
+      }
     }
 
     // Check if this is a game-winning point
@@ -4149,7 +4292,42 @@ const MatchTracker: React.FC = () => {
 
     // console.log('🎯 [Debug] Point completed with reactions:', completedPoint);
     
-   
+    // Handle game logic after point completion
+    setTimeout(() => {
+      // Calculate the new point totals correctly
+      const p1Total = newP1Points;
+      const p2Total = newP2Points;
+      
+      // Handle tiebreak server switching: 1-1-2-2-2-2 pattern
+      if (match.isTieBreak) {
+        const totalPoints = p1Total + p2Total;
+        // Switch after point 1, point 2, then every 2 points after that (4, 6, 8, 10...)
+        if (totalPoints === 1 || totalPoints === 2 || (totalPoints > 2 && totalPoints % 2 === 0)) {
+          switchServer();
+          // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
+        }
+      }
+      
+      const gameWinner = checkGameWinner(p1Total, p2Total);
+      
+      if (gameWinner) {
+        // Use helper function for game win logic
+        handleGameWin(gameWinner);
+        // Save state after game completion
+        setTimeout(() => saveMatchState(), 100);
+      } else {
+        // Use helper function for deuce/advantage logic
+        handleDeuceAdvantage(p1Total, p2Total);
+        // Save state after point
+        setTimeout(() => saveMatchState(), 100);
+      }
+      
+      // For Level 3, start in-between timer after point
+      if (match.level === 3) {
+        setIsPointActive(false);
+        setInBetweenTime(0);
+      }
+    }, 0);
 
     // Clear session storage flags to reset court to normal state
     sessionStorage.removeItem('ballInCourtChoice');
@@ -4609,8 +4787,10 @@ const MatchTracker: React.FC = () => {
             
             {/* Court Layout - Same for all levels */}
             {/* Equal courts: Left x=70 to x=510 (440px), Net x=510 to x=590 (80px), Right x=590 to x=1030 (440px) */}
-            <rect x="70" y="40" width="440" height="520" fill={getCourtColors().leftCourt} />
-            <rect x="590" y="40" width="440" height="520" fill={getCourtColors().rightCourt} />
+            {/* Left court area - ensure it's rendered with proper fill and not affected by net */}
+            <rect x="70" y="40" width="440" height="520" fill={getCourtColors().leftCourt} style={{ pointerEvents: 'none' }} />
+            {/* Right court area */}
+            <rect x="590" y="40" width="440" height="520" fill={getCourtColors().rightCourt} style={{ pointerEvents: 'none' }} />
                 <line x1="510" y1="40" x2="510" y2="560" stroke="white" strokeWidth="4" />
                 <line x1="590" y1="40" x2="590" y2="560" stroke="white" strokeWidth="4" />
             {/* Baseline center marks (drawn later to sit above overlays) */}
@@ -4629,26 +4809,50 @@ const MatchTracker: React.FC = () => {
             {/* Right half outside W|B|T strip (x=830 to x=1030) */}
             <rect x="830" y="40" width="200" height="520" fill={getCourtColors().rightCourt} opacity="0.35" stroke="#FFFFFF" strokeWidth="2" style={{ pointerEvents: 'none' }} />
             {/* Click-capture for in-court outzones (serve faults) */}
+            {(() => {
+              const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+              const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+              const leftPlayer = courtRotation === 0 ? 1 : 2;
+              const isServerCourt = (leftPlayer === 1 && player1.isServing) || (leftPlayer === 2 && player2.isServing);
+              const isLeftClickable = isGameRunning && isPointActive && (!isServingPhase || !isServerCourt);
+              
+              return (
             <rect
               x="70" y="40" width="200" height="520"
               fill="transparent"
-              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+                  style={{ 
+                    cursor: isLeftClickable ? 'pointer' : 'not-allowed',
+                    opacity: isServingPhase && isServerCourt ? 0.3 : 1
+                  }}
               onClick={() => {
-                if (!(isGameRunning && isPointActive)) return;
-                const leftPlayer = courtRotation === 0 ? 1 : 2;
+                    if (!isLeftClickable) return;
                 handleCourtZoneClick({ id: 'left_outzone', label: 'Outzone Left', x: 70, y: servingPosition === 'up' ? 40 : 560, width: 200, height: 520, player: leftPlayer, type: 'O' } as any);
               }}
             />
+              );
+            })()}
+            {(() => {
+              const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+              const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+              const rightPlayer = courtRotation === 0 ? 2 : 1;
+              const isServerCourt = (rightPlayer === 1 && player1.isServing) || (rightPlayer === 2 && player2.isServing);
+              const isRightClickable = isGameRunning && isPointActive && (!isServingPhase || !isServerCourt);
+              
+              return (
             <rect
               x="830" y="40" width="200" height="520"
               fill="transparent"
-              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+                  style={{ 
+                    cursor: isRightClickable ? 'pointer' : 'not-allowed',
+                    opacity: isServingPhase && isServerCourt ? 0.3 : 1
+                  }}
               onClick={() => {
-                if (!(isGameRunning && isPointActive)) return;
-                const rightPlayer = courtRotation === 0 ? 2 : 1;
+                    if (!isRightClickable) return;
                 handleCourtZoneClick({ id: 'right_outzone', label: 'Outzone Right', x: 830, y: servingPosition === 'up' ? 40 : 560, width: 200, height: 520, player: rightPlayer, type: 'O' } as any);
               }}
             />
+              );
+            })()}
 
             {/* Horizontal outfield (top and bottom bands) - click as serve faults */}
             {/* Top band split by halves aligned with court widths */}
@@ -4658,13 +4862,32 @@ const MatchTracker: React.FC = () => {
             <rect x="70" y="560" width="440" height="40" fill={getCourtColors().leftCourt} opacity="0.6" stroke="#FFFFFF" strokeWidth="3" rx="2" style={{ pointerEvents: 'none' }} />
             <rect x="590" y="560" width="440" height="40" fill={getCourtColors().rightCourt} opacity="0.6" stroke="#FFFFFF" strokeWidth="3" rx="2" style={{ pointerEvents: 'none' }} />
             {/* Click-capture for horizontal outfields (serve faults) */}
+            {(() => {
+              const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+              const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+              
+              // Top outfield - check if it belongs to server
+              // Top half (y=0 to y=40) belongs to left court player when servingPosition is 'up'
+              const topPlayer = servingPosition === 'up' ? (courtRotation === 0 ? 1 : 2) : (courtRotation === 0 ? 2 : 1);
+              const isTopServerCourt = (topPlayer === 1 && player1.isServing) || (topPlayer === 2 && player2.isServing);
+              const isTopClickable = isGameRunning && isPointActive && (!isServingPhase || !isTopServerCourt);
+              
+              // Bottom outfield - check if it belongs to server
+              const bottomPlayer = servingPosition === 'up' ? (courtRotation === 0 ? 2 : 1) : (courtRotation === 0 ? 1 : 2);
+              const isBottomServerCourt = (bottomPlayer === 1 && player1.isServing) || (bottomPlayer === 2 && player2.isServing);
+              const isBottomClickable = isGameRunning && isPointActive && (!isServingPhase || !isBottomServerCourt);
+              
+              return (
+                <>
             <rect
               x="70" y="0" width="960" height="40"
               fill="transparent"
-              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+                    style={{ 
+                      cursor: isTopClickable ? 'pointer' : 'not-allowed',
+                      opacity: isServingPhase && isTopServerCourt ? 0.3 : 1
+                    }}
               onClick={() => {
-                if (!(isGameRunning && isPointActive)) return;
-                // Top band: choose player by half clicked inside handler if needed; default to server's opponent field
+                      if (!isTopClickable) return;
                 const player = (courtRotation === 0 ? 1 : 2);
                 handleCourtZoneClick({ id: 'top_outfield', label: 'Top Outfield', x: 70, y: 0, width: 960, height: 40, player, type: 'O' } as any);
               }}
@@ -4672,13 +4895,19 @@ const MatchTracker: React.FC = () => {
             <rect
               x="70" y="560" width="960" height="40"
               fill="transparent"
-              style={{ cursor: (isGameRunning && isPointActive) ? 'pointer' : 'not-allowed' }}
+                    style={{ 
+                      cursor: isBottomClickable ? 'pointer' : 'not-allowed',
+                      opacity: isServingPhase && isBottomServerCourt ? 0.3 : 1
+                    }}
               onClick={() => {
-                if (!(isGameRunning && isPointActive)) return;
+                      if (!isBottomClickable) return;
                 const player = (courtRotation === 0 ? 1 : 2);
                 handleCourtZoneClick({ id: 'bottom_outfield', label: 'Bottom Outfield', x: 70, y: 560, width: 960, height: 40, player, type: 'O' } as any);
               }}
             />
+                </>
+              );
+            })()}
 
             {/* Baseline center marks (visible above overlays) */}
             <line x1="70" y1="300" x2="82" y2="300" stroke="white" strokeWidth="4" strokeLinecap="round" />
@@ -4712,24 +4941,26 @@ const MatchTracker: React.FC = () => {
                     // Show two nets with court colors and mesh design - RESPECT COURT ROTATION
                     return (
                       <>
-                        {/* Left net - color depends on court rotation */}
+                        {/* Left net - color depends on court rotation - extends full height */}
                         <rect 
-                          x="510" y="40" width="40" height="520" 
+                          x="510" y="0" width="40" height="600" 
                           fill={courtRotation === 0 ? "#D4FF5A" : "#4C6BFF"} 
                           style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                           onClick={() => isGameRunning && handleNetClick(courtRotation === 0 ? 1 : 2)}
                         />
-                        {/* Mesh pattern for left net */}
+                        {/* Mesh pattern for left net - extends full height */}
                         <g stroke={courtRotation === 0 ? "#9ACD32" : "#2F3FB0"} strokeWidth="1" opacity="0.6" style={{ pointerEvents: 'none' }}>
                           {/* Vertical mesh lines */}
-                          <line x1="513" y1="40" x2="513" y2="560" />
-                          <line x1="517" y1="40" x2="517" y2="560" />
-                          <line x1="521" y1="40" x2="521" y2="560" />
-                          <line x1="525" y1="40" x2="525" y2="560" />
-                          <line x1="529" y1="40" x2="529" y2="560" />
-                          <line x1="533" y1="40" x2="533" y2="560" />
-                          <line x1="537" y1="40" x2="537" y2="560" />
-                          {/* Horizontal mesh lines */}
+                          <line x1="513" y1="0" x2="513" y2="600" />
+                          <line x1="517" y1="0" x2="517" y2="600" />
+                          <line x1="521" y1="0" x2="521" y2="600" />
+                          <line x1="525" y1="0" x2="525" y2="600" />
+                          <line x1="529" y1="0" x2="529" y2="600" />
+                          <line x1="533" y1="0" x2="533" y2="600" />
+                          <line x1="537" y1="0" x2="537" y2="600" />
+                          {/* Horizontal mesh lines - extended to cover full height */}
+                          <line x1="510" y1="20" x2="550" y2="20" />
+                          <line x1="510" y1="40" x2="550" y2="40" />
                           <line x1="510" y1="60" x2="550" y2="60" />
                           <line x1="510" y1="80" x2="550" y2="80" />
                           <line x1="510" y1="100" x2="550" y2="100" />
@@ -4754,29 +4985,34 @@ const MatchTracker: React.FC = () => {
                           <line x1="510" y1="480" x2="550" y2="480" />
                           <line x1="510" y1="500" x2="550" y2="500" />
                           <line x1="510" y1="520" x2="550" y2="520" />
+                          <line x1="510" y1="540" x2="550" y2="540" />
+                          <line x1="510" y1="560" x2="550" y2="560" />
+                          <line x1="510" y1="580" x2="550" y2="580" />
                         </g>
                         <text x="530" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "#86909C" : "white"} transform="rotate(-90, 530, 300)" style={{ pointerEvents: 'none' }}>
                           {courtRotation === 0 ? player1.name : player2.name}
                         </text>
                         
-                        {/* Right net - color depends on court rotation */}
+                        {/* Right net - color depends on court rotation - extends full height */}
                         <rect 
-                          x="550" y="40" width="40" height="520" 
+                          x="550" y="0" width="40" height="600" 
                           fill={courtRotation === 0 ? "#4C6BFF" : "#D4FF5A"} 
                           style={{ cursor: isGameRunning ? "pointer" : "not-allowed" }}
                           onClick={() => isGameRunning && handleNetClick(courtRotation === 0 ? 2 : 1)}
                         />
-                        {/* Mesh pattern for right net */}
+                        {/* Mesh pattern for right net - extends full height */}
                         <g stroke={courtRotation === 0 ? "#2F3FB0" : "#9ACD32"} strokeWidth="1" opacity="0.6" style={{ pointerEvents: 'none' }}>
                           {/* Vertical mesh lines */}
-                          <line x1="554" y1="40" x2="554" y2="560" />
-                          <line x1="558" y1="40" x2="558" y2="560" />
-                          <line x1="562" y1="40" x2="562" y2="560" />
-                          <line x1="566" y1="40" x2="566" y2="560" />
-                          <line x1="570" y1="40" x2="570" y2="560" />
-                          <line x1="574" y1="40" x2="574" y2="560" />
-                          <line x1="578" y1="40" x2="578" y2="560" />
-                          {/* Horizontal mesh lines */}
+                          <line x1="554" y1="0" x2="554" y2="600" />
+                          <line x1="558" y1="0" x2="558" y2="600" />
+                          <line x1="562" y1="0" x2="562" y2="600" />
+                          <line x1="566" y1="0" x2="566" y2="600" />
+                          <line x1="570" y1="0" x2="570" y2="600" />
+                          <line x1="574" y1="0" x2="574" y2="600" />
+                          <line x1="578" y1="0" x2="578" y2="600" />
+                          {/* Horizontal mesh lines - extended to cover full height */}
+                          <line x1="550" y1="20" x2="590" y2="20" />
+                          <line x1="550" y1="40" x2="590" y2="40" />
                           <line x1="550" y1="60" x2="590" y2="60" />
                           <line x1="550" y1="80" x2="590" y2="80" />
                           <line x1="550" y1="100" x2="590" y2="100" />
@@ -4801,6 +5037,9 @@ const MatchTracker: React.FC = () => {
                           <line x1="550" y1="480" x2="590" y2="480" />
                           <line x1="550" y1="500" x2="590" y2="500" />
                           <line x1="550" y1="520" x2="590" y2="520" />
+                          <line x1="550" y1="540" x2="590" y2="540" />
+                          <line x1="550" y1="560" x2="590" y2="560" />
+                          <line x1="550" y1="580" x2="590" y2="580" />
                         </g>
                         <text x="570" y="300" textAnchor="middle" fontSize="20" fontWeight="bold" fill={courtRotation === 0 ? "white" : "#86909C"} transform="rotate(-90, 570, 300)" style={{ pointerEvents: 'none' }}>
                           {courtRotation === 0 ? player2.name : player1.name}
@@ -4811,27 +5050,29 @@ const MatchTracker: React.FC = () => {
                     // Show neutral net with white background and NET text
                     return (
                       <>
-                        {/* Neutral net with white background - clickable for serve faults */}
+                        {/* Neutral net with white background - clickable for serve faults - extends full height */}
                         <rect 
-                          x="510" y="40" width="80" height="520" 
+                          x="510" y="0" width="80" height="600" 
                           fill="white" 
                           style={{ cursor: isGameRunning && isPointActive ? "pointer" : "default" }}
                           onClick={() => isGameRunning && isPointActive && handleNetClick(1)}
                         />
-                        {/* NET text repeated 12 times - evenly justified across full height */}
+                        {/* NET text repeated evenly across full height (14 times for better coverage) */}
                         <g fill="#1B2B5B" fontSize="18" fontWeight="bold" style={{ pointerEvents: 'none' }}>
-                          <text x="550" y="60" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 60)">NET</text>
-                          <text x="550" y="104" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 104)">NET</text>
-                          <text x="550" y="148" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 148)">NET</text>
-                          <text x="550" y="192" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 192)">NET</text>
-                          <text x="550" y="236" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 236)">NET</text>
-                          <text x="550" y="280" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 280)">NET</text>
-                          <text x="550" y="324" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 324)">NET</text>
-                          <text x="550" y="368" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 368)">NET</text>
-                          <text x="550" y="412" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 412)">NET</text>
-                          <text x="550" y="456" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 456)">NET</text>
-                          <text x="550" y="500" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 500)">NET</text>
-                          <text x="550" y="544" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 544)">NET</text>
+                          <text x="550" y="30" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 30)">NET</text>
+                          <text x="550" y="73" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 73)">NET</text>
+                          <text x="550" y="116" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 116)">NET</text>
+                          <text x="550" y="159" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 159)">NET</text>
+                          <text x="550" y="202" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 202)">NET</text>
+                          <text x="550" y="245" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 245)">NET</text>
+                          <text x="550" y="288" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 288)">NET</text>
+                          <text x="550" y="331" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 331)">NET</text>
+                          <text x="550" y="374" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 374)">NET</text>
+                          <text x="550" y="417" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 417)">NET</text>
+                          <text x="550" y="460" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 460)">NET</text>
+                          <text x="550" y="503" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 503)">NET</text>
+                          <text x="550" y="546" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 546)">NET</text>
+                          <text x="550" y="589" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90, 550, 589)">NET</text>
                         </g>
                       </>
                     );
@@ -4974,14 +5215,23 @@ const MatchTracker: React.FC = () => {
                 {/* Clickable zones for Level 3 */}
                 {courtZones.map((zone) => {
                   // Determine which player this zone belongs to based on court rotation
+                  // courtRotation === 0: P1 on left, P2 on right (normal)
+                  // courtRotation === 1: P2 on left, P1 on right (swapped)
                   const actualPlayer = courtRotation === 0 ? zone.player : (zone.player === 1 ? 2 : 1);
                   
-                  // During a serve, only the server's own field is disabled (can't serve to your own side)
-                  // Wrong service boxes are clickable and will trigger fault/double fault
-                  const isDisabledDuringServe = false;
+                  // Check if we're in serving phase
+                  const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+                  const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
                   
-                  // Zone is clickable if game is running and point is active
-                  const isClickable = isGameRunning && isPointActive;
+                  // During a serve, the server's own court is disabled (can't serve to your own side)
+                  // Only the opponent's court (where serve should land) is clickable
+                  // Simplified: actualPlayer represents who is currently on that side, so check if they're serving
+                  const isServerCourt = (actualPlayer === 1 && player1.isServing) || (actualPlayer === 2 && player2.isServing);
+                  
+                  const isDisabledDuringServe = isServingPhase && isServerCourt;
+                  
+                  // Zone is clickable if game is running, point is active, and not disabled during serve
+                  const isClickable = isGameRunning && isPointActive && !isDisabledDuringServe;
                   
                   return (
                     <rect
@@ -4992,7 +5242,10 @@ const MatchTracker: React.FC = () => {
                       height={zone.height}
                       fill="transparent"
                       stroke="none"
-                      style={{ cursor: isClickable ? "pointer" : "not-allowed" }}
+                      style={{ 
+                        cursor: isClickable ? "pointer" : "not-allowed",
+                        opacity: isDisabledDuringServe ? 0.3 : 1
+                      }}
                       onClick={() => isClickable && handleCourtZoneClick({
                         ...zone,
                         player: actualPlayer
@@ -5060,24 +5313,46 @@ const MatchTracker: React.FC = () => {
             {match.level !== 3 && (
               <>
                 {/* Left Court Scoring Area with Level 3 Visual Style */}
+                {(() => {
+                  const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+                  const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+                  const leftCourtPlayer = courtRotation === 0 ? 1 : 2;
+                  const isServerCourt = (leftCourtPlayer === 1 && player1.isServing) || (leftCourtPlayer === 2 && player2.isServing);
+                  const isClickable = isGameRunning && (!isServingPhase || !isServerCourt);
+                  
+                  return (
                 <rect 
                   x="270" y="40" width="240" height="520" 
                   fill={isGameRunning ? (getCourtColors().leftCourt === '#D4FF5A' ? "#49682E" : "#2F3FB0") : "#6B7280"} 
-                  onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 1 : 2)} 
+                      onClick={() => isClickable && addPoint(courtRotation === 0 ? 1 : 2)} 
                   style={{ 
-                    cursor: isGameRunning ? "pointer" : "not-allowed" 
+                        cursor: isClickable ? "pointer" : "not-allowed",
+                        opacity: isServingPhase && isServerCourt ? 0.5 : 1
                   }} 
                 />
+                  );
+                })()}
                 
                 {/* Right Court Scoring Area with Level 3 Visual Style */}
+                {(() => {
+                  const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+                  const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+                  const rightCourtPlayer = courtRotation === 0 ? 2 : 1;
+                  const isServerCourt = (rightCourtPlayer === 1 && player1.isServing) || (rightCourtPlayer === 2 && player2.isServing);
+                  const isClickable = isGameRunning && (!isServingPhase || !isServerCourt);
+                  
+                  return (
                 <rect 
                   x="590" y="40" width="240" height="520" 
                   fill={isGameRunning ? (getCourtColors().rightCourt === '#D4FF5A' ? "#49682E" : "#2F3FB0") : "#6B7280"} 
-                  onClick={() => isGameRunning && addPoint(courtRotation === 0 ? 2 : 1)} 
+                      onClick={() => isClickable && addPoint(courtRotation === 0 ? 2 : 1)} 
                   style={{ 
-                    cursor: isGameRunning ? "pointer" : "not-allowed" 
+                        cursor: isClickable ? "pointer" : "not-allowed",
+                        opacity: isServingPhase && isServerCourt ? 0.5 : 1
                   }} 
                 />
+                  );
+                })()}
                 
                 {/* Net Design (Level 3 Style) - Smaller Width - Clickable for serve faults */}
                 <rect 
@@ -5134,22 +5409,44 @@ const MatchTracker: React.FC = () => {
                 )}
                 
                 {/* Overlay Shade for Tap-to-Score Areas (Clickable - Foreground) */}
+                {(() => {
+                  const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+                  const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+                  const leftCourtPlayer = courtRotation === 0 ? 1 : 2;
+                  const isServerCourt = (leftCourtPlayer === 1 && player1.isServing) || (leftCourtPlayer === 2 && player2.isServing);
+                  const isClickable = isGameRunning && !isPaused && (!isServingPhase || !isServerCourt);
+                  
+                  return (
                 <rect 
                   x="310" y="40" width="240" height="520" 
                   fill="rgba(0, 0, 0, 0.1)" 
                   style={{ 
-                    cursor: (isGameRunning && !isPaused) ? "pointer" : "not-allowed" 
+                        cursor: isClickable ? "pointer" : "not-allowed",
+                        opacity: isServingPhase && isServerCourt ? 0.3 : 1
                   }} 
-                  onClick={() => isGameRunning && !isPaused && addPoint(courtRotation === 0 ? 1 : 2)} 
-                />
+                      onClick={() => isClickable && addPoint(courtRotation === 0 ? 1 : 2)} 
+                    />
+                  );
+                })()}
+                {(() => {
+                  const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
+                  const isServingPhase = isPointActive && !hasChosenBallInCourt && faultCount < 2;
+                  const rightCourtPlayer = courtRotation === 0 ? 2 : 1;
+                  const isServerCourt = (rightCourtPlayer === 1 && player1.isServing) || (rightCourtPlayer === 2 && player2.isServing);
+                  const isClickable = isGameRunning && !isPaused && (!isServingPhase || !isServerCourt);
+                  
+                  return (
                 <rect 
                   x="630" y="40" width="240" height="520" 
                   fill="rgba(0, 0, 0, 0.1)" 
                   style={{ 
-                    cursor: (isGameRunning && !isPaused) ? "pointer" : "not-allowed" 
+                        cursor: isClickable ? "pointer" : "not-allowed",
+                        opacity: isServingPhase && isServerCourt ? 0.3 : 1
                   }} 
-                  onClick={() => isGameRunning && !isPaused && addPoint(courtRotation === 0 ? 2 : 1)} 
+                      onClick={() => isClickable && addPoint(courtRotation === 0 ? 2 : 1)} 
                 />
+                  );
+                })()}
                 
                 {/* Zone Labels (Level 3 Style) */}
                 <text x="430" y="95" textAnchor="middle" fontSize="12" fill="white">W</text>
@@ -5457,7 +5754,13 @@ const MatchTracker: React.FC = () => {
                     setMatchReadyToStart(false); // Hide the Start Match button
                     
                     // Initialize point tracking for API submission
-                    startNewPoint();
+                    // For Level 3, don't start the point immediately - wait for user to click "Start Serve"
+                    if (match.level !== 3) {
+                      startNewPoint();
+                    } else {
+                      // For Level 3, set isPointActive to false so the Start Serve button shows
+                      setIsPointActive(false);
+                    }
                     setLastPointEndTime(Date.now());
                     
                     // Clear any previous localStorage to start fresh
@@ -5838,11 +6141,6 @@ const MatchTracker: React.FC = () => {
                     <h3 className="text-xl font-semibold text-gray-800">Shot Placement</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {shotPlacements
-                        .filter(placement => {
-                          // Remove wide when outcome is 'returnWinner'
-                          if (selectedOutcome === 'returnWinner' && placement.type === 'wide') return false;
-                          return true;
-                        })
                         .map((placement) => (
                         <button
                           key={placement.type}
@@ -5866,7 +6164,7 @@ const MatchTracker: React.FC = () => {
                       {shotTypes.filter(type => 
                         // Remove volleys and overheads for return winners and return errors
                         (selectedOutcome === 'returnWinner' || selectedOutcome === 'forced_error' || selectedOutcome === 'unforced_error') ?
-                        (!['volley', 'overhead'].includes(type.type) && !type.label.toLowerCase().includes('volley')) :
+                        (!['forehandVolley', 'backhandVolley', 'forehandSwingingVolley', 'backhandSwingingVolley', 'overhead'].includes(type.type) && !type.label.toLowerCase().includes('volley')) :
                         true // Keep all shot types for other outcomes
                       ).map((type) => (
                         <button
@@ -6268,8 +6566,6 @@ const MatchTracker: React.FC = () => {
                             .filter(place => {
                               // Remove dropShot when error zone is 'long'
                               if (selectedMissedShot === 'long' && place === 'dropShot') return false;
-                              // Remove wide when outcome is 'returnWinner'
-                              if (selectedOutcome === 'returnWinner' && place === 'wide') return false;
                               return true;
                             })
                             .map((place) => (
