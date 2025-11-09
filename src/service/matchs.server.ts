@@ -236,6 +236,7 @@ export interface UpdateMatchStatusRequest {
 
 export interface SaveMatchProgressRequest {
   trackingLevel: TrackingLevel;
+  totalGameTime: number; // Total game time in seconds
   sets: MatchSetData[];
 }
 

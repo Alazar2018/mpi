@@ -713,6 +713,64 @@ const MatchTracker: React.FC = () => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const normalizePointTypeForWinner = (pointType: string | null, winner: 1 | 2): string | null => {
+    if (!pointType) {
+      return null;
+    }
+
+    const preserves = [
+      'ace',
+      'fault',
+      'doubleFault',
+      'returnWinner',
+      'returnError',
+      'p1Winner',
+      'p2Winner',
+      'p1ForcedError',
+      'p2ForcedError',
+      'p1UnforcedError',
+      'p2UnforcedError',
+      'p1UnforcedReturnError',
+      'p2UnforcedReturnError'
+    ];
+
+    if (preserves.includes(pointType)) {
+      return pointType;
+    }
+
+    const losingPlayerPrefix = winner === 1 ? 'p2' : 'p1';
+    const winningPlayerPrefix = winner === 1 ? 'p1' : 'p2';
+    const sanitized = pointType.replace(/[^a-zA-Z]/g, '').toLowerCase();
+
+    switch (sanitized) {
+      case 'forcederror':
+      case 'forcedreturnerror':
+        return `${losingPlayerPrefix}ForcedError`;
+      case 'unforcederror':
+      case 'returnerror':
+      case 'returnunforcederror':
+        return `${losingPlayerPrefix}UnforcedError`;
+      case 'winner':
+        return `${winningPlayerPrefix}Winner`;
+      case 'doublefault':
+        return 'doubleFault';
+      case 'servicewinner':
+        return 'ace';
+      case 'fault':
+        return 'fault';
+      case 'ace':
+        return 'ace';
+      case 'returnwinner':
+        return 'returnWinner';
+      case 'p1winner':
+        return 'p1Winner';
+      case 'p2winner':
+        return 'p2Winner';
+      default:
+        return pointType;
+    }
+  };
+
   // Point tracking helper functions
   const startNewPoint = () => {
     setCurrentPointData({
@@ -771,11 +829,13 @@ const MatchTracker: React.FC = () => {
       courtPosition: null
     };
       
+      const resolvedPointType = normalizePointTypeForWinner(pointType, winner);
+
       const completedPoint: PointScore = {
       ...pointData,
         p1Score: scoreAfterPoint.p1Score,
         p2Score: scoreAfterPoint.p2Score,
-        type: pointType,
+        type: resolvedPointType,
         betweenPointDuration,
         ...additionalData
       };
@@ -871,6 +931,21 @@ const MatchTracker: React.FC = () => {
     const p1Points = player1.points;
     const p2Points = player2.points;
     
+    const rules = getMatchRules(
+      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
+    
+    // For tiebreak-only formats or tiebreak games, use numeric scoring
+    if (rules.isTiebreakOnly || match.isTieBreak) {
+      return {
+        p1Score: p1Points.toString(),
+        p2Score: p2Points.toString()
+      };
+    }
+    
     // If either player has 4+ points and leads by 2, game is over
     if ((p1Points >= 4 && p1Points > p2Points + 1) || (p2Points >= 4 && p2Points > p1Points + 1)) {
       return { p1Score: "0", p2Score: "0" }; // Game over, scores reset
@@ -957,10 +1032,12 @@ const MatchTracker: React.FC = () => {
     // Get the score state after this point
     const scoreAfterPoint = getCurrentGameScoreAfterPoint(newP1Points, newP2Points);
 
+    const resolvedPointType = normalizePointTypeForWinner(pointType, winner);
+
     // Check if there's ball in court play (not just an ace or fault)
     // Ball in court play means there was actual rally between players
     const hasChosenBallInCourt = sessionStorage.getItem('ballInCourtChoice') === 'true';
-    const isBallInCourtPlay = hasChosenBallInCourt || (pointType && pointType !== 'ace' && pointType !== 'fault' && pointType !== 'doubleFault');
+    const isBallInCourtPlay = hasChosenBallInCourt || (resolvedPointType && resolvedPointType !== 'ace' && resolvedPointType !== 'fault' && resolvedPointType !== 'doubleFault');
     
     // Rallies should be set for Level 3 (default to 'oneToFour' if null)
     // For Level 3, rallies is required by backend, so always set a value
@@ -996,7 +1073,7 @@ const MatchTracker: React.FC = () => {
     // If null, keep it null (no default value)
     // Valid shot types: 'forehand', 'backhand', 'forehandVolley', 'backhandVolley', 'forehandSlice', 'backhandSlice', 'forehandDropShot', 'backhandDropShot', 'forehandSwingingVolley', 'backhandSwingingVolley', 'overhead'
     const validShotTypes = ['forehand', 'backhand', 'forehandVolley', 'backhandVolley', 'forehandSlice', 'backhandSlice', 'forehandDropShot', 'backhandDropShot', 'forehandSwingingVolley', 'backhandSwingingVolley', 'overhead'];
-    const validatedMissedShotWay = selectedShotType && validShotTypes.includes(selectedShotType) ? selectedShotType : null;
+    let validatedMissedShotWay = selectedShotType && validShotTypes.includes(selectedShotType) ? selectedShotType : null;
     
     // Validate servePlacement - for Level 3, this is required and must be one of ['wide', 'body', 't']
     // Valid serve placements: 'wide', 'body', 't'
@@ -1007,6 +1084,10 @@ const MatchTracker: React.FC = () => {
       : (selectedServePlacement && validServePlacements.includes(selectedServePlacement) ? selectedServePlacement : null);
 
     // Use actual user selections instead of dummy data
+    if (!validatedMissedShotWay && resolvedPointType && resolvedPointType.toLowerCase().includes('forcederror')) {
+      validatedMissedShotWay = selectedShotWay && validShotTypes.includes(selectedShotWay) ? selectedShotWay : 'forehand';
+    }
+
     const pointData = {
       pointWinner: winner === 1 ? "playerOne" : "playerTwo",
       p1Reaction: validatedP1Reaction,
@@ -1014,7 +1095,7 @@ const MatchTracker: React.FC = () => {
       missedShot: validatedMissedShot,
       placement: validatedPlacement,
       missedShotWay: validatedMissedShotWay,
-      type: pointType || null,
+      type: resolvedPointType,
       servePlacement: validatedServePlacement,
       courtPosition: level === 3 ? 
                    (selectedCourtZone ? zoneTypeToCourtPosition(selectedCourtZone.type) : "leftCourt") : 
@@ -1532,26 +1613,93 @@ const MatchTracker: React.FC = () => {
   
   };
 
+  // Helper function to merge existing games from API with current gameHistory
+  const mergeExistingGamesWithHistory = (): GameScore[] => {
+    // Get all existing games from all sets in matchData
+    const existingGamesFromAPI: GameScore[] = [];
+    
+    if (matchData && matchData.sets) {
+      matchData.sets.forEach((set: any) => {
+        if (set.games && Array.isArray(set.games)) {
+          set.games.forEach((game: any) => {
+            // Convert API game format to GameScore format
+            const gameScore: GameScore = {
+              gameNumber: game.gameNumber,
+              server: game.server,
+              scores: game.scores || []
+            };
+            existingGamesFromAPI.push(gameScore);
+          });
+        }
+      });
+    }
+    
+    // Create a map of existing games by gameNumber
+    const existingGamesMap = new Map<number, GameScore>();
+    existingGamesFromAPI.forEach(game => {
+      existingGamesMap.set(game.gameNumber, game);
+    });
+    
+    // Merge: current gameHistory takes priority, then add any existing games not in current history
+    const mergedGames = new Map<number, GameScore>();
+    
+    // First, add all existing games from API
+    existingGamesMap.forEach((game, gameNumber) => {
+      mergedGames.set(gameNumber, game);
+    });
+    
+    // Then, add/override with current gameHistory (current games take priority)
+    gameHistory.forEach(game => {
+      mergedGames.set(game.gameNumber, game);
+    });
+    
+    // Convert map to array and sort by gameNumber
+    return Array.from(mergedGames.values()).sort((a, b) => a.gameNumber - b.gameNumber);
+  };
+
   // Save match progress to API
   const saveMatchProgressToAPI = async () => {
     if (!matchId || !matchData) return;
 
+    // Merge existing games from API with current game history
+    const mergedGameHistory = mergeExistingGamesWithHistory();
+    console.log('💾 [saveMatchProgressToAPI] Merged game history:', {
+      existingGamesFromAPI: matchData.sets?.reduce((sum: number, set: any) => sum + (set.games?.length || 0), 0) || 0,
+      currentGameHistory: gameHistory.length,
+      mergedGameHistory: mergedGameHistory.length,
+      mergedGameNumbers: mergedGameHistory.map(g => g.gameNumber)
+    });
+
     // Build updated game history including current game scores
-    let updatedGameHistory = [...gameHistory];
+    let updatedGameHistory = [...mergedGameHistory];
 
     // Save current game scores to game history before saving
+    // Only add if the game hasn't been completed yet (i.e., not already in gameHistory)
     if (currentGameScores.length > 0) {
-      const currentGameScore: GameScore = {
-        gameNumber: match.games[match.currentSet]?.player1 + match.games[match.currentSet]?.player2 + 1,
-        scores: currentGameScores,
-        server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
-      };
+      // Calculate game number consistently: current games + 1 (for in-progress game)
+      const currentGameNumber = match.games[match.currentSet]?.player1 + match.games[match.currentSet]?.player2 + 1;
       
-      // Check if this game already exists to avoid duplicates
-      const gameExists = updatedGameHistory.some(g => g.gameNumber === currentGameScore.gameNumber);
-      if (!gameExists) {
+      // Check if this game already exists in merged game history (might have been added by handleGameWin)
+      const gameExistsInHistory = updatedGameHistory.some(g => g.gameNumber === currentGameNumber);
+      
+      if (!gameExistsInHistory) {
+        const currentGameScore: GameScore = {
+          gameNumber: currentGameNumber,
+          scores: currentGameScores,
+          server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
+        };
+        
         updatedGameHistory = [...updatedGameHistory, currentGameScore];
         setGameHistory(updatedGameHistory);
+        console.log('💾 [saveMatchProgressToAPI] Added in-progress game to history:', {
+          gameNumber: currentGameNumber,
+          scoresCount: currentGameScores.length
+        });
+      } else {
+        console.log('💾 [saveMatchProgressToAPI] Game already in history, skipping:', {
+          gameNumber: currentGameNumber,
+          existingGames: updatedGameHistory.map(g => g.gameNumber)
+        });
       }
       
       setCurrentGameScores([]);
@@ -1559,6 +1707,15 @@ const MatchTracker: React.FC = () => {
       // Start new point for next game
       startNewPoint();
     }
+
+    // Deduplicate updatedGameHistory to ensure no duplicate games by gameNumber
+    updatedGameHistory = updatedGameHistory.reduce((acc: GameScore[], game) => {
+      const exists = acc.find(g => g.gameNumber === game.gameNumber);
+      if (!exists) {
+        acc.push(game);
+      }
+      return acc;
+    }, []);
 
     // Show loading toast
     const loadingToast = toast.loading('Saving match progress...', {
@@ -1571,6 +1728,7 @@ const MatchTracker: React.FC = () => {
               // Convert match state to API format with actual point data (SAVE PROGRESS)
         const apiData: SaveMatchProgressRequest = {
           trackingLevel,
+          totalGameTime: gameTime, // Total game time in seconds
           sets: match.sets.map((set, setIndex) => {
             // Get games for this set from updated game history
             // For save progress, use actual games count from match.games, not sets (sets may not be updated yet)
@@ -1587,9 +1745,23 @@ const MatchTracker: React.FC = () => {
               : totalGamesBeforeSet + actualGamesInSet;      // Only completed games for other sets
             
             const setGames = updatedGameHistory.filter(game => {
-              return game.gameNumber > totalGamesBeforeSet && 
+              return game && 
+                     typeof game === 'object' && 
+                     'gameNumber' in game && 
+                     'scores' in game && 
+                     'server' in game &&
+                     game.gameNumber > totalGamesBeforeSet && 
                      game.gameNumber <= maxGameNumber;
             });
+
+            // Deduplicate games by gameNumber to prevent sending duplicate games
+            const uniqueSetGames = setGames.reduce((acc: GameScore[], game) => {
+              const exists = acc.find(g => g.gameNumber === game.gameNumber);
+              if (!exists) {
+                acc.push(game);
+              }
+              return acc;
+            }, []);
 
             console.log('💾 [saveMatchProgress] Set filtering:', {
               setIndex,
@@ -1601,14 +1773,16 @@ const MatchTracker: React.FC = () => {
               isCurrentSet,
               gameHistoryLength: updatedGameHistory.length,
               filteredGamesCount: setGames.length,
+              uniqueGamesCount: uniqueSetGames.length,
               gameNumbers: updatedGameHistory.map(g => g.gameNumber),
-              filteredGameNumbers: setGames.map(g => g.gameNumber)
+              filteredGameNumbers: setGames.map(g => g.gameNumber),
+              uniqueGameNumbers: uniqueSetGames.map(g => g.gameNumber)
             });
 
             return {
               p1TotalScore: set.player1,
               p2TotalScore: set.player2,
-              games: setGames.length > 0 ? setGames.map(game => ({
+              games: uniqueSetGames.length > 0 ? uniqueSetGames.map(game => ({
                 ...game,
                 scores: (() => {
                   // For Level 1, duplicate the last point and only send essential data
@@ -1746,12 +1920,22 @@ const MatchTracker: React.FC = () => {
       return;
     }
 
-    // Save current game scores to game history before submitting (only if game hasn't been saved yet)
+    // Merge existing games from API with current game history
+    const mergedGameHistory = mergeExistingGamesWithHistory();
+    console.log('💾 [submitMatchResultToAPI] Merged game history:', {
+      existingGamesFromAPI: matchData.sets?.reduce((sum: number, set: any) => sum + (set.games?.length || 0), 0) || 0,
+      currentGameHistory: gameHistory.length,
+      mergedGameHistory: mergedGameHistory.length,
+      mergedGameNumbers: mergedGameHistory.map(g => g.gameNumber)
+    });
+
+    // Save current game scores to merged game history before submitting (only if game hasn't been saved yet)
+    let finalGameHistory = [...mergedGameHistory];
     if (currentGameScores.length > 0) {
       const finalGameNumber = match.games[match.currentSet]?.player1 + match.games[match.currentSet]?.player2 + 1;
       
-      // Check if this game already exists in gameHistory (to avoid duplicates)
-      const gameExists = gameHistory.some(g => g.gameNumber === finalGameNumber);
+      // Check if this game already exists in merged game history (to avoid duplicates)
+      const gameExists = finalGameHistory.some(g => g.gameNumber === finalGameNumber);
       
       if (!gameExists) {
       const finalGameScore: GameScore = {
@@ -1760,23 +1944,18 @@ const MatchTracker: React.FC = () => {
         server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
       };
       
-        console.log('💾 [submitMatchResultToAPI] Saving final game score:', finalGameScore);
-      
-      setGameHistory(prev => {
-        const newHistory = [...prev, finalGameScore];
-          console.log('💾 [submitMatchResultToAPI] Updated gameHistory:', {
-          previousLength: prev.length,
-          newLength: newHistory.length,
-          finalGameScore
-        });
-        return newHistory;
-      });
+        console.log('💾 [submitMatchResultToAPI] Adding final game score to merged history:', finalGameScore);
+        finalGameHistory.push(finalGameScore);
+        finalGameHistory.sort((a, b) => a.gameNumber - b.gameNumber);
+        
+        // Update state as well
+        setGameHistory(finalGameHistory);
       setCurrentGameScores([]);
       
       // Wait a moment for state update to complete before proceeding
       await new Promise(resolve => setTimeout(resolve, 100));
     } else {
-        console.log('💾 [submitMatchResultToAPI] Game already saved, skipping duplicate');
+        console.log('💾 [submitMatchResultToAPI] Game already exists in merged history, skipping duplicate');
         setCurrentGameScores([]);
       }
     } else {
@@ -1873,8 +2052,8 @@ const MatchTracker: React.FC = () => {
           // For multi-set matches, filter games based on set boundaries
           let setGames;
           if (match.sets.length === 1) {
-            // Single set match - use all games from gameHistory, but filter to only include actual game objects
-            setGames = gameHistory.filter(game => 
+            // Single set match - use all games from merged gameHistory, but filter to only include actual game objects
+            setGames = mergedGameHistory.filter(game => 
               game && 
               typeof game === 'object' && 
               'gameNumber' in game && 
@@ -1887,7 +2066,7 @@ const MatchTracker: React.FC = () => {
             const actualGamesInSet = match.games[setIndex]?.player1 + match.games[setIndex]?.player2 || 0;
             const totalGamesBeforeSet = setIndex === 0 ? 0 : 
               match.games.slice(0, setIndex).reduce((sum, game) => sum + (game?.player1 || 0) + (game?.player2 || 0), 0);
-            setGames = gameHistory.filter(game => {
+            setGames = finalGameHistory.filter(game => {
               return game && 
                      typeof game === 'object' && 
                      'gameNumber' in game && 
@@ -1901,10 +2080,10 @@ const MatchTracker: React.FC = () => {
           console.log(`💾 [submitMatchResultToAPI] Set ${setIndex} processing:`, {
             setScores: { p1: set.player1, p2: set.player2 },
             gamesInMatch: { p1: match.games[setIndex]?.player1 || 0, p2: match.games[setIndex]?.player2 || 0 },
-            actualGamesInSet: match.sets.length === 1 ? gameHistory.length : (match.games[setIndex]?.player1 || 0) + (match.games[setIndex]?.player2 || 0),
+            actualGamesInSet: match.sets.length === 1 ? finalGameHistory.length : (match.games[setIndex]?.player1 || 0) + (match.games[setIndex]?.player2 || 0),
             setGamesLength: setGames.length,
-            gameHistoryLength: gameHistory.length,
-            gameNumbers: gameHistory.map(g => g.gameNumber),
+            mergedGameHistoryLength: finalGameHistory.length,
+            gameNumbers: finalGameHistory.map(g => g.gameNumber),
             filteredGameNumbers: setGames.map(g => g.gameNumber)
           });
 
@@ -3170,8 +3349,12 @@ const MatchTracker: React.FC = () => {
         // });
         
         if (currentGameScores.length > 0) {
+          // Calculate game number consistently: current games (before win) + 1
+          // This matches the calculation in saveMatchProgressToAPI
+          const gameNumber = currentGames.player1 + currentGames.player2 + 1;
+          
           const gameScore: GameScore = {
-            gameNumber: newGames[match.currentSet].player1 + newGames[match.currentSet].player2,
+            gameNumber: gameNumber,
             scores: currentGameScores,
             server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
           };
@@ -3193,6 +3376,16 @@ const MatchTracker: React.FC = () => {
           });
           
           setGameHistory(prev => {
+            // Check if this game already exists to avoid duplicates
+            const gameExists = prev.some(g => g.gameNumber === gameScore.gameNumber);
+            if (gameExists) {
+              console.warn('⚠️ [handleGameWin] Game already exists in history, skipping duplicate:', {
+                gameNumber: gameScore.gameNumber,
+                existingGames: prev.map(g => g.gameNumber)
+              });
+              return prev;
+            }
+            
             const newHistory = [...prev, gameScore];
             console.log('🎮 [handleGameWin] Updated gameHistory:', {
               previousGamesCount: prev.length,
@@ -3345,13 +3538,25 @@ const MatchTracker: React.FC = () => {
             setTimeout(() => {
               // Save current game scores to game history before ending
               if (currentGameScores.length > 0) {
+                const finalGameNumber = match.games[match.currentSet]?.player1 + match.games[match.currentSet]?.player2 + 1;
                 const finalGameScore: GameScore = {
-                  gameNumber: match.games[match.currentSet]?.player1 + match.games[match.currentSet]?.player2 + 1,
+                  gameNumber: finalGameNumber,
                   scores: currentGameScores,
                   server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
                 };
                 
-                setGameHistory(prev => [...prev, finalGameScore]);
+                setGameHistory(prev => {
+                  // Check if this game already exists to avoid duplicates
+                  const gameExists = prev.some(g => g.gameNumber === finalGameNumber);
+                  if (gameExists) {
+                    console.warn('⚠️ [Match Win] Game already exists in history, skipping duplicate:', {
+                      gameNumber: finalGameNumber,
+                      existingGames: prev.map(g => g.gameNumber)
+                    });
+                    return prev;
+                  }
+                  return [...prev, finalGameScore];
+                });
                 setCurrentGameScores([]);
               }
               
@@ -3665,12 +3870,17 @@ const MatchTracker: React.FC = () => {
           setGameHistory(parsedState.gameHistory || []);
           setUndoHistory(parsedState.undoHistory || []);
           setRedoHistory(parsedState.redoHistory || []);
+          // Restore gameTime from localStorage if available
+          if (parsedState.gameTime !== undefined) {
+            setGameTime(parsedState.gameTime);
+          }
           
           console.log('🔄 [resumeMatch] Restored from localStorage:', {
             match: parsedState.match,
             player1: parsedState.player1,
             player2: parsedState.player2,
             gameHistory: parsedState.gameHistory?.length || 0,
+            gameTime: parsedState.gameTime || 0,
             gamesInSet: `${parsedState.match?.games?.[parsedState.match?.currentSet || 0]?.player1 || 0}-${parsedState.match?.games?.[parsedState.match?.currentSet || 0]?.player2 || 0}`
           });
         
@@ -4025,6 +4235,12 @@ const MatchTracker: React.FC = () => {
       //   player2: player2
       // });
 
+      // Restore gameTime from API data if available
+      if (matchData.totalGameTime !== undefined && matchData.totalGameTime !== null) {
+        setGameTime(matchData.totalGameTime);
+        console.log('🔄 [resumeMatch] Restored gameTime from API:', matchData.totalGameTime);
+      }
+
       // Save the resumed state
       setTimeout(() => saveMatchState(), 100);
 
@@ -4127,7 +4343,8 @@ const MatchTracker: React.FC = () => {
     // Use the actual selected values from the Ball In Court modal
     let pointType = selectedOutcome || 'winner';
     let courtPosition = 'leftCourt'; // Default, but should be set based on actual zone clicked
-    let missedShotWay = selectedShotWay || null;
+    // Use selectedShotType if available (from shot_details modal), otherwise use selectedShotWay
+    let missedShotWay = selectedShotType || selectedShotWay || null;
     let missedShot = selectedMissedShot || null;
     let placement = selectedPlacement || null;
     
@@ -4221,16 +4438,66 @@ const MatchTracker: React.FC = () => {
       if (match.level === 3 && !rallies) {
         rallies = 'oneToFour';
       }
+      
+      // For returnWinner in Level 3, missedShotWay is required
+      // Use selectedShotType if available (from shot_details modal), otherwise use selectedShotWay
+      if (pointType === 'returnWinner' && match.level === 3) {
+        missedShotWay = selectedShotType || selectedShotWay || null;
+        // If still null, this is an error - should not happen if shot_details modal was completed properly
+        if (!missedShotWay) {
+          console.error('⚠️ [completePointWithReactions] returnWinner point missing missedShotWay in Level 3');
+          // Set a default to prevent backend error (but this should not happen)
+          missedShotWay = 'forehand'; // Default fallback
+        }
+      }
     }
 
+    const resolvedPointType = normalizePointTypeForWinner(pointType, lastPointWinner);
+
+    if ((!missedShotWay || typeof missedShotWay !== 'string') && resolvedPointType && resolvedPointType.toLowerCase().includes('forcederror')) {
+      missedShotWay = selectedShotType || selectedShotWay || 'forehand';
+    }
+
+    // Get match rules to check if this is a tiebreak
+    const rules = getMatchRules(
+      match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      match.scoringVariation,
+      match.customTiebreakRules,
+      match.noAdScoring
+    );
+    const isTiebreakGame = rules.isTiebreakOnly || match.isTieBreak;
+
     // Check if this is a game-winning point
-    // For game-winning points, we want to record the score when the game was won (e.g., 40-30)
+    // For game-winning points, we want to record the score when the game was won (e.g., 40-30 or 7-5 for tiebreak)
     // rather than the new score (0-0) which represents the start of the next game
-    const isGameWinningPoint = (newP1Points >= 4 && newP1Points > newP2Points + 1) || 
-                              (newP2Points >= 4 && newP2Points > newP1Points + 1);
+    // For tiebreak, game-winning is determined by tiebreak rules
+    const isGameWinningPoint = isTiebreakGame
+      ? (() => {
+          const tiebreakRule = getTiebreakRuleForSet(match.currentSet + 1, rules, match.matchFormat || 'bestOfThree');
+          return (newP1Points >= tiebreakRule && newP1Points - newP2Points >= 2) || 
+                 (newP2Points >= tiebreakRule && newP2Points - newP1Points >= 2);
+        })()
+      : ((newP1Points >= 4 && newP1Points > newP2Points + 1) || 
+         (newP2Points >= 4 && newP2Points > newP1Points + 1));
     
     let finalP1Score, finalP2Score;
     
+    if (isTiebreakGame) {
+      // For tiebreak games, use numeric scores directly (0, 1, 2, 3, 4, 5, 6, 7, etc.)
+      if (isGameWinningPoint) {
+        // Use the previous score for game-winning points (the score when the game was won)
+        const previousP1Points = Math.max(0, newP1Points - 1);
+        const previousP2Points = Math.max(0, newP2Points - 1);
+        
+        finalP1Score = previousP1Points.toString();
+        finalP2Score = previousP2Points.toString();
+      } else {
+        // Use the new score for regular points
+        finalP1Score = newP1Points.toString();
+        finalP2Score = newP2Points.toString();
+      }
+    } else {
+      // For regular games, use tennis scoring (0, 15, 30, 40, AD)
     if (isGameWinningPoint) {
       // Use the previous score for game-winning points (the score when the game was won)
       const previousP1Points = Math.max(0, newP1Points - 1);
@@ -4238,18 +4505,18 @@ const MatchTracker: React.FC = () => {
       
       finalP1Score = pointToScore(previousP1Points);
       finalP2Score = pointToScore(previousP2Points);
-      
-      // console.log('🎯 [Game Win] Using previous score for final point:', { 
-      //   previousScore: `${finalP1Score}-${finalP2Score}`, 
-      //   newScore: `${pointToScore(newP1Points)}-${pointToScore(newP2Points)}`,
-      //   isGameWinningPoint,
-      //   previousPoints: `${previousP1Points}-${previousP2Points}`,
-      //   newPoints: `${newP1Points}-${newP2Points}`
-      // });
     } else {
       // Use the new score for regular points
       finalP1Score = pointToScore(newP1Points);
       finalP2Score = pointToScore(newP2Points);
+      }
+    }
+    
+    // For returnWinner in Level 3, ensure missedShotWay is set (backend requirement)
+    if (pointType === 'returnWinner' && match.level === 3 && !missedShotWay) {
+      // Use selectedShotType as fallback if available
+      missedShotWay = selectedShotType || 'forehand'; // Default to forehand if still not set
+      console.warn('⚠️ [completePointWithReactions] returnWinner point missing missedShotWay, using fallback:', missedShotWay);
     }
     
     // Create the completed point data
@@ -4258,7 +4525,7 @@ const MatchTracker: React.FC = () => {
       p2Score: finalP2Score,
       pointWinner: lastPointWinner === 1 ? "playerOne" : "playerTwo",
       isSecondService: isSecondService,
-      type: pointType,
+      type: resolvedPointType,
       servePlacement: selectedServePlacement || 't',
       courtPosition: courtPosition,
       rallies: rallies,
@@ -6198,6 +6465,19 @@ const MatchTracker: React.FC = () => {
                   <div className="text-center">
                     <button
                       onClick={() => {
+                        // For returnWinner in Level 3, shot type is required
+                        if (selectedOutcome === 'returnWinner' && match.level === 3 && !selectedShotType) {
+                          toast.error('Please select a shot type for return winner', {
+                            duration: 3000,
+                          });
+                          return;
+                        }
+                        
+                        // Copy selectedShotType to selectedShotWay for compatibility
+                        if (selectedShotType) {
+                          setSelectedShotWay(selectedShotType);
+                        }
+                        
                         // Close shot details modal
                         setShowLevel3Modal(false);
                         
@@ -6211,8 +6491,11 @@ const MatchTracker: React.FC = () => {
                         setLevel3ModalType('reaction');
                         setShowLevel3Modal(true);
                       }}
+                      disabled={selectedOutcome === 'returnWinner' && match.level === 3 && !selectedShotType}
                       className={`px-8 py-4 rounded-lg font-bold transition-all shadow-md hover:shadow-lg ${
-                        lastPointWinner === 1 
+                        (selectedOutcome === 'returnWinner' && match.level === 3 && !selectedShotType)
+                          ? 'bg-gray-400 cursor-not-allowed text-gray-600'
+                          : lastPointWinner === 1 
                           ? 'bg-[#D4FF5A] hover:bg-[#9ACD32] text-gray-800' 
                           : 'bg-[#4C6BFF] hover:bg-[#3B5BDB] text-white'
                       }`}
