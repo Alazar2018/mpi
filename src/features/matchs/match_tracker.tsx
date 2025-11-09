@@ -114,6 +114,13 @@ interface GameScore {
 
 
 
+
+const getTiebreakServePosition = (totalPointsPlayed: number): 'up' | 'down' => {
+  const normalizedPoints = totalPointsPlayed % 4;
+  return normalizedPoints === 0 || normalizedPoints === 1 ? 'down' : 'up';
+};
+
+
 // Confetti component for winners modal
 const Confetti = () => {
   const confettiPieces = [
@@ -890,7 +897,9 @@ const MatchTracker: React.FC = () => {
       
       // Toggle serving position transversely (alternate sides) after each point
       // Server changes position from one side to the other after each point
-      setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+      if (!match.isTieBreak) {
+        setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+      }
       
       // For Level 1, keep currentPointData for multiple points per game
       // For other levels, reset current point data
@@ -1166,7 +1175,9 @@ const MatchTracker: React.FC = () => {
     
     // Toggle serving position transversely (alternate sides) after each point
     // Server changes position from one side to the other after each point
-    setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    if (!match.isTieBreak) {
+      setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    }
     
     // Toggle second service if it was first service
     if (!isSecondService) {
@@ -1417,13 +1428,22 @@ const MatchTracker: React.FC = () => {
     return p1Sets >= rules.setsToWin ? 1 : p2Sets >= rules.setsToWin ? 2 : null;
   };
 
-  const switchServer = () => {
+  const switchServer = (options?: { tiebreakTotalPoints?: number }) => {
+    const isTieBreak = match.isTieBreak;
+    const totalPointsForPosition = options?.tiebreakTotalPoints ?? (player1.points + player2.points);
+    
     setPlayer1(prev => ({ ...prev, isServing: !prev.isServing }));
     setPlayer2(prev => ({ ...prev, isServing: !prev.isServing }));
     // Update match.server state
     setMatch(prev => ({ ...prev, server: prev.server === 1 ? 2 : 1 }));
-    // Start the new server at the bottom position
-    setServingPosition('down');
+    
+    if (isTieBreak) {
+      const desiredPosition = getTiebreakServePosition(totalPointsForPosition);
+      setServingPosition(prev => (prev === desiredPosition ? prev : desiredPosition));
+    } else {
+      // Start the new server at the bottom position for regular games
+      setServingPosition('down');
+    }
   };
 
   const selectServer = (playerNumber: 1 | 2) => {
@@ -1532,6 +1552,15 @@ const MatchTracker: React.FC = () => {
   const [selectedPlacement, setSelectedPlacement] = useState<string | null>(null);
   const [isForcedError, setIsForcedError] = useState<boolean | null>(null);
   const [selectedServePlacement, setSelectedServePlacement] = useState<string | null>(null); // Track serve placement: W->wide, B->body, T->t
+
+  useEffect(() => {
+    if (!match.isTieBreak) {
+      return;
+    }
+    const totalPointsPlayed = player1.points + player2.points;
+    const desiredPosition = getTiebreakServePosition(totalPointsPlayed);
+    setServingPosition(prev => (prev === desiredPosition ? prev : desiredPosition));
+  }, [match.isTieBreak, player1.points, player2.points]);
 
   
   // Note-taking state
@@ -3109,7 +3138,9 @@ const MatchTracker: React.FC = () => {
     // Level 1: Add point immediately
     
      // Toggle serving position for the same server
-    setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    if (!match.isTieBreak) {
+      setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    }
 
     // Save current state for undo
     setUndoHistory(prev => [...prev, {
@@ -3167,7 +3198,7 @@ const MatchTracker: React.FC = () => {
       if (match.isTieBreak) {
         const totalPoints = p1Total + p2Total;
         if (totalPoints === 1 || (totalPoints > 1 && totalPoints % 2 === 1)) {
-          switchServer();
+          switchServer({ tiebreakTotalPoints: totalPoints });
           // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
       }
@@ -3758,7 +3789,9 @@ const MatchTracker: React.FC = () => {
     }
 
     // Now add the point and continue with normal game logic
-    setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    if (!match.isTieBreak) {
+      setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    }
 
     // Save current state for undo
     setUndoHistory(prev => [...prev, {
@@ -3808,7 +3841,7 @@ const MatchTracker: React.FC = () => {
       if (match.isTieBreak) {
         const totalPoints = p1Total + p2Total;
         if (totalPoints === 1 || (totalPoints > 1 && totalPoints % 2 === 1)) {
-          switchServer();
+          switchServer({ tiebreakTotalPoints: totalPoints });
           // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
       }
@@ -4564,7 +4597,9 @@ const MatchTracker: React.FC = () => {
     
     // Toggle serving position transversely (alternate sides) after each point
     // Server changes position from one side to the other after each point
-    setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    if (!match.isTieBreak) {
+      setServingPosition(prev => prev === 'up' ? 'down' : 'up');
+    }
     
     // Reset second service flag
     setIsSecondService(false);
@@ -4582,7 +4617,7 @@ const MatchTracker: React.FC = () => {
       if (match.isTieBreak) {
         const totalPoints = p1Total + p2Total;
         if (totalPoints === 1 || (totalPoints > 1 && totalPoints % 2 === 1)) {
-          switchServer();
+          switchServer({ tiebreakTotalPoints: totalPoints });
           // console.log('🎯 [Tiebreak] Switching server after point', totalPoints);
         }
       }
