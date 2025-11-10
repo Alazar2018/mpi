@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useApiRequest } from "@/hooks/useApiRequest";
 import { getMatchById, saveMatchProgress, submitMatchResult } from "./api/matchs.api";
-import type { Match, SaveMatchProgressRequest, SubmitMatchResultRequest } from "@/service/matchs.server";
+import type { Match, SaveMatchProgressRequest, SubmitMatchResultRequest, MatchSetData } from "@/service/matchs.server";
 import { notesService, type MatchNote, type NoteType, type Priority, type Visibility } from "@/service/notes.server";
 import { 
   getMatchRules, 
@@ -110,6 +110,7 @@ interface GameScore {
   scores: PointScore[];
   changeoverDuration?: number;
   server: string;
+  winner?: "playerOne" | "playerTwo";
 }
 
 
@@ -1650,10 +1651,13 @@ const MatchTracker: React.FC = () => {
         if (set.games && Array.isArray(set.games)) {
           set.games.forEach((game: any) => {
             // Convert API game format to GameScore format
-            const gameScore: GameScore = {
+          const rawWinner = typeof game.winner === 'string' ? game.winner.trim() : undefined;
+          const normalizedWinner = rawWinner === 'playerOne' || rawWinner === 'playerTwo' ? rawWinner : undefined;
+          const gameScore: GameScore = {
               gameNumber: game.gameNumber,
               server: game.server,
-              scores: game.scores || []
+            scores: game.scores || [],
+            winner: normalizedWinner
             };
             existingGamesFromAPI.push(gameScore);
           });
@@ -1965,10 +1969,14 @@ const MatchTracker: React.FC = () => {
       const gameExists = finalGameHistory.some(g => g.gameNumber === finalGameNumber);
       
       if (!gameExists) {
+      const finalGameWinner = currentGameScores[currentGameScores.length - 1]?.pointWinner;
       const finalGameScore: GameScore = {
           gameNumber: finalGameNumber,
         scores: currentGameScores,
-        server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
+        server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne",
+        winner: finalGameWinner === 'playerOne' || finalGameWinner === 'playerTwo'
+          ? finalGameWinner
+          : undefined
       };
       
         console.log('💾 [submitMatchResultToAPI] Adding final game score to merged history:', finalGameScore);
@@ -2085,7 +2093,8 @@ const MatchTracker: React.FC = () => {
               typeof game === 'object' && 
               'gameNumber' in game && 
               'scores' in game && 
-              'server' in game
+              'server' in game &&
+              ((game as GameScore).winner === 'playerOne' || (game as GameScore).winner === 'playerTwo')
             );
           } else {
             // Multi-set match - filter games based on set boundaries
@@ -2100,7 +2109,8 @@ const MatchTracker: React.FC = () => {
                      'scores' in game && 
                      'server' in game &&
                      game.gameNumber > totalGamesBeforeSet && 
-                     game.gameNumber <= totalGamesBeforeSet + actualGamesInSet;
+                     game.gameNumber <= totalGamesBeforeSet + actualGamesInSet &&
+                     ((game as GameScore).winner === 'playerOne' || (game as GameScore).winner === 'playerTwo');
           });
           }
 
@@ -2133,10 +2143,9 @@ const MatchTracker: React.FC = () => {
                       const setWinner = p1Score > p2Score ? 'playerOne' : 
                                        p2Score > p1Score ? 'playerTwo' : null;
 
-                      return {
+                      const setPayload: MatchSetData & { winner?: "playerOne" | "playerTwo" } = {
               p1TotalScore: isTiebreakOnly ? (setForScoring.p1TotalScore ?? setForScoring.player1) : setForScoring.player1,
               p2TotalScore: isTiebreakOnly ? (setForScoring.p2TotalScore ?? setForScoring.player2) : setForScoring.player2,
-              winner: setWinner,
             games: setGames.length > 0 ? setGames.map(game => ({
               ...game,
               scores: (() => {
@@ -2237,6 +2246,10 @@ const MatchTracker: React.FC = () => {
               })()
             })) : []
             };
+                      if (setWinner) {
+                        setPayload.winner = setWinner;
+                      }
+                      return setPayload;
         })
       };
 
@@ -2300,8 +2313,8 @@ const MatchTracker: React.FC = () => {
         setRedoHistory(parsedState.redoHistory || []);
         setShowServingModal(false);
         setMatchReadyToStart(false);
-        // Reset game time to 0 for new games - don't load previous time
-        setGameTime(0);
+        // Restore saved game time if available
+        setGameTime(parsedState.gameTime ?? 0);
         setInBetweenTime(parsedState.inBetweenTime || 0);
         setPlayer1InBetweenTime(parsedState.player1InBetweenTime || 0);
         setPlayer2InBetweenTime(parsedState.player2InBetweenTime || 0);
@@ -2359,7 +2372,9 @@ const MatchTracker: React.FC = () => {
     setCourtRotation(0);
     setServingPosition('down');
     setInBetweenTime(0);
-    setGameTime(0); // Always reset game time to 0 on component mount
+    if (!hasLoadedState) {
+      setGameTime(0); // Start fresh only when no saved state is found
+    }
     setIsPointActive(false);
     setShowInfoModal(false);
     // Note: player1InBetweenTime and player2InBetweenTime are NOT reset to keep records
@@ -3386,7 +3401,8 @@ const MatchTracker: React.FC = () => {
           const gameScore: GameScore = {
             gameNumber: gameNumber,
             scores: currentGameScores,
-            server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
+            server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne",
+            winner: gameWinner === 1 ? "playerOne" : "playerTwo"
           };
           
           console.log('🎮 [handleGameWin] Tracking game completion:', {
@@ -3572,7 +3588,8 @@ const MatchTracker: React.FC = () => {
                 const finalGameScore: GameScore = {
                   gameNumber: finalGameNumber,
                   scores: currentGameScores,
-                  server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne"
+                  server: match.server === 1 ? "playerOne" : match.server === 2 ? "playerTwo" : "playerOne",
+                  winner: gameWinner === 1 ? "playerOne" : "playerTwo"
                 };
                 
                 setGameHistory(prev => {
@@ -3972,6 +3989,15 @@ const MatchTracker: React.FC = () => {
         return { p1, p2, isDeuce, advantage };
       };
 
+      const normalizeWinner = (value: any): "playerOne" | "playerTwo" | null => {
+        if (!value || typeof value !== "string") return null;
+        const trimmed = value.trim();
+        if (trimmed === "playerOne" || trimmed === "playerTwo") {
+          return trimmed;
+        }
+        return null;
+      };
+
       existingSets.forEach((setItem: any, index: number) => {
         const setGames = Array.isArray(setItem.games) ? setItem.games : [];
 
@@ -3986,19 +4012,21 @@ const MatchTracker: React.FC = () => {
         let lastCompletedGameServer: 'playerOne' | 'playerTwo' | null = null;
 
         setGames.forEach((game: any) => {
-          if (game.winner === 'playerOne') {
+          const normalizedWinner = normalizeWinner(game.winner);
+          if (normalizedWinner === 'playerOne') {
             p1CompletedGames += 1;
             lastCompletedGameServer = game.server || lastCompletedGameServer;
-          } else if (game.winner === 'playerTwo') {
+          } else if (normalizedWinner === 'playerTwo') {
             p2CompletedGames += 1;
             lastCompletedGameServer = game.server || lastCompletedGameServer;
           }
 
-          if (game.winner === 'playerOne' || game.winner === 'playerTwo') {
+          if (normalizedWinner) {
             completedGameHistory.push({
               gameNumber: game.gameNumber,
               server: game.server,
-              scores: game.scores || []
+              scores: game.scores || [],
+              winner: normalizedWinner
             });
           }
         });
