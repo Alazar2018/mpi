@@ -561,8 +561,12 @@ const MatchTracker: React.FC = () => {
         setMatchReadyToStart(false);
         
         // For tiebreak-only saved matches, restore points immediately from API data
+        const savedLegacyType: 'one' | 'three' | 'five' =
+          matchData.matchType === 'one' || matchData.matchType === 'three' || matchData.matchType === 'five'
+            ? matchData.matchType
+            : 'three';
         const savedMatchRules = getMatchRules(
-          matchData.matchFormat || convertLegacyMatchType(matchData.matchType === 'one' ? 1 : matchData.matchType === 'three' ? 3 : matchData.matchType === 'five' ? 5 : 3),
+          matchData.matchFormat || convertLegacyMatchType(savedLegacyType),
           matchData.scoringVariation,
           matchData.customTiebreakRules,
           matchData.noAdScoring
@@ -779,11 +783,6 @@ const MatchTracker: React.FC = () => {
 
   // Point tracking helper functions
   const startNewPoint = () => {
-    setCurrentPointData({
-      isSecondService,
-      pointStartTime: Date.now()
-    });
-    
     setPointStartTime(Date.now());
     const currentScore = getCurrentGameScore();
     setCurrentPointData({
@@ -2128,14 +2127,15 @@ const MatchTracker: React.FC = () => {
                       
                       // For tiebreak-only matches, use p1TotalScore/p2TotalScore for winner determination
                       // For regular matches, use set.player1/set.player2
-                      const p1Score = isTiebreakOnly ? set.p1TotalScore : set.player1;
-                      const p2Score = isTiebreakOnly ? set.p2TotalScore : set.player2;
+                      const setForScoring = set as { player1: number; player2: number; p1TotalScore?: number; p2TotalScore?: number };
+                      const p1Score = isTiebreakOnly ? (setForScoring.p1TotalScore ?? setForScoring.player1) : setForScoring.player1;
+                      const p2Score = isTiebreakOnly ? (setForScoring.p2TotalScore ?? setForScoring.player2) : setForScoring.player2;
                       const setWinner = p1Score > p2Score ? 'playerOne' : 
                                        p2Score > p1Score ? 'playerTwo' : null;
 
                       return {
-              p1TotalScore: set.player1,
-              p2TotalScore: set.player2,
+              p1TotalScore: isTiebreakOnly ? (setForScoring.p1TotalScore ?? setForScoring.player1) : setForScoring.player1,
+              p2TotalScore: isTiebreakOnly ? (setForScoring.p2TotalScore ?? setForScoring.player2) : setForScoring.player2,
               winner: setWinner,
             games: setGames.length > 0 ? setGames.map(game => ({
               ...game,
@@ -3874,408 +3874,245 @@ const MatchTracker: React.FC = () => {
   const resumeMatchWithExistingData = () => {
     if (!matchData) return;
 
-    // console.log('🔄 Resuming match with data:', matchData);
-
-    // Check if this is a tiebreak-only match - if so, always use API data
+    const legacyType: 'one' | 'three' | 'five' =
+      matchData.matchType === 'one' || matchData.matchType === 'three' || matchData.matchType === 'five'
+        ? matchData.matchType
+        : 'three';
+    const matchFormat = matchData.matchFormat || convertLegacyMatchType(legacyType);
     const rules = getMatchRules(
-      matchData.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+      matchFormat,
       matchData.scoringVariation,
       matchData.customTiebreakRules,
       matchData.noAdScoring
     );
     const isTiebreakOnly = rules.isTiebreakOnly;
 
-    // For tiebreak-only matches, always use API data (ignore localStorage)
-    // For regular matches, try localStorage first
     if (!isTiebreakOnly) {
-    // First, try to load any existing state from localStorage
-    const savedState = localStorage.getItem(`tennisMatchState_${matchId}`);
-    if (savedState) {
-      try {
-        const parsedState = JSON.parse(savedState);
-          // console.log('💾 Found saved state in localStorage:', parsedState);
-        
-        // Restore the saved state
-        setMatch(parsedState.match);
-        setPlayer1(parsedState.player1);
-        setPlayer2(parsedState.player2);
+      const savedState = localStorage.getItem(`tennisMatchState_${matchId}`);
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState);
+
+          setMatch(parsedState.match);
+          setPlayer1(parsedState.player1);
+          setPlayer2(parsedState.player2);
           setGameHistory(parsedState.gameHistory || []);
           setUndoHistory(parsedState.undoHistory || []);
           setRedoHistory(parsedState.redoHistory || []);
-          // Restore gameTime from localStorage if available
           if (parsedState.gameTime !== undefined) {
             setGameTime(parsedState.gameTime);
           }
-          
-          console.log('🔄 [resumeMatch] Restored from localStorage:', {
-            match: parsedState.match,
-            player1: parsedState.player1,
-            player2: parsedState.player2,
-            gameHistory: parsedState.gameHistory?.length || 0,
-            gameTime: parsedState.gameTime || 0,
-            gamesInSet: `${parsedState.match?.games?.[parsedState.match?.currentSet || 0]?.player1 || 0}-${parsedState.match?.games?.[parsedState.match?.currentSet || 0]?.player2 || 0}`
+
+          setMatchReadyToStart(true);
+          setIsGameRunning(false);
+          setIsPaused(false);
+          setTimeout(() => startNewPoint(), 0);
+          setLastPointEndTime(Date.now());
+
+          toast.success('Previous match state restored! 🎾', {
+            duration: 4000,
+            icon: '💾',
           });
-        
-        // Don't auto-start the game - user must explicitly start
-        setMatchReadyToStart(true);
-        setIsGameRunning(false);
-        setIsPaused(false);
-        
-        // Initialize point tracking for API submission
-        startNewPoint();
-        setLastPointEndTime(Date.now());
-        
-        toast.success('Previous match state restored! 🎾', {
-          duration: 4000,
-          icon: '💾',
-        });
-        
-        return; // Exit early if we restored from localStorage
-      } catch (error) {
-        console.error('Error parsing saved state:', error);
-        // Continue with API data restoration if localStorage fails
-      }
+
+          return;
+        } catch (error) {
+          console.error('Error parsing saved state:', error);
+        }
       }
     } else {
-      // For tiebreak-only matches, clear localStorage to ensure we use API data
-      console.log('🔄 [resumeMatch] Tiebreak-only match detected, clearing localStorage to use API data');
       localStorage.removeItem(`tennisMatchState_${matchId}`);
     }
 
     try {
-      // Extract existing match state from API data
       const existingSets = matchData.sets || [];
-      // console.log('📊 Existing sets from API:', existingSets);
-      
-      // isTiebreakOnly is already defined above
-      
-      // Convert API data to component state format
-      // For sets, use the winner field to determine set scores
-      // If a set has a winner, that player won the set (1-0)
-      // Otherwise, use p1TotalScore and p2TotalScore for in-progress sets
-      // BUT: For tiebreak-only matches, p1TotalScore/p2TotalScore are tiebreak points, not set scores
-      const convertedSets = existingSets.map((set, index) => {
-        const setData = set as any;
-        
-        // If set has a winner, it's a completed set
-        if (setData.winner) {
-          if (setData.winner === 'playerOne') {
-            return { player1: 1, player2: 0 };
-          } else if (setData.winner === 'playerTwo') {
-            return { player1: 0, player2: 1 };
+      const maxSets = rules.maxSets;
+
+      const convertedSets = Array.from({ length: maxSets }, () => ({ player1: 0, player2: 0 }));
+      const convertedGames = Array.from({ length: maxSets }, () => ({ player1: 0, player2: 0, scores: [] as PointScore[] }));
+
+      const completedGameHistory: GameScore[] = [];
+
+      let currentSetIndex = existingSets.length > 0 ? existingSets.length - 1 : 0;
+      let inProgressGameScores: PointScore[] = [];
+      let inProgressGameServer: 'playerOne' | 'playerTwo' | null = null;
+      let inProgressGameIsTiebreak = false;
+
+      const reconstructPointsFromScores = (
+        scores: PointScore[],
+        isTieBreakGame: boolean
+      ): { p1: number; p2: number; isDeuce: boolean; advantage: 1 | 2 | null } => {
+        let p1 = 0;
+        let p2 = 0;
+
+        scores.forEach((score) => {
+          if (score.pointWinner === 'playerOne') {
+            p1 += 1;
+          } else if (score.pointWinner === 'playerTwo') {
+            p2 += 1;
+          }
+        });
+
+        if (isTieBreakGame || rules.noAdScoring) {
+          return { p1, p2, isDeuce: false, advantage: null };
+        }
+
+        let isDeuce = false;
+        let advantage: 1 | 2 | null = null;
+
+        if (p1 >= 3 && p2 >= 3) {
+          if (p1 === p2) {
+            isDeuce = true;
+          } else if (p1 === p2 + 1) {
+            advantage = 1;
+          } else if (p2 === p1 + 1) {
+            advantage = 2;
           }
         }
-        
-        // For tiebreak-only matches, sets are always 0-0 (no sets in tiebreak-only format)
-        if (isTiebreakOnly) {
-          return { player1: 0, player2: 0 };
-        }
-        
-        // For in-progress sets, use p1TotalScore and p2TotalScore
-        // But if they're both 0, count from games instead
-        if (setData.p1TotalScore === 0 && setData.p2TotalScore === 0) {
-          const setGames = setData.games || [];
-          let p1Wins = 0;
-          let p2Wins = 0;
-          
-          setGames.forEach((game: any) => {
-            if (game.winner === 'playerOne') p1Wins++;
-            else if (game.winner === 'playerTwo') p2Wins++;
-          });
-          
-          // For sets, we only track if the set is won (1-0 or 0-1)
-          // Games within a set are tracked separately
-          return { player1: 0, player2: 0 };
-        }
-        
-        return {
-          player1: setData.p1TotalScore || 0,
-          player2: setData.p2TotalScore || 0
-        };
-      });
-      // console.log('🔄 Converted sets for component:', convertedSets);
-      
-      // Log the actual set scores from API
-      existingSets.forEach((set, index) => {
-        // console.log(`🎯 Set ${index + 1}: P1=${(set as any).p1TotalScore}, P2=${(set as any).p2TotalScore}, Winner=${(set as any).winner}`);
-      });
 
-      // Get games from the last set if available
-      const lastSet = existingSets[existingSets.length - 1];
-      const existingGames = lastSet ? (lastSet as any).games || [] : [];
-      console.log('🔄 [resumeMatch] Existing games from API:', existingGames);
-      
-      // Restore gameHistory from API games
-      const restoredGameHistory: GameScore[] = existingGames.map((game: any) => ({
-        gameNumber: game.gameNumber,
-        server: game.server,
-        scores: game.scores || []
-      }));
-      
-      console.log('🔄 [resumeMatch] Restored gameHistory:', restoredGameHistory);
-      setGameHistory(restoredGameHistory);
-      
-      // Calculate games count for current set from API games
-      // Use the winner field directly from each game object
-      const currentSetIndex = existingSets.length > 0 ? existingSets.length - 1 : 0;
-      const currentSet = existingSets[currentSetIndex];
-      const totalGamesPlayed = existingGames.length;
-      
-      // Count games won by each player using the winner field from API
-      let p1GamesInCurrentSet = 0;
-      let p2GamesInCurrentSet = 0;
-      
-      // First, try to use p1TotalScore and p2TotalScore from the set if available and valid
-      if (currentSet && (currentSet as any).p1TotalScore !== undefined && (currentSet as any).p2TotalScore !== undefined) {
-        const setP1Games = (currentSet as any).p1TotalScore || 0;
-        const setP2Games = (currentSet as any).p2TotalScore || 0;
-        
-        // Verify the counts match by counting from games
-        let countedP1Games = 0;
-        let countedP2Games = 0;
-        
-        existingGames.forEach((game: any) => {
+        return { p1, p2, isDeuce, advantage };
+      };
+
+      existingSets.forEach((setItem: any, index: number) => {
+        const setGames = Array.isArray(setItem.games) ? setItem.games : [];
+
+        if (setItem.winner === 'playerOne') {
+          convertedSets[index] = { player1: 1, player2: 0 };
+        } else if (setItem.winner === 'playerTwo') {
+          convertedSets[index] = { player1: 0, player2: 1 };
+        }
+
+        let p1CompletedGames = 0;
+        let p2CompletedGames = 0;
+        let lastCompletedGameServer: 'playerOne' | 'playerTwo' | null = null;
+
+        setGames.forEach((game: any) => {
           if (game.winner === 'playerOne') {
-            countedP1Games++;
+            p1CompletedGames += 1;
+            lastCompletedGameServer = game.server || lastCompletedGameServer;
           } else if (game.winner === 'playerTwo') {
-            countedP2Games++;
+            p2CompletedGames += 1;
+            lastCompletedGameServer = game.server || lastCompletedGameServer;
+          }
+
+          if (game.winner === 'playerOne' || game.winner === 'playerTwo') {
+            completedGameHistory.push({
+              gameNumber: game.gameNumber,
+              server: game.server,
+              scores: game.scores || []
+            });
           }
         });
-        
-        // Use the set scores if they match, otherwise use counted values
-        if (setP1Games === countedP1Games && setP2Games === countedP2Games) {
-          p1GamesInCurrentSet = setP1Games;
-          p2GamesInCurrentSet = setP2Games;
-          console.log('🔄 [resumeMatch] Using set scores (verified):', { p1Games: setP1Games, p2Games: setP2Games });
-        } else {
-          // Use counted values if set scores don't match
-          p1GamesInCurrentSet = countedP1Games;
-          p2GamesInCurrentSet = countedP2Games;
-          console.log('🔄 [resumeMatch] Set scores mismatch, using counted values:', {
-            setScores: { p1: setP1Games, p2: setP2Games },
-            counted: { p1: countedP1Games, p2: countedP2Games }
-          });
-        }
-      } else {
-        // If set scores not available, count from games using winner field
-        existingGames.forEach((game: any) => {
-          if (game.winner === 'playerOne') {
-            p1GamesInCurrentSet++;
-          } else if (game.winner === 'playerTwo') {
-            p2GamesInCurrentSet++;
+
+        convertedGames[index] = { player1: p1CompletedGames, player2: p2CompletedGames, scores: [] };
+
+        if (index === existingSets.length - 1) {
+          const inProgress = [...setGames].reverse().find((game: any) => !game.winner);
+          if (inProgress) {
+            inProgressGameScores = inProgress.scores || [];
+            inProgressGameServer = inProgress.server || null;
+            inProgressGameIsTiebreak = Boolean(inProgress.tieBreak || setItem.tieBreak);
+          } else {
+            if (lastCompletedGameServer) {
+              inProgressGameServer = lastCompletedGameServer === 'playerOne' ? 'playerTwo' : 'playerOne';
+            }
           }
-        });
-        console.log('🔄 [resumeMatch] Set scores not available, counted from games:', {
-          p1Games: p1GamesInCurrentSet,
-          p2Games: p2GamesInCurrentSet
-        });
-      }
-      
-      console.log('🔄 [resumeMatch] Calculated games:', {
-        p1Games: p1GamesInCurrentSet,
-        p2Games: p2GamesInCurrentSet,
-        totalGames: totalGamesPlayed
-      });
-      
-      // Create a games array with entries for all sets
-      const convertedGames = Array.from({ length: existingSets.length }, (_, index) => {
-        if (index === currentSetIndex) {
-          // For the current set, use calculated games count
-            return {
-            player1: p1GamesInCurrentSet,
-            player2: p2GamesInCurrentSet,
-            scores: []
-            };
         }
-        // For completed sets, use 0-0 (games are already counted in set scores)
-        return { player1: 0, player2: 0, scores: [] };
-      });
-      
-      console.log('🔄 [resumeMatch] Converted games:', convertedGames);
-
-      // Determine current set and server
-      // If all games are completed, the next server should alternate from the last game
-      // For now, we'll use the last game's server as a starting point
-      // The actual server will be determined when the next point starts based on match logic
-      const lastGame = existingGames[existingGames.length - 1];
-      let server: 1 | 2 = 1; // Default to player 1
-      
-      if (lastGame) {
-        // Use the last game's server, but if all games are completed, 
-        // the next server should alternate (so if last was playerOne, next is playerTwo)
-        if (lastGame.server === 'playerOne') {
-          // Last game: playerOne served, so next game: playerTwo serves
-          server = 2;
-        } else {
-          // Last game: playerTwo served, so next game: playerOne serves
-          server = 1;
-        }
-      }
-      
-      console.log('🔄 [resumeMatch] Server determination:', {
-        lastGameServer: lastGame?.server,
-        nextServer: server === 1 ? 'playerOne' : 'playerTwo',
-        totalGames: existingGames.length
       });
 
-      // Update match state with existing data
+      currentSetIndex = Math.min(currentSetIndex, maxSets - 1);
+
+      const totalP1Sets = convertedSets.reduce((sum, setScore) => sum + setScore.player1, 0);
+      const totalP2Sets = convertedSets.reduce((sum, setScore) => sum + setScore.player2, 0);
+      const totalP1Games = convertedGames.reduce((sum, gameScore) => sum + (gameScore.player1 || 0), 0);
+      const totalP2Games = convertedGames.reduce((sum, gameScore) => sum + (gameScore.player2 || 0), 0);
+
+      let restoredP1Points = 0;
+      let restoredP2Points = 0;
+      let restoredIsDeuce = false;
+      let restoredAdvantage: 1 | 2 | null = null;
+      let restoredIsTiebreak = rules.isTiebreakOnly;
+
+      if (rules.isTiebreakOnly) {
+        const lastSet = existingSets[currentSetIndex];
+        const rawP1 = lastSet ? Number((lastSet as any).p1TotalScore) || 0 : 0;
+          const rawP2 = lastSet ? Number((lastSet as any).p2TotalScore) || 0 : 0;
+        restoredP1Points = rawP1;
+        restoredP2Points = rawP2;
+        restoredIsDeuce = false;
+        restoredAdvantage = null;
+        restoredIsTiebreak = true;
+      } else if (inProgressGameScores.length > 0) {
+        const { p1, p2, isDeuce, advantage } = reconstructPointsFromScores(
+          inProgressGameScores,
+          inProgressGameIsTiebreak
+        );
+        restoredP1Points = p1;
+        restoredP2Points = p2;
+        restoredIsDeuce = isDeuce;
+        restoredAdvantage = advantage;
+        restoredIsTiebreak = inProgressGameIsTiebreak;
+      }
+
+      completedGameHistory.sort((a, b) => a.gameNumber - b.gameNumber);
+
+      let server: 1 | 2 = 1;
+      if (inProgressGameServer === 'playerOne') {
+        server = 1;
+      } else if (inProgressGameServer === 'playerTwo') {
+        server = 2;
+      } else if (completedGameHistory.length > 0) {
+        const lastCompletedGame = completedGameHistory[completedGameHistory.length - 1];
+        server = lastCompletedGame.server === 'playerOne' ? 2 : 1;
+      }
+
       setMatch(prev => ({
         ...prev,
         sets: convertedSets,
-        games: convertedGames as any, // Type assertion for test data population
+        games: convertedGames as any,
         currentSet: currentSetIndex,
-        server: server
+        server,
+        isTieBreak: restoredIsTiebreak,
+        isDeuce: restoredIsDeuce,
+        hasAdvantage: restoredAdvantage
       }));
 
-      // Calculate total scores from all sets
-      const totalP1Sets = convertedSets.reduce((sum, set) => sum + set.player1, 0);
-      const totalP2Sets = convertedSets.reduce((sum, set) => sum + set.player2, 0);
-      
-      // console.log('📊 Calculated total scores - P1 Sets:', totalP1Sets, 'P2 Sets:', totalP2Sets);
-
-      // Update player scores with the restored data
-      const totalP1Games = convertedGames.reduce((sum, game) => sum + (game.player1 || 0), 0);
-      const totalP2Games = convertedGames.reduce((sum, game) => sum + (game.player2 || 0), 0);
-      
-      // isTiebreakOnly is already defined above
-      
-      let p1Points = 0;
-      let p2Points = 0;
-      
-      if (isTiebreakOnly && lastSet) {
-        // For tiebreak-only matches, use p1TotalScore/p2TotalScore directly as they represent tiebreak points
-        // These are the current tiebreak scores, not set scores
-        const rawP1TotalScore = (lastSet as any).p1TotalScore;
-        const rawP2TotalScore = (lastSet as any).p2TotalScore;
-        
-        // Ensure we're using numbers, not strings
-        p1Points = typeof rawP1TotalScore === 'number' ? rawP1TotalScore : parseInt(rawP1TotalScore) || 0;
-        p2Points = typeof rawP2TotalScore === 'number' ? rawP2TotalScore : parseInt(rawP2TotalScore) || 0;
-        
-        console.log('🔄 [resumeMatch] Restoring tiebreak points from p1TotalScore/p2TotalScore:', {
-          rawP1TotalScore,
-          rawP2TotalScore,
-          p1Points,
-          p2Points,
-          p1PointsType: typeof p1Points,
-          p2PointsType: typeof p2Points,
-          lastSet: lastSet,
-          tieBreak: (lastSet as any).tieBreak ? 'exists' : 'missing'
-        });
-      }
-      
-      console.log('🔄 [resumeMatch] Updating player scores:', {
-        totalP1Sets,
-        totalP2Sets,
-        totalP1Games,
-        totalP2Games,
-        currentSetGames: `${p1GamesInCurrentSet}-${p2GamesInCurrentSet}`,
-        isTiebreakOnly,
-        p1Points,
-        p2Points
-      });
-      
-      console.log('🔄 [resumeMatch] Setting player points:', {
-        isTiebreakOnly,
-        p1Points,
-        p2Points,
-        totalP1Sets,
-        totalP2Sets,
-        totalP1Games,
-        totalP2Games
-      });
-      
-      setPlayer1(prev => {
-        const newPoints = isTiebreakOnly ? p1Points : 0;
-        console.log('🔄 [resumeMatch] Setting player1 points:', {
-          previous: prev.points,
-          new: newPoints,
-          isTiebreakOnly,
-          p1Points
-        });
-        return {
+      setPlayer1(prev => ({
         ...prev,
         sets: totalP1Sets,
-          games: totalP1Games,
-          points: newPoints
-        };
-      });
+        games: totalP1Games,
+        points: restoredP1Points,
+        isServing: server === 1
+      }));
 
-      setPlayer2(prev => {
-        const newPoints = isTiebreakOnly ? p2Points : 0;
-        console.log('🔄 [resumeMatch] Setting player2 points:', {
-          previous: prev.points,
-          new: newPoints,
-          isTiebreakOnly,
-          p2Points
-        });
-        return {
+      setPlayer2(prev => ({
         ...prev,
         sets: totalP2Sets,
-          games: totalP2Games,
-          points: newPoints
-        };
-      });
+        games: totalP2Games,
+        points: restoredP2Points,
+        isServing: server === 2
+      }));
 
-      // Set server positions
-      if (server === 1) {
-        setPlayer1(prev => ({ ...prev, isServing: true }));
-        setPlayer2(prev => ({ ...prev, isServing: false }));
-      } else {
-        setPlayer2(prev => ({ ...prev, isServing: true }));
-        setPlayer1(prev => ({ ...prev, isServing: false }));
-      }
+      setGameHistory(completedGameHistory);
+      setCurrentGameScores(inProgressGameScores);
 
-      // Set match as ready to continue
       setMatchReadyToStart(false);
       setIsGameRunning(true);
       setIsPaused(false);
+      setIsPointActive(false);
 
-      // Initialize point tracking for next point
-      // This ensures currentPointData is available when user starts tracking points
-      startNewPoint();
+      setTimeout(() => startNewPoint(), 0);
       setLastPointEndTime(Date.now());
 
-      // Show resume success toast
+      if (matchData.totalGameTime !== undefined && matchData.totalGameTime !== null) {
+        setGameTime(matchData.totalGameTime);
+      }
+
       toast.success('Match resumed successfully! 🎾', {
         duration: 4000,
         icon: '🔄',
       });
 
-      // Log the final restored state
-      // console.log('✅ Final restored state:', {
-      //   sets: convertedSets,
-      //   games: convertedGames,
-      //   currentSet: currentSetIndex,
-      //   server: server,
-      //   player1: { 
-      //     sets: totalP1Sets, 
-      //     games: convertedGames.reduce((sum, game) => sum + game.player1, 0), 
-      //     points: convertedGames[0]?.player1 || 0 
-      //   },
-      //   player2: { 
-      //     sets: totalP2Sets, 
-      //     games: convertedGames.reduce((sum, game) => sum + game.player2, 0), 
-      //     points: convertedGames[0]?.player2 || 0 
-      //   }
-      // });
-      
-      // Also log the current match state to verify
-      // console.log('🎾 Current match state after restoration:', {
-      //   match: match,
-      //   player1: player1,
-      //   player2: player2
-      // });
-
-      // Restore gameTime from API data if available
-      if (matchData.totalGameTime !== undefined && matchData.totalGameTime !== null) {
-        setGameTime(matchData.totalGameTime);
-        console.log('🔄 [resumeMatch] Restored gameTime from API:', matchData.totalGameTime);
-      }
-
-      // Save the resumed state
       setTimeout(() => saveMatchState(), 100);
-
     } catch (error) {
       console.error('Error resuming match:', error);
       toast.error('Failed to resume match. Starting fresh...', {
