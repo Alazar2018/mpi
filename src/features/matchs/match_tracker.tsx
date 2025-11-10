@@ -703,15 +703,14 @@ const MatchTracker: React.FC = () => {
     }
   };
 
-  // Get score display considering no-ad scoring
+  // Get score display handling no-ad scoring with traditional tennis notation
   const getScoreDisplay = (points: number, isNoAd: boolean) => {
     if (isNoAd) {
-      // No-ad scoring: just show the point number
-      return points.toString();
-    } else {
-      // Standard scoring
-      return pointToScore(points);
+      // No-ad matches still use traditional point labels; cap at 40 for deciding point
+      return points >= 3 ? "40" : pointToScore(points);
     }
+    // Standard scoring
+    return pointToScore(points);
   };
 
   const formatTime = (seconds: number) => {

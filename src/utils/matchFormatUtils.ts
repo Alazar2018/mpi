@@ -82,7 +82,7 @@ const MATCH_FORMATS: Record<MatchFormat, MatchFormatConfig> = {
   },
   shortSets: {
     format: 'shortSets',
-    description: '4 out of 7 sets (no-ad scoring and 7-point tiebreak at 3-3)',
+    description: 'Short set to 4',
     maxSets: 7,
     setsToWin: 4,
     gamesPerSet: 4,
