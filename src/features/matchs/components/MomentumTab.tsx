@@ -10,7 +10,8 @@ interface Player {
 interface Score {
   p1Score: string | number;
   p2Score: string | number;
-  pointWinner: string;
+  pointWinner?: 'playerOne' | 'playerTwo';
+  winner?: 'playerOne' | 'playerTwo';
   server: string;
 }
 
@@ -31,6 +32,7 @@ interface Set {
     scores: Array<{
       p1Score: number;
       p2Score: number;
+      pointWinner?: 'playerOne' | 'playerTwo';
       winner?: string;
       server?: string;
     }>;
@@ -55,6 +57,7 @@ interface MatchData {
   matchType?: string;
   matchCategory?: string;
   matchFormat?: string;
+  tieBreakRule?: number;
 }
 
 interface MomentumTabProps {
@@ -99,6 +102,8 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     [matchData.matchFormat]
   );
 
+  const tieBreakTarget = matchData.tieBreakRule ?? 7;
+
   useEffect(() => {
     if (isTieBreakMatch) {
       setSelectedSet(1);
@@ -120,6 +125,119 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     return typeof score === 'number' ? score.toString() : score;
   };
 
+  const normalizeWinnerValue = (value?: string | null): 'playerOne' | 'playerTwo' | 'none' => {
+    if (!value) return 'none';
+    const normalized = value.toString().toLowerCase();
+    if (normalized.includes('playerone') || normalized === 'p1' || normalized === 'player1') {
+      return 'playerOne';
+    }
+    if (normalized.includes('playertwo') || normalized === 'p2' || normalized === 'player2') {
+      return 'playerTwo';
+    }
+    return 'none';
+  };
+
+  const TENNIS_SCORE_MAP: Record<string, number> = {
+    '0': 0,
+    '00': 0,
+    love: 0,
+    '15': 1,
+    '30': 2,
+    '40': 3,
+    ad: 4,
+    adv: 4,
+    advantage: 4,
+    game: 5,
+  };
+
+  const parseScoreValue = (value: string | number | undefined): number => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (!value) {
+      return 0;
+    }
+    const normalized = value.toString().trim().toLowerCase();
+    if (normalized in TENNIS_SCORE_MAP) {
+      return TENNIS_SCORE_MAP[normalized];
+    }
+    const numeric = Number(normalized);
+    return Number.isFinite(numeric) ? numeric : 0;
+  };
+
+  const getStandardGameScoreLabel = (p1Points: number, p2Points: number): string => {
+    const diff = p1Points - p2Points;
+    if (p1Points >= 4 || p2Points >= 4) {
+      if (Math.abs(diff) >= 2) {
+        return 'Game';
+      }
+      if (diff === 1) {
+        return 'Ad-40';
+      }
+      if (diff === -1) {
+        return '40-Ad';
+      }
+      return 'Deuce';
+    }
+
+    const scoreDisplay = ['0', '15', '30', '40'];
+    const p1Display = scoreDisplay[Math.min(p1Points, 3)] ?? '40';
+    const p2Display = scoreDisplay[Math.min(p2Points, 3)] ?? '40';
+    return `${p1Display}-${p2Display}`;
+  };
+
+  const getTieBreakScoreLabel = (p1Points: number, p2Points: number): string => `${p1Points}-${p2Points}`;
+
+  const resolvePointOutcome = (
+    score: {
+      p1Score: string | number;
+      p2Score: string | number;
+      pointWinner?: string | null;
+      winner?: string | null;
+    },
+    prevP1: number,
+    prevP2: number
+  ): {
+    winner: 'playerOne' | 'playerTwo' | 'none';
+    p1Value: number;
+    p2Value: number;
+    isValid: boolean;
+  } => {
+    const p1Value = parseScoreValue(score.p1Score);
+    const p2Value = parseScoreValue(score.p2Score);
+
+    let winner = normalizeWinnerValue(score.pointWinner);
+    if (winner === 'none') {
+      winner = normalizeWinnerValue(score.winner);
+    }
+
+    const hasChanged = p1Value !== prevP1 || p2Value !== prevP2;
+
+    if (winner === 'none' && hasChanged) {
+      if (p1Value > prevP1) {
+        winner = 'playerOne';
+      } else if (p2Value > prevP2) {
+        winner = 'playerTwo';
+      }
+    }
+
+    if (winner === 'none') {
+      return {
+        winner,
+        p1Value,
+        p2Value,
+        isValid: false,
+      };
+    }
+
+    return {
+      winner,
+      p1Value,
+      p2Value,
+      isValid: true,
+    };
+  };
+
   // Calculate momentum data for a specific set
   const calculateMomentum = (set: Set, gameFilter: 'all' | number) => {
     const momentumData: MomentumPoint[] = [];
@@ -134,21 +252,58 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
         return;
       }
 
+      let previousP1Score = 0;
+      let previousP2Score = 0;
+      let p1PointsCount = 0;
+      let p2PointsCount = 0;
+      let gameFinished = false;
+      const normalizedGameWinner = normalizeWinnerValue(game.winner);
+
       game.scores.forEach((score, scoreIndex) => {
-        if (score.pointWinner === 'playerOne') {
+        if (gameFinished) {
+          return;
+        }
+
+        const { winner, p1Value, p2Value, isValid } = resolvePointOutcome(
+          score,
+          previousP1Score,
+          previousP2Score
+        );
+
+        if (!isValid) {
+          return;
+        }
+
+        if (winner === 'playerOne') {
           currentMomentum += 1;
-        } else if (score.pointWinner === 'playerTwo') {
+          p1PointsCount += 1;
+        } else if (winner === 'playerTwo') {
           currentMomentum -= 1;
+          p2PointsCount += 1;
+        }
+
+        let isWinningPoint =
+          Math.abs(p1PointsCount - p2PointsCount) >= 2 && (p1PointsCount >= 4 || p2PointsCount >= 4);
+
+        if (!isWinningPoint && winner !== 'none' && winner === normalizedGameWinner && scoreIndex === game.scores.length - 1) {
+          isWinningPoint = true;
         }
 
         momentumData.push({
           index: momentumData.length,
           momentum: currentMomentum,
-          scoreLabel: `${formatScoreValue(score.p1Score)}-${formatScoreValue(score.p2Score)}`,
-          winner: score.pointWinner === 'playerOne' ? 'playerOne' : score.pointWinner === 'playerTwo' ? 'playerTwo' : 'none',
+          scoreLabel: getStandardGameScoreLabel(p1PointsCount, p2PointsCount),
+          winner,
           game: thisGameNumber,
-          isGamePoint: scoreIndex === (game.scores.length - 1)
+          isGamePoint: isWinningPoint,
         });
+
+        previousP1Score = p1Value;
+        previousP2Score = p2Value;
+
+        if (isWinningPoint) {
+          gameFinished = true;
+        }
       });
     });
 
@@ -160,24 +315,61 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     const allMomentumData: MomentumPoint[] = [];
     let currentMomentum = 0;
 
-    matchData.sets.forEach((set, setIndex) => {
+    matchData.sets.forEach((set) => {
       const games = set.games || [];
       games.forEach((game, gameIndex) => {
+        let previousP1Score = 0;
+        let previousP2Score = 0;
+        let p1PointsCount = 0;
+        let p2PointsCount = 0;
+        let gameFinished = false;
+        const normalizedGameWinner = normalizeWinnerValue(game.winner);
+
         game.scores.forEach((score, scoreIndex) => {
-          if (score.pointWinner === 'playerOne') {
+          if (gameFinished) {
+            return;
+          }
+
+          const { winner, p1Value, p2Value, isValid } = resolvePointOutcome(
+            score,
+            previousP1Score,
+            previousP2Score
+          );
+
+          if (!isValid) {
+            return;
+          }
+
+          if (winner === 'playerOne') {
             currentMomentum += 1;
-          } else if (score.pointWinner === 'playerTwo') {
+            p1PointsCount += 1;
+          } else if (winner === 'playerTwo') {
             currentMomentum -= 1;
+            p2PointsCount += 1;
+          }
+
+          let isWinningPoint =
+            Math.abs(p1PointsCount - p2PointsCount) >= 2 && (p1PointsCount >= 4 || p2PointsCount >= 4);
+
+          if (!isWinningPoint && winner !== 'none' && winner === normalizedGameWinner && scoreIndex === game.scores.length - 1) {
+            isWinningPoint = true;
           }
 
           allMomentumData.push({
             momentum: currentMomentum,
             index: allMomentumData.length,
-            scoreLabel: `${formatScoreValue(score.p1Score)}-${formatScoreValue(score.p2Score)}`,
-            winner: score.pointWinner === 'playerOne' ? 'playerOne' : score.pointWinner === 'playerTwo' ? 'playerTwo' : 'none',
+            scoreLabel: getStandardGameScoreLabel(p1PointsCount, p2PointsCount),
+            winner,
             game: game.gameNumber || gameIndex + 1,
-            isGamePoint: scoreIndex === (game.scores.length - 1)
+            isGamePoint: isWinningPoint,
           });
+
+          previousP1Score = p1Value;
+          previousP2Score = p2Value;
+
+          if (isWinningPoint) {
+            gameFinished = true;
+          }
         });
       });
     });
@@ -192,22 +384,54 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
 
     const momentumData: MomentumPoint[] = [];
     let currentMomentum = 0;
+    let previousP1Score = 0;
+    let previousP2Score = 0;
+    let p1PointsCount = 0;
+    let p2PointsCount = 0;
+    let tieBreakFinished = false;
+    const winningThreshold = tieBreakTarget;
 
     set.tieBreak.scores.forEach((score, index) => {
-      if (score.winner === 'playerOne') {
-        currentMomentum += 1;
-      } else if (score.winner === 'playerTwo') {
-        currentMomentum -= 1;
+      if (tieBreakFinished) {
+        return;
       }
+
+      const { winner, p1Value, p2Value, isValid } = resolvePointOutcome(
+        score,
+        previousP1Score,
+        previousP2Score
+      );
+
+      if (!isValid) {
+        return;
+      }
+
+      if (winner === 'playerOne') {
+        currentMomentum += 1;
+        p1PointsCount += 1;
+      } else if (winner === 'playerTwo') {
+        currentMomentum -= 1;
+        p2PointsCount += 1;
+      }
+
+      const isWinningPoint =
+        Math.abs(p1PointsCount - p2PointsCount) >= 2 && (p1PointsCount >= winningThreshold || p2PointsCount >= winningThreshold);
 
       momentumData.push({
         index,
         momentum: currentMomentum,
-        scoreLabel: `${formatScoreValue(score.p1Score)}-${formatScoreValue(score.p2Score)}`,
-        winner: score.winner === 'playerOne' ? 'playerOne' : score.winner === 'playerTwo' ? 'playerTwo' : 'none',
+        scoreLabel: getTieBreakScoreLabel(p1PointsCount, p2PointsCount),
+        winner,
         game: 1,
-        isGamePoint: index === set.tieBreak!.scores.length - 1
+        isGamePoint: isWinningPoint,
       });
+
+      previousP1Score = p1Value;
+      previousP2Score = p2Value;
+
+      if (isWinningPoint) {
+        tieBreakFinished = true;
+      }
     });
 
     return momentumData;
@@ -245,6 +469,9 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     return player as string;
   };
 
+  const playerOneName = getPlayerName(matchData.p1);
+  const playerTwoName = getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2');
+
   // Check if there's any data to display
   if (!matchData.sets || matchData.sets.length === 0) {
     return (
@@ -273,8 +500,8 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
 
       {/* Filters */}
       {!isTieBreakMatch && (
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
               Sets
             </span>
@@ -304,7 +531,7 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
           </div>
 
           {selectedSet !== 'all' && availableGames.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
                 Games
               </span>
@@ -350,18 +577,18 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
               Game Momentum
             </h3>
             <p className="text-xs text-[var(--text-secondary)] transition-colors duration-300">
-              Positive momentum favours {getPlayerName(matchData.p1)}, negative favours {getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2')}
+              Positive momentum favours {playerOneName}, negative favours {playerTwoName}
             </p>
           </div>
           {momentumData.length > 0 && (
             <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                <span>{getPlayerName(matchData.p1)} point</span>
+                <span>{playerOneName} point</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-2 w-2 rounded-full bg-sky-500"></span>
-                <span>{getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2')} point</span>
+                <span>{playerTwoName} point</span>
               </div>
             </div>
           )}
@@ -380,16 +607,32 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
       <div className="mt-6 bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3 transition-colors duration-300">How to Read Momentum</h3>
         <div className="text-sm text-[var(--text-secondary)] space-y-2 transition-colors duration-300">
-          <p>• <strong>Above center line:</strong> Player 1 has momentum advantage</p>
-          <p>• <strong>Below center line:</strong> Player 2 has momentum advantage</p>
-          <p>• <strong>Steep upward line:</strong> Player 1 winning consecutive points</p>
-          <p>• <strong>Steep downward line:</strong> Player 2 winning consecutive points</p>
-          <p>• <strong>Flat line:</strong> Players trading points evenly</p>
+          <p>
+            • <strong>Above center line:</strong>{' '}
+            <span className="font-semibold text-emerald-500">{playerOneName}</span>{' '}
+            holds the momentum edge
+          </p>
+          <p>
+            • <strong>Below center line:</strong>{' '}
+            <span className="font-semibold text-sky-500">{playerTwoName}</span>{' '}
+            holds the momentum edge
+          </p>
+          <p>
+            • <strong>Steep upward line:</strong>{' '}
+            <span className="font-semibold text-emerald-500">{playerOneName}</span> strings together consecutive points
+          </p>
+          <p>
+            • <strong>Steep downward line:</strong>{' '}
+            <span className="font-semibold text-sky-500">{playerTwoName}</span> strings together consecutive points
+          </p>
+          <p>• <strong>Flat line:</strong> Both players are trading points evenly</p>
         </div>
       </div>
     </div>
   );
 };
+
+export default MomentumTab;
 
 interface MomentumChartProps {
   momentumData: MomentumPoint[];
@@ -439,38 +682,32 @@ const MomentumChart: React.FC<MomentumChartProps> = ({ momentumData }) => {
         className="w-full"
       >
         {/* Momentum axis labels */}
-        {ticks.map((tick) => {
-          const x = getX(tick);
-          return (
-            <text
-              key={`tick-label-${tick}`}
-              x={x}
-              y={topMargin - 20}
-              textAnchor="middle"
-              className="fill-[var(--text-tertiary)] text-xs"
-            >
-              {tick}
-            </text>
-          );
-        })}
+        {ticks.map((tick) => (
+          <text
+            key={`tick-label-${tick}`}
+            x={getX(tick)}
+            y={topMargin - 16}
+            textAnchor="middle"
+            className="fill-[var(--text-tertiary)] text-xs"
+          >
+            {tick}
+          </text>
+        ))}
 
-        {/* Vertical momentum grid lines */}
-        {ticks.map((tick) => {
-          const x = getX(tick);
-          return (
-            <line
-              key={`tick-line-${tick}`}
-              x1={x}
-              y1={topMargin - 10}
-              x2={x}
-              y2={chartHeight - bottomMargin + 10}
-              stroke="var(--border-primary)"
-              strokeWidth={tick === 0 ? 2 : 1}
-              strokeDasharray={tick === 0 ? undefined : '4 6'}
-              opacity={tick === 0 ? 0.7 : 0.4}
-            />
-          );
-        })}
+        {/* Vertical axis grid lines */}
+        {ticks.map((tick) => (
+          <line
+            key={`tick-line-${tick}`}
+            x1={getX(tick)}
+            y1={topMargin - 6}
+            x2={getX(tick)}
+            y2={chartHeight - bottomMargin + 6}
+            stroke="var(--border-primary)"
+            strokeWidth={tick === 0 ? 2 : 1}
+            strokeDasharray={tick === 0 ? undefined : '6 8'}
+            opacity={tick === 0 ? 0.8 : 0.4}
+          />
+        ))}
 
         {/* Baseline for scores */}
         <line
@@ -490,7 +727,7 @@ const MomentumChart: React.FC<MomentumChartProps> = ({ momentumData }) => {
           strokeWidth={3}
         />
 
-        {/* Points */}
+        {/* Data points */}
         {momentumData.map((point, index) => {
           const x = getX(point.momentum);
           const y = getY(index);
@@ -498,59 +735,48 @@ const MomentumChart: React.FC<MomentumChartProps> = ({ momentumData }) => {
             point.winner === 'playerOne'
               ? '#10B981'
               : point.winner === 'playerTwo'
-                ? '#3B82F6'
-                : '#9CA3AF';
+              ? '#3B82F6'
+              : '#9CA3AF';
 
           return (
             <g key={`point-${index}`}>
-              <circle
-                cx={x}
-                cy={y}
-                r={6}
-                fill={fill}
-                className="transition-all duration-150"
-              />
+              <circle cx={x} cy={y} r={6} fill={fill} className="transition-all duration-150" />
             </g>
           );
         })}
 
-        {/* GAME badge near last point */}
-        {lastPoint && (
-          <g>
-            <rect
-              x={getX(lastPoint.momentum) + 20}
-              y={getY(momentumData.length - 1) - 16}
-              width={68}
-              height={28}
-              rx={14}
-              fill="#34d399"
-            />
-            <text
-              x={getX(lastPoint.momentum) + 54}
-              y={getY(momentumData.length - 1)}
-              textAnchor="middle"
-              className="fill-white font-semibold text-sm"
-            >
-              GAME
-            </text>
-          </g>
-        )}
-
-        {/* Score labels */}
+        {/* GAME badge near each game closing point */}
         {momentumData.map((point, index) => {
-          const y = getY(index) + 4;
+          if (!point.isGamePoint) return null;
+          const badgeX = getX(point.momentum) + 24;
+          const badgeY = getY(index) - 16;
           return (
-            <text
-              key={`score-label-${index}`}
-              x={leftMargin - 20}
-              y={y}
-              textAnchor="end"
-              className="fill-[var(--text-primary)] text-sm font-semibold"
-            >
-              {point.scoreLabel}
-            </text>
+            <g key={`game-badge-${index}`}>
+              <rect x={badgeX} y={badgeY} width={68} height={28} rx={14} fill="#34d399" />
+              <text
+                x={badgeX + 34}
+                y={badgeY + 18}
+                textAnchor="middle"
+                className="fill-white font-semibold text-sm"
+              >
+                GAME
+              </text>
+            </g>
           );
         })}
+
+        {/* Score labels */}
+        {momentumData.map((point, index) => (
+          <text
+            key={`score-label-${index}`}
+            x={leftMargin - 40}
+            y={getY(index) + 4}
+            textAnchor="end"
+            className="fill-[var(--text-primary)] text-sm font-semibold"
+          >
+            {point.scoreLabel}
+          </text>
+        ))}
 
         {/* Game separators */}
         {momentumData.map((point, index) => {
@@ -573,5 +799,3 @@ const MomentumChart: React.FC<MomentumChartProps> = ({ momentumData }) => {
     </div>
   );
 };
-
-export default MomentumTab;
