@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 interface Player {
   _id: string;
@@ -8,8 +8,8 @@ interface Player {
 }
 
 interface Score {
-  p1Score: string;
-  p2Score: string;
+  p1Score: string | number;
+  p2Score: string | number;
   pointWinner: string;
   server: string;
 }
@@ -27,6 +27,15 @@ interface Set {
   p2TotalScore: number;
   winner: string;
   games: Game[];
+  tieBreak?: {
+    scores: Array<{
+      p1Score: number;
+      p2Score: number;
+      winner?: string;
+      server?: string;
+    }>;
+    winner?: string;
+  };
 }
 
 interface MatchData {
@@ -45,34 +54,100 @@ interface MatchData {
   courtSurface?: string;
   matchType?: string;
   matchCategory?: string;
+  matchFormat?: string;
 }
 
 interface MomentumTabProps {
   matchData: MatchData;
 }
 
+type MomentumPoint = {
+  index: number;
+  momentum: number;
+  scoreLabel: string;
+  winner: 'playerOne' | 'playerTwo' | 'none';
+  game: number;
+  isGamePoint: boolean;
+};
+
+const generateMomentumPath = (
+  data: MomentumPoint[],
+  getX: (momentum: number) => number,
+  getY: (index: number) => number
+) => {
+  if (data.length === 0) return '';
+
+  return data
+    .map((point, index) => {
+      const x = getX(point.momentum);
+      const y = getY(index);
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    })
+    .join(' ');
+};
+
 const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
   const [selectedSet, setSelectedSet] = useState<'all' | number>('all');
+  const [selectedGame, setSelectedGame] = useState<'all' | number>('all');
+
+  const isTiebreakOnlyFormat = (matchFormat?: string): boolean => {
+    return matchFormat ? matchFormat.startsWith('tiebreak') : false;
+  };
+
+  const isTieBreakMatch = useMemo(
+    () => isTiebreakOnlyFormat(matchData.matchFormat),
+    [matchData.matchFormat]
+  );
+
+  useEffect(() => {
+    if (isTieBreakMatch) {
+      setSelectedSet(1);
+      setSelectedGame(1);
+    } else {
+      setSelectedSet('all');
+      setSelectedGame('all');
+    }
+  }, [isTieBreakMatch]);
+
+  useEffect(() => {
+    if (!isTieBreakMatch) {
+      setSelectedGame('all');
+    }
+  }, [selectedSet, isTieBreakMatch]);
+
+  const formatScoreValue = (score: string | number | undefined) => {
+    if (score === undefined || score === null) return '0';
+    return typeof score === 'number' ? score.toString() : score;
+  };
 
   // Calculate momentum data for a specific set
-  const calculateMomentum = (set: Set) => {
-    const momentumData: { point: number; momentum: number; game: number }[] = [];
+  const calculateMomentum = (set: Set, gameFilter: 'all' | number) => {
+    const momentumData: MomentumPoint[] = [];
     let currentMomentum = 0;
-    let pointCount = 0;
 
-    set.games.forEach((game, gameIndex) => {
-      game.scores.forEach((score) => {
+    const games = set.games || [];
+
+    games.forEach((game, gameIndex) => {
+      const thisGameNumber = game.gameNumber || gameIndex + 1;
+
+      if (gameFilter !== 'all' && thisGameNumber !== gameFilter) {
+        return;
+      }
+
+      game.scores.forEach((score, scoreIndex) => {
         if (score.pointWinner === 'playerOne') {
           currentMomentum += 1;
         } else if (score.pointWinner === 'playerTwo') {
           currentMomentum -= 1;
         }
-        
-        pointCount++;
+
         momentumData.push({
-          point: pointCount,
+          index: momentumData.length,
           momentum: currentMomentum,
-          game: gameIndex + 1
+          scoreLabel: `${formatScoreValue(score.p1Score)}-${formatScoreValue(score.p2Score)}`,
+          winner: score.pointWinner === 'playerOne' ? 'playerOne' : score.pointWinner === 'playerTwo' ? 'playerTwo' : 'none',
+          game: thisGameNumber,
+          isGamePoint: scoreIndex === (game.scores.length - 1)
         });
       });
     });
@@ -82,25 +157,26 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
 
   // Calculate momentum data for all sets combined
   const calculateAllSetsMomentum = () => {
-    const allMomentumData: { point: number; momentum: number; set: number; game: number }[] = [];
+    const allMomentumData: MomentumPoint[] = [];
     let currentMomentum = 0;
-    let pointCount = 0;
 
     matchData.sets.forEach((set, setIndex) => {
-      set.games.forEach((game, gameIndex) => {
-        game.scores.forEach((score) => {
+      const games = set.games || [];
+      games.forEach((game, gameIndex) => {
+        game.scores.forEach((score, scoreIndex) => {
           if (score.pointWinner === 'playerOne') {
             currentMomentum += 1;
           } else if (score.pointWinner === 'playerTwo') {
             currentMomentum -= 1;
           }
-          
-          pointCount++;
+
           allMomentumData.push({
-            point: pointCount,
             momentum: currentMomentum,
-            set: setIndex + 1,
-            game: gameIndex + 1
+            index: allMomentumData.length,
+            scoreLabel: `${formatScoreValue(score.p1Score)}-${formatScoreValue(score.p2Score)}`,
+            winner: score.pointWinner === 'playerOne' ? 'playerOne' : score.pointWinner === 'playerTwo' ? 'playerTwo' : 'none',
+            game: game.gameNumber || gameIndex + 1,
+            isGamePoint: scoreIndex === (game.scores.length - 1)
           });
         });
       });
@@ -109,53 +185,58 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     return allMomentumData;
   };
 
+  const calculateTieBreakMomentum = (set?: Set) => {
+    if (!set?.tieBreak?.scores) {
+      return [];
+    }
+
+    const momentumData: MomentumPoint[] = [];
+    let currentMomentum = 0;
+
+    set.tieBreak.scores.forEach((score, index) => {
+      if (score.winner === 'playerOne') {
+        currentMomentum += 1;
+      } else if (score.winner === 'playerTwo') {
+        currentMomentum -= 1;
+      }
+
+      momentumData.push({
+        index,
+        momentum: currentMomentum,
+        scoreLabel: `${formatScoreValue(score.p1Score)}-${formatScoreValue(score.p2Score)}`,
+        winner: score.winner === 'playerOne' ? 'playerOne' : score.winner === 'playerTwo' ? 'playerTwo' : 'none',
+        game: 1,
+        isGamePoint: index === set.tieBreak!.scores.length - 1
+      });
+    });
+
+    return momentumData;
+  };
+
   // Get momentum data based on selection
   const momentumData = useMemo(() => {
+    if (isTieBreakMatch) {
+      return calculateTieBreakMomentum(matchData.sets[0]);
+    }
+
     if (selectedSet === 'all') {
       return calculateAllSetsMomentum();
     } else {
       const set = matchData.sets[selectedSet - 1];
-      return set ? calculateMomentum(set) : [];
+      return set ? calculateMomentum(set, selectedGame) : [];
     }
-  }, [selectedSet, matchData.sets]);
+  }, [selectedSet, selectedGame, matchData.sets, isTieBreakMatch]);
 
-  // Generate SVG path for momentum line
-  const generateMomentumPath = (data: any[]) => {
-    if (data.length === 0) return '';
-    
-    const maxMomentum = Math.max(...data.map(d => d.momentum));
-    const minMomentum = Math.min(...data.map(d => d.momentum));
-    const range = maxMomentum - minMomentum || 1;
-    
-    return data.map((point, index) => {
-      const x = 100 + (index / (data.length - 1)) * 1200;
-      const y = 100 + ((maxMomentum - point.momentum) / range) * 300;
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-  };
-
-  // Generate SVG path for area fill
-  const generateAreaPath = (data: any[]) => {
-    if (data.length === 0) return '';
-    
-    const maxMomentum = Math.max(...data.map(d => d.momentum));
-    const minMomentum = Math.min(...data.map(d => d.momentum));
-    const range = maxMomentum - minMomentum || 1;
-    
-    const topPath = data.map((point, index) => {
-      const x = 100 + (index / (data.length - 1)) * 1200;
-      const y = 100 + ((maxMomentum - point.momentum) / range) * 300;
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-    
-    const bottomPath = data.map((point, index) => {
-      const x = 100 + ((data.length - 1 - index) / (data.length - 1)) * 1200;
-      const y = 400;
-      return `L ${x} ${y}`;
-    }).join(' ');
-    
-    return `${topPath} ${bottomPath} Z`;
-  };
+  const availableGames = useMemo(() => {
+    if (isTieBreakMatch || selectedSet === 'all') {
+      return [];
+    }
+    const set = matchData.sets[selectedSet - 1];
+    if (!set?.games) {
+      return [];
+    }
+    return set.games.map((game, index) => game.gameNumber || index + 1);
+  }, [matchData.sets, selectedSet, isTieBreakMatch]);
 
   const getPlayerName = (player: Player | string) => {
     if (typeof player === 'object' && player.firstName) {
@@ -182,198 +263,117 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
     <div className="p-6 bg-[var(--bg-primary)] min-h-screen transition-colors duration-300">
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2 transition-colors duration-300">Match Momentum Analysis</h2>
-        <p className="text-[var(--text-secondary)] transition-colors duration-300">Visual representation of player momentum throughout the match</p>
+        <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2 transition-colors duration-300">
+          Match Momentum Analysis
+        </h2>
+        <p className="text-[var(--text-secondary)] transition-colors duration-300">
+          Visual representation of player momentum throughout the match
+        </p>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex space-x-2 mb-6">
-        <button
-          onClick={() => setSelectedSet('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            selectedSet === 'all'
-              ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
-              : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          All Set
-        </button>
-        {matchData.sets.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setSelectedSet(index + 1)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              selectedSet === index + 1
-                ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            Set {index + 1}
-          </button>
-        ))}
-      </div>
-
-      {/* Momentum Charts */}
-      <div className="space-y-6">
-        {/* Player 1 Momentum */}
-        <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 text-center transition-colors duration-300">
-            {getPlayerName(matchData.p1)} Momentum
-          </h3>
-          <div className="flex justify-center items-center w-full">
-            <div className="relative w-full max-w-6xl">
-              <svg 
-                width="100%" 
-                height="500" 
-                viewBox="0 0 1400 500" 
-                className="w-full h-auto"
-                preserveAspectRatio="xMidYMid meet"
+      {/* Filters */}
+      {!isTieBreakMatch && (
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
+              Sets
+            </span>
+            <button
+              onClick={() => setSelectedSet('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                selectedSet === 'all'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              All Sets
+            </button>
+            {matchData.sets.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedSet(index + 1)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  selectedSet === index + 1
+                    ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+                }`}
               >
-                {/* Grid lines */}
-                <line x1="100" y1="100" x2="100" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
-                <line x1="100" y1="400" x2="1300" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
-                
-                {/* Center line */}
-                <line x1="100" y1="250" x2="1300" y2="250" stroke="var(--border-secondary)" strokeWidth="1" strokeDasharray="5,5" />
-                
-                {/* Area fill */}
-                <path
-                  d={generateAreaPath(momentumData)}
-                  fill="url(#momentumGradient)"
-                  opacity="0.3"
-                />
-                
-                {/* Momentum line */}
-                <path
-                  d={generateMomentumPath(momentumData)}
-                  stroke="#8b5cf6"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                
-                {/* Data points */}
-                {momentumData.map((point, index) => {
-                  const x = 100 + (index / (momentumData.length - 1)) * 1200;
-                  const y = 100 + ((Math.max(...momentumData.map(d => d.momentum)) - point.momentum) / 
-                    (Math.max(...momentumData.map(d => d.momentum)) - Math.min(...momentumData.map(d => d.momentum)) || 1)) * 300;
-                  
-                  return (
-                    <circle
-                      key={index}
-                      cx={x}
-                      cy={y}
-                      r="5"
-                      fill="#8b5cf6"
-                      className="hover:r-6 transition-all cursor-pointer"
-                    />
-                  );
-                })}
-                
-                {/* Gradient definition */}
-                <defs>
-                  <linearGradient id="momentumGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.1" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              
-              {/* Legend */}
-              <div className="mt-6 text-center">
-                <div className="flex items-center justify-center space-x-6 text-sm text-[var(--text-secondary)] transition-colors duration-300">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-purple-500 rounded-full mr-2"></div>
-                    <span>Momentum Line</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-purple-200 rounded-full mr-2"></div>
-                    <span>Momentum Area</span>
-                  </div>
-                </div>
+                Set {index + 1}
+              </button>
+            ))}
+          </div>
+
+          {selectedSet !== 'all' && availableGames.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
+                Games
+              </span>
+              <button
+                onClick={() => setSelectedGame('all')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  selectedGame === 'all'
+                    ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                All Games
+              </button>
+              {availableGames.map((gameNumber) => (
+                <button
+                  key={gameNumber}
+                  onClick={() => setSelectedGame(gameNumber)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    selectedGame === gameNumber
+                      ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  Game {gameNumber}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isTieBreakMatch && (
+        <div className="mb-6 text-sm text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-4 py-3 transition-colors duration-300">
+          Tie-break format detected. Momentum reflects the tie-break points played.
+        </div>
+      )}
+
+      {/* Momentum Chart */}
+      <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] transition-colors duration-300">
+              Game Momentum
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] transition-colors duration-300">
+              Positive momentum favours {getPlayerName(matchData.p1)}, negative favours {getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2')}
+            </p>
+          </div>
+          {momentumData.length > 0 && (
+            <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span>{getPlayerName(matchData.p1)} point</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-2 w-2 rounded-full bg-sky-500"></span>
+                <span>{getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2')} point</span>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Player 2 Momentum */}
-        <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 text-center transition-colors duration-300">
-            {getPlayerName(matchData.p2)} Momentum
-          </h3>
-          <div className="flex justify-center items-center w-full">
-            <div className="relative w-full max-w-6xl">
-              <svg 
-                width="100%" 
-                height="500" 
-                viewBox="0 0 1400 500" 
-                className="w-full h-auto"
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* Grid lines */}
-                <line x1="100" y1="100" x2="100" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
-                <line x1="100" y1="400" x2="1300" y2="400" stroke="var(--border-primary)" strokeWidth="1" />
-                
-                {/* Center line */}
-                <line x1="100" y1="250" x2="1300" y2="250" stroke="var(--border-secondary)" strokeWidth="1" strokeDasharray="5,5" />
-                
-                {/* Area fill */}
-                <path
-                  d={generateAreaPath(momentumData)}
-                  fill="url(#momentumGradient2)"
-                  opacity="0.3"
-                />
-                
-                {/* Momentum line */}
-                <path
-                  d={generateMomentumPath(momentumData)}
-                  stroke="#3b82f6"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                
-                {/* Data points */}
-                {momentumData.map((point, index) => {
-                  const x = 100 + (index / (momentumData.length - 1)) * 1200;
-                  const y = 100 + ((Math.max(...momentumData.map(d => d.momentum)) - point.momentum) / 
-                    (Math.max(...momentumData.map(d => d.momentum)) - Math.min(...momentumData.map(d => d.momentum)) || 1)) * 300;
-                  
-                  return (
-                    <circle
-                      key={index}
-                      cx={x}
-                      cy={y}
-                      r="5"
-                      fill="#3b82f6"
-                      className="hover:r-6 transition-all cursor-pointer"
-                    />
-                  );
-                })}
-                
-                {/* Gradient definition */}
-                <defs>
-                  <linearGradient id="momentumGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.6" />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.1" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              
-              {/* Legend */}
-              <div className="mt-6 text-center">
-                <div className="flex items-center justify-center space-x-6 text-sm text-[var(--text-secondary)] transition-colors duration-300">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
-                    <span>Momentum Line</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-blue-200 rounded-full mr-2"></div>
-                    <span>Momentum Area</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {momentumData.length === 0 ? (
+          <div className="text-center text-sm text-[var(--text-tertiary)] py-12 transition-colors duration-300">
+            No momentum data recorded for the selected filters.
           </div>
-        </div>
+        ) : (
+          <MomentumChart momentumData={momentumData} />
+        )}
       </div>
 
       {/* Momentum Explanation */}
@@ -387,6 +387,189 @@ const MomentumTab: React.FC<MomentumTabProps> = ({ matchData }) => {
           <p>• <strong>Flat line:</strong> Players trading points evenly</p>
         </div>
       </div>
+    </div>
+  );
+};
+
+interface MomentumChartProps {
+  momentumData: MomentumPoint[];
+}
+
+const MomentumChart: React.FC<MomentumChartProps> = ({ momentumData }) => {
+  const leftMargin = 120;
+  const rightMargin = 140;
+  const topMargin = 60;
+  const bottomMargin = 60;
+  const pointGap = 60;
+  const baseWidth = 600;
+
+  const rangeValue = Math.max(
+    6,
+    Math.ceil(
+      Math.max(
+        ...momentumData.map((point) => Math.abs(point.momentum)),
+        0
+      )
+    )
+  );
+
+  const chartHeight =
+    topMargin +
+    bottomMargin +
+    (momentumData.length > 1 ? (momentumData.length - 1) * pointGap : 0);
+  const chartWidth = leftMargin + baseWidth + rightMargin;
+  const plotWidth = baseWidth;
+  const centerX = leftMargin + plotWidth / 2;
+
+  const getX = (momentum: number) =>
+    centerX + (momentum / rangeValue) * (plotWidth / 2);
+  const getY = (index: number) =>
+    chartHeight - bottomMargin - index * pointGap;
+
+  const pathD = generateMomentumPath(momentumData, getX, getY);
+  const ticks = Array.from({ length: rangeValue * 2 + 1 }, (_, i) => i - rangeValue);
+  const lastPoint = momentumData[momentumData.length - 1];
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg
+        width={chartWidth}
+        height={chartHeight}
+        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+        className="w-full"
+      >
+        {/* Momentum axis labels */}
+        {ticks.map((tick) => {
+          const x = getX(tick);
+          return (
+            <text
+              key={`tick-label-${tick}`}
+              x={x}
+              y={topMargin - 20}
+              textAnchor="middle"
+              className="fill-[var(--text-tertiary)] text-xs"
+            >
+              {tick}
+            </text>
+          );
+        })}
+
+        {/* Vertical momentum grid lines */}
+        {ticks.map((tick) => {
+          const x = getX(tick);
+          return (
+            <line
+              key={`tick-line-${tick}`}
+              x1={x}
+              y1={topMargin - 10}
+              x2={x}
+              y2={chartHeight - bottomMargin + 10}
+              stroke="var(--border-primary)"
+              strokeWidth={tick === 0 ? 2 : 1}
+              strokeDasharray={tick === 0 ? undefined : '4 6'}
+              opacity={tick === 0 ? 0.7 : 0.4}
+            />
+          );
+        })}
+
+        {/* Baseline for scores */}
+        <line
+          x1={leftMargin}
+          y1={chartHeight - bottomMargin}
+          x2={leftMargin}
+          y2={topMargin}
+          stroke="var(--border-primary)"
+          strokeWidth={1.5}
+        />
+
+        {/* Momentum path */}
+        <path
+          d={pathD}
+          fill="none"
+          stroke="#f87171"
+          strokeWidth={3}
+        />
+
+        {/* Points */}
+        {momentumData.map((point, index) => {
+          const x = getX(point.momentum);
+          const y = getY(index);
+          const fill =
+            point.winner === 'playerOne'
+              ? '#10B981'
+              : point.winner === 'playerTwo'
+                ? '#3B82F6'
+                : '#9CA3AF';
+
+          return (
+            <g key={`point-${index}`}>
+              <circle
+                cx={x}
+                cy={y}
+                r={6}
+                fill={fill}
+                className="transition-all duration-150"
+              />
+            </g>
+          );
+        })}
+
+        {/* GAME badge near last point */}
+        {lastPoint && (
+          <g>
+            <rect
+              x={getX(lastPoint.momentum) + 20}
+              y={getY(momentumData.length - 1) - 16}
+              width={68}
+              height={28}
+              rx={14}
+              fill="#34d399"
+            />
+            <text
+              x={getX(lastPoint.momentum) + 54}
+              y={getY(momentumData.length - 1)}
+              textAnchor="middle"
+              className="fill-white font-semibold text-sm"
+            >
+              GAME
+            </text>
+          </g>
+        )}
+
+        {/* Score labels */}
+        {momentumData.map((point, index) => {
+          const y = getY(index) + 4;
+          return (
+            <text
+              key={`score-label-${index}`}
+              x={leftMargin - 20}
+              y={y}
+              textAnchor="end"
+              className="fill-[var(--text-primary)] text-sm font-semibold"
+            >
+              {point.scoreLabel}
+            </text>
+          );
+        })}
+
+        {/* Game separators */}
+        {momentumData.map((point, index) => {
+          if (!point.isGamePoint || index === momentumData.length - 1) return null;
+          const y = getY(index) - pointGap / 2;
+          return (
+            <line
+              key={`game-separator-${index}`}
+              x1={leftMargin - 10}
+              y1={y}
+              x2={chartWidth - rightMargin + 20}
+              y2={y}
+              stroke="var(--border-secondary)"
+              strokeDasharray="6 8"
+              opacity={0.5}
+            />
+          );
+        })}
+      </svg>
     </div>
   );
 };

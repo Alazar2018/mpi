@@ -575,19 +575,36 @@ const MatchTracker: React.FC = () => {
         const isSavedTiebreakOnly = savedMatchRules.isTiebreakOnly;
         
         if (isSavedTiebreakOnly && matchData.sets && matchData.sets.length > 0) {
-          const lastSet = matchData.sets[matchData.sets.length - 1];
-          const p1Points = (lastSet as any).p1TotalScore || 0;
-          const p2Points = (lastSet as any).p2TotalScore || 0;
-          
+          const lastSet = matchData.sets[matchData.sets.length - 1] as any;
+          const setGames = Array.isArray(lastSet?.games) ? lastSet.games : [];
+          const lastGame = setGames.length > 0 ? setGames[setGames.length - 1] : null;
+
+          const countPointsFromScores = (scores: any[]): { p1: number; p2: number } => {
+            return (scores || []).reduce(
+              (acc, score) => {
+                if (score?.pointWinner === 'playerOne') acc.p1 += 1;
+                else if (score?.pointWinner === 'playerTwo') acc.p2 += 1;
+                return acc;
+              },
+              { p1: 0, p2: 0 }
+            );
+          };
+
+          const initialPoints = lastGame
+            ? countPointsFromScores(lastGame.scores || [])
+            : countPointsFromScores(
+                setGames.flatMap((game: any) => game?.scores || [])
+              );
+
+          setPlayer1(prev => ({ ...prev, points: initialPoints.p1 }));
+          setPlayer2(prev => ({ ...prev, points: initialPoints.p2 }));
+
           console.log('🔄 [initialLoad] Restoring tiebreak points for saved match:', {
-            p1Points,
-            p2Points,
-            p1TotalScore: (lastSet as any).p1TotalScore,
-            p2TotalScore: (lastSet as any).p2TotalScore
+            p1Points: initialPoints.p1,
+            p2Points: initialPoints.p2,
+            p1TotalScore: lastSet?.p1TotalScore,
+            p2TotalScore: lastSet?.p2TotalScore
           });
-          
-          setPlayer1(prev => ({ ...prev, points: p1Points }));
-          setPlayer2(prev => ({ ...prev, points: p2Points }));
         }
         
         // Show toast indicating saved match loaded
@@ -2143,7 +2160,13 @@ const MatchTracker: React.FC = () => {
                       const setWinner = p1Score > p2Score ? 'playerOne' : 
                                        p2Score > p1Score ? 'playerTwo' : null;
 
-                      const setPayload: MatchSetData & { winner?: "playerOne" | "playerTwo" } = {
+      const existingSetFromAPI = matchData.sets?.[setIndex] as any;
+      const existingTieBreakScores: any[] = Array.isArray(existingSetFromAPI?.tieBreak?.scores)
+        ? existingSetFromAPI.tieBreak.scores
+        : [];
+      const existingTieBreakWinner: "playerOne" | "playerTwo" | undefined = existingSetFromAPI?.tieBreak?.winner;
+
+      const setPayload: MatchSetData & { winner?: "playerOne" | "playerTwo" } = {
               p1TotalScore: isTiebreakOnly ? (setForScoring.p1TotalScore ?? setForScoring.player1) : setForScoring.player1,
               p2TotalScore: isTiebreakOnly ? (setForScoring.p2TotalScore ?? setForScoring.player2) : setForScoring.player2,
             games: setGames.length > 0 ? setGames.map(game => ({
@@ -2246,6 +2269,48 @@ const MatchTracker: React.FC = () => {
               })()
             })) : []
             };
+
+      if (isTiebreakOnly) {
+        const historyTieBreakScores = setGames.flatMap(game => game.scores || []);
+        const combinedTieBreakScores: any[] = (() => {
+          const seen = new Set<string>();
+          const result: any[] = [];
+
+          const addScore = (score: any) => {
+            if (!score) return;
+            const key = [
+              score.p1Score,
+              score.p2Score,
+              score.pointWinner ?? score.winner,
+              score.server
+            ].map(value => (value !== undefined && value !== null ? String(value) : "")).join("|");
+            if (!seen.has(key)) {
+              seen.add(key);
+              result.push(score);
+            }
+          };
+
+          existingTieBreakScores.forEach(addScore);
+          historyTieBreakScores.forEach(addScore);
+
+          return result;
+        })();
+
+        const tieBreakWinner =
+          setPayload.winner ??
+          existingTieBreakWinner ??
+          (combinedTieBreakScores.length > 0
+            ? (combinedTieBreakScores[combinedTieBreakScores.length - 1].pointWinner ??
+              combinedTieBreakScores[combinedTieBreakScores.length - 1].winner)
+            : undefined);
+
+        setPayload.games = [];
+        setPayload.tieBreak = {
+          scores: combinedTieBreakScores as any,
+          winner: tieBreakWinner
+        } as any;
+      }
+
                       if (setWinner) {
                         setPayload.winner = setWinner;
                       }
@@ -3487,90 +3552,66 @@ const MatchTracker: React.FC = () => {
         // });
 
         if (setWinner) {
-          // FIRST: Reset games to 0-0 for both players in the current set
+          // Prepare updated games and sets
           const resetGames = [...newGames];
           resetGames[match.currentSet] = { player1: 0, player2: 0, scores: [] };
-          
-          // Ensure we have a games entry for the next set if we're moving to it
           if (match.currentSet + 1 < match.bestOf) {
             resetGames[match.currentSet + 1] = { player1: 0, player2: 0, scores: [] };
           }
-          
-          // SECOND: Update sets
+
           const newSets = [...match.sets];
           newSets[match.currentSet] = {
             player1: setWinner === 1 ? 1 : 0,
             player2: setWinner === 2 ? 1 : 0
           };
 
-          // THIRD: Update match state with reset games AND new sets
+          const newP1Sets = newSets.reduce((sum, set) => sum + set.player1, 0);
+          const newP2Sets = newSets.reduce((sum, set) => sum + set.player2, 0);
+          const matchWinner = checkMatchWinner(newP1Sets, newP2Sets);
+
+          // Update match and player state
           setMatch(prev => ({
             ...prev,
             sets: newSets,
-            games: resetGames,  // Use the reset games (0-0)
+            games: resetGames,
             isDeuce: false,
             hasAdvantage: null
           }));
 
-          // FOURTH: Update player set counts and reset points
-          const newP1Sets = newSets.reduce((sum, set) => sum + set.player1, 0);
-          const newP2Sets = newSets.reduce((sum, set) => sum + set.player2, 0);
-          
-          // console.log('🎯 Updating player set counts:', {
-          //   p1Sets: newP1Sets,
-          //   p2Sets: newP2Sets,
-          //   newSets: newSets
-          // });
-          
-          setPlayer1(prev => ({ 
-            ...prev, 
+          setPlayer1(prev => ({
+            ...prev,
             sets: newP1Sets,
-            points: 0 
+            points: 0
           }));
-          setPlayer2(prev => ({ 
-            ...prev, 
+          setPlayer2(prev => ({
+            ...prev,
             sets: newP2Sets,
-            points: 0 
+            points: 0
           }));
 
-          // Show set won toast and winner modal
-          const setWinnerName = setWinner === 1 ? player1.name : player2.name;
-          toast.success(`${setWinnerName} wins the set! 🎾`, {
-            duration: 4000,
-            icon: '🏅',
-          });
-          
-          // Show winner modal for set win
-          const setWinRules = getMatchRules(
-            match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
-            match.scoringVariation,
-            match.customTiebreakRules,
-            match.noAdScoring
-          );
-          // console.log('🎯 [Set Win] Triggering winner modal with player points:', {
-          //   player1Points: player1.points,
-          //   player2Points: player2.points,
-          //   setWinner,
-          //   isTiebreakOnly: setWinRules.isTiebreakOnly
-          // });
-          
-          // For tiebreak-only formats, capture the final points before showing modal
-          if (setWinRules.isTiebreakOnly) {
-            const capturedP1Points = finalP1Points !== undefined ? finalP1Points : player1.points;
-            const capturedP2Points = finalP2Points !== undefined ? finalP2Points : player2.points;
-            // console.log('🎯 [Set Win] Capturing final tiebreak scores:', { p1Points: capturedP1Points, p2Points: capturedP2Points });
-            setFinalTiebreakScores({ p1Points: capturedP1Points, p2Points: capturedP2Points });
-            setMatchWinner(setWinner);
-            setShowWinnersModal(true);
-          } else {
+          if (!matchWinner) {
+            const setWinnerName = setWinner === 1 ? player1.name : player2.name;
+            toast.success(`${setWinnerName} wins the set! 🎾`, {
+              duration: 4000,
+              icon: '🏅',
+            });
+
+            const setWinRules = getMatchRules(
+              match.matchFormat || convertLegacyMatchType(match.bestOf === 1 ? 'one' : match.bestOf === 3 ? 'three' : 'five'),
+              match.scoringVariation,
+              match.customTiebreakRules,
+              match.noAdScoring
+            );
+
+            if (setWinRules.isTiebreakOnly) {
+              const capturedP1Points = finalP1Points !== undefined ? finalP1Points : player1.points;
+              const capturedP2Points = finalP2Points !== undefined ? finalP2Points : player2.points;
+              setFinalTiebreakScores({ p1Points: capturedP1Points, p2Points: capturedP2Points });
+            }
+
             setMatchWinner(setWinner);
             setShowWinnersModal(true);
           }
-
-          // Check for match winner AFTER updating the state
-          const totalSetsP1 = newSets.reduce((sum, set) => sum + set.player1, 0);
-          const totalSetsP2 = newSets.reduce((sum, set) => sum + set.player2, 0);
-          const matchWinner = checkMatchWinner(totalSetsP1, totalSetsP2);
 
           if (matchWinner) {
             // Show match won toast
@@ -3866,7 +3907,7 @@ const MatchTracker: React.FC = () => {
       
       if (gameWinner) {
         // Use helper function for game win logic
-        handleGameWin(gameWinner);
+        handleGameWin(gameWinner, p1Total, p2Total);
         // Save state after game completion
         setTimeout(() => saveMatchState(), 100);
       } else {
@@ -3904,7 +3945,9 @@ const MatchTracker: React.FC = () => {
     );
     const isTiebreakOnly = rules.isTiebreakOnly;
 
-    if (!isTiebreakOnly) {
+    const shouldUseLocalState = !isTiebreakOnly && matchData.status !== 'saved';
+
+    if (shouldUseLocalState) {
       const savedState = localStorage.getItem(`tennisMatchState_${matchId}`);
       if (savedState) {
         try {
@@ -3937,11 +3980,16 @@ const MatchTracker: React.FC = () => {
         }
       }
     } else {
-      localStorage.removeItem(`tennisMatchState_${matchId}`);
+      if (matchId) {
+        localStorage.removeItem(`tennisMatchState_${matchId}`);
+      } else {
+        localStorage.removeItem('tennisMatchState');
+      }
     }
 
     try {
-      const existingSets = matchData.sets || [];
+    const existingSets = matchData.sets || [];
+    const resumeLevel = match.level ?? matchData.trackingLevel ? parseInt(String(matchData.trackingLevel).replace('level', ''), 10) : undefined;
       const maxSets = rules.maxSets;
 
       const convertedSets = Array.from({ length: maxSets }, () => ({ player1: 0, player2: 0 }));
@@ -3999,14 +4047,19 @@ const MatchTracker: React.FC = () => {
       };
 
       existingSets.forEach((setItem: any, index: number) => {
-        const setGames = Array.isArray(setItem.games) ? setItem.games : [];
+      const rawSetScores = setItem as { player1?: number | string; player2?: number | string; p1TotalScore?: number | string; p2TotalScore?: number | string };
+      const parsedSetP1 = rawSetScores.p1TotalScore ?? rawSetScores.player1 ?? 0;
+      const parsedSetP2 = rawSetScores.p2TotalScore ?? rawSetScores.player2 ?? 0;
+      const setP1Score = typeof parsedSetP1 === 'string' ? parseInt(parsedSetP1, 10) || 0 : parsedSetP1 || 0;
+      const setP2Score = typeof parsedSetP2 === 'string' ? parseInt(parsedSetP2, 10) || 0 : parsedSetP2 || 0;
 
-        if (setItem.winner === 'playerOne') {
-          convertedSets[index] = { player1: 1, player2: 0 };
-        } else if (setItem.winner === 'playerTwo') {
-          convertedSets[index] = { player1: 0, player2: 1 };
-        }
+      if (setP1Score > setP2Score) {
+        convertedSets[index] = { player1: 1, player2: 0 };
+      } else if (setP2Score > setP1Score) {
+        convertedSets[index] = { player1: 0, player2: 1 };
+      }
 
+      const setGames = Array.isArray(setItem.games) ? setItem.games : [];
         let p1CompletedGames = 0;
         let p2CompletedGames = 0;
         let lastCompletedGameServer: 'playerOne' | 'playerTwo' | null = null;
@@ -4031,15 +4084,45 @@ const MatchTracker: React.FC = () => {
           }
         });
 
+        const tieBreakScores = Array.isArray(setItem.tieBreak?.scores) ? setItem.tieBreak.scores : [];
+        const tieBreakWinner =
+          tieBreakScores.length > 0
+            ? (
+                normalizeWinner(setItem.tieBreak?.winner) ??
+                normalizeWinner(tieBreakScores[tieBreakScores.length - 1]?.winner) ??
+                normalizeWinner(tieBreakScores[tieBreakScores.length - 1]?.pointWinner)
+              )
+            : null;
+
+        if (tieBreakScores.length > 0) {
+          if (tieBreakWinner === 'playerOne') {
+            p1CompletedGames += 1;
+          } else if (tieBreakWinner === 'playerTwo') {
+            p2CompletedGames += 1;
+          }
+
+          completedGameHistory.push({
+            gameNumber: completedGameHistory.length + 1,
+            server: tieBreakScores[0]?.server || 'playerOne',
+            scores: tieBreakScores,
+            winner: tieBreakWinner ?? undefined
+          });
+        }
+
         convertedGames[index] = { player1: p1CompletedGames, player2: p2CompletedGames, scores: [] };
 
         if (index === existingSets.length - 1) {
-          const inProgress = [...setGames].reverse().find((game: any) => !game.winner);
+          const inProgress = [...setGames].reverse().find((game: any) => !normalizeWinner(game.winner));
           if (inProgress) {
             inProgressGameScores = inProgress.scores || [];
             inProgressGameServer = inProgress.server || null;
             inProgressGameIsTiebreak = Boolean(inProgress.tieBreak || setItem.tieBreak);
           } else {
+            if (tieBreakScores.length > 0 && !tieBreakWinner) {
+              inProgressGameScores = tieBreakScores;
+              inProgressGameServer = tieBreakScores[tieBreakScores.length - 1]?.server || null;
+              inProgressGameIsTiebreak = true;
+            }
             if (lastCompletedGameServer) {
               inProgressGameServer = lastCompletedGameServer === 'playerOne' ? 'playerTwo' : 'playerOne';
             }
@@ -4061,11 +4144,39 @@ const MatchTracker: React.FC = () => {
       let restoredIsTiebreak = rules.isTiebreakOnly;
 
       if (rules.isTiebreakOnly) {
-        const lastSet = existingSets[currentSetIndex];
-        const rawP1 = lastSet ? Number((lastSet as any).p1TotalScore) || 0 : 0;
-          const rawP2 = lastSet ? Number((lastSet as any).p2TotalScore) || 0 : 0;
-        restoredP1Points = rawP1;
-        restoredP2Points = rawP2;
+        const countPoints = (scores: PointScore[]): { p1: number; p2: number } => {
+          return (scores || []).reduce(
+            (acc, score) => {
+              if (score?.pointWinner === 'playerOne') acc.p1 += 1;
+              else if (score?.pointWinner === 'playerTwo') acc.p2 += 1;
+              return acc;
+            },
+            { p1: 0, p2: 0 }
+          );
+        };
+
+        if (inProgressGameScores.length > 0) {
+          const points = countPoints(inProgressGameScores);
+          restoredP1Points = points.p1;
+          restoredP2Points = points.p2;
+        } else if (completedGameHistory.length > 0) {
+          const lastCompletedGame = completedGameHistory[completedGameHistory.length - 1];
+          const points = countPoints(lastCompletedGame.scores || []);
+          restoredP1Points = points.p1;
+          restoredP2Points = points.p2;
+        } else if (existingSets[currentSetIndex]) {
+          const lastSet = existingSets[currentSetIndex] as any;
+          const setGames = Array.isArray(lastSet?.games) ? lastSet.games : [];
+          const aggregatePoints = countPoints(
+            setGames.flatMap((game: any) => game?.scores || [])
+          );
+          restoredP1Points = aggregatePoints.p1;
+          restoredP2Points = aggregatePoints.p2;
+        } else {
+          restoredP1Points = 0;
+          restoredP2Points = 0;
+        }
+
         restoredIsDeuce = false;
         restoredAdvantage = null;
         restoredIsTiebreak = true;
@@ -4490,7 +4601,7 @@ const MatchTracker: React.FC = () => {
       
       if (gameWinner) {
         // Use helper function for game win logic
-        handleGameWin(gameWinner);
+        handleGameWin(gameWinner, p1Total, p2Total);
         // Save state after game completion
         setTimeout(() => saveMatchState(), 100);
       } else {

@@ -10,8 +10,8 @@ interface Player {
 }
 
 interface Score {
-  p1Score: string;
-  p2Score: string;
+  p1Score: string | number;
+  p2Score: string | number;
   isSecondService?: boolean;
   type?: string;
   servePlacement?: string;
@@ -65,6 +65,26 @@ interface Set {
     };
   };
   games?: Game[];
+  tieBreak?: {
+    scores: Array<{
+      p1Score: number;
+      p2Score: number;
+      isSecondService?: boolean;
+      type?: string;
+      servePlacement?: string;
+      courtPosition?: string;
+      rallies?: string;
+      missedShotWay?: string | null;
+      missedShot?: string | null;
+      placement?: string | null;
+      betweenPointDuration?: number;
+      p1Reaction?: string;
+      p2Reaction?: string;
+      winner?: string;
+      server?: string;
+    }>;
+    winner?: string;
+  };
 }
 
 interface MatchData {
@@ -213,14 +233,15 @@ const SetsTab: React.FC<SetsTabProps> = ({ matchData }) => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const formatTennisScore = (score: string) => {
-    switch (score) {
+  const formatTennisScore = (score: string | number) => {
+    const normalized = typeof score === 'number' ? score.toString() : score;
+    switch (normalized) {
       case '0': return '0';
       case '15': return '15';
       case '30': return '30';
       case '40': return '40';
       case 'AD': return 'AD';
-      default: return score;
+      default: return normalized;
     }
   };
 
@@ -236,6 +257,113 @@ const SetsTab: React.FC<SetsTabProps> = ({ matchData }) => {
     
     // If no scores available, show 0-0
     return { p1: '0', p2: '0' };
+  };
+
+  const formatTieBreakScore = (score: number) => {
+    return Number.isFinite(score) ? score.toString() : '0';
+  };
+
+  const renderTieBreakPoints = (set: Set, setIndex: number) => {
+    const tieBreakScores = set.tieBreak?.scores || [];
+
+    return (
+      <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] p-6 border border-[var(--border-primary)] transition-colors duration-300">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <div>
+            <h4 className="text-xl font-semibold text-[var(--text-primary)] transition-colors duration-300">
+              Tie-Break Set {set.setNumber || setIndex + 1}
+            </h4>
+            <p className="text-sm text-[var(--text-secondary)] transition-colors duration-300">
+              Final Score: {set.p1TotalScore}-{set.p2TotalScore}
+            </p>
+          </div>
+          {set.tieBreak?.winner && (
+            <span className="inline-block px-3 py-1 rounded-full text-sm font-medium text-[var(--text-primary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] transition-colors duration-300">
+              🏆 Tie-Break Winner: {set.tieBreak.winner === 'playerOne'
+                ? getPlayerName(matchData.p1)
+                : getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2')}
+            </span>
+          )}
+        </div>
+
+        {tieBreakScores.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[var(--border-primary)]">
+              <thead className="bg-[var(--bg-secondary)]">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider transition-colors duration-300">
+                    Point
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider transition-colors duration-300">
+                    Score
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider transition-colors duration-300">
+                    Winner
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider transition-colors duration-300">
+                    Server
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider transition-colors duration-300">
+                    Details
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-primary)]">
+                {tieBreakScores.map((score, scoreIndex) => {
+                  const winnerName = score.winner === 'playerOne'
+                    ? getPlayerName(matchData.p1)
+                    : score.winner === 'playerTwo'
+                      ? getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2')
+                      : 'N/A';
+
+                  const serverName = score.server === 'playerOne'
+                    ? getPlayerName(matchData.p1)
+                    : score.server === 'playerTwo'
+                      ? getPlayerName(matchData.p2 || matchData.p2Name || 'Player 2')
+                      : 'Unknown';
+
+                  return (
+                    <tr key={scoreIndex} className="transition-colors duration-300 hover:bg-[var(--bg-secondary)]">
+                      <td className="px-4 py-3 text-sm text-[var(--text-primary)] font-medium">
+                        Point {scoreIndex + 1}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[var(--text-primary)] font-semibold">
+                        {formatTieBreakScore(score.p1Score)} - {formatTieBreakScore(score.p2Score)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[var(--text-primary)]">
+                        {winnerName}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">
+                        {serverName}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-[var(--text-secondary)] space-y-1">
+                        {score.type && (
+                          <div>
+                            <span className="font-medium text-[var(--text-primary)] transition-colors duration-300">
+                              {score.type.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                            </span>
+                          </div>
+                        )}
+                        {score.servePlacement && (
+                          <div>Serve: <span className="capitalize text-[var(--text-primary)] transition-colors duration-300">{score.servePlacement}</span></div>
+                        )}
+                        {typeof score.betweenPointDuration === 'number' && (
+                          <div>Duration: <span className="text-[var(--text-primary)] transition-colors duration-300">{score.betweenPointDuration}s</span></div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-6 text-sm text-[var(--text-tertiary)] transition-colors duration-300">
+            No tie-break points recorded for this set.
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Check if there's any data to display
@@ -288,9 +416,13 @@ const SetsTab: React.FC<SetsTabProps> = ({ matchData }) => {
               </div>
             )}
 
-            {/* Games Grid - 3 per row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {set.games && set.games.length > 0 ? (
+            {isTiebreakOnlyFormat(matchData.matchFormat) ? (
+              renderTieBreakPoints(set, index)
+            ) : (
+              <>
+                {/* Games Grid - 3 per row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {set.games && set.games.length > 0 ? (
                 set.games.map((game, gameIndex) => {
                   const gameNumber = game.gameNumber || gameIndex + 1;
                   const playerOrder = getPlayerDisplayOrder(gameNumber);
@@ -423,18 +555,20 @@ const SetsTab: React.FC<SetsTabProps> = ({ matchData }) => {
                     </div>
                   );
                 })
-              ) : (
+                  ) : (
                 <div className="col-span-full text-center py-8 text-[var(--text-tertiary)] text-sm transition-colors duration-300">
                   No games recorded for this set
                 </div>
-              )}
-            </div>
-            
-            {/* Set Summary Footer */}
-            <div className="mt-6 flex justify-between items-center pt-4 border-t border-[var(--border-primary)] bg-[var(--bg-card)] rounded-lg p-4 shadow-[var(--shadow-secondary)] transition-colors duration-300">
-              <div className="text-[var(--text-secondary)] transition-colors duration-300">Total Games: {set.games?.length || 0}</div>
-              <div className="text-[var(--text-secondary)] transition-colors duration-300">Set Score: {set.p1TotalScore}-{set.p2TotalScore}</div>
-            </div>
+                  )}
+                </div>
+                
+                {/* Set Summary Footer */}
+                <div className="mt-6 flex justify-between items-center pt-4 border-t border-[var(--border-primary)] bg-[var(--bg-card)] rounded-lg p-4 shadow-[var(--shadow-secondary)] transition-colors duration-300">
+                  <div className="text-[var(--text-secondary)] transition-colors duration-300">Total Games: {set.games?.length || 0}</div>
+                  <div className="text-[var(--text-secondary)] transition-colors duration-300">Set Score: {set.p1TotalScore}-{set.p2TotalScore}</div>
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>
