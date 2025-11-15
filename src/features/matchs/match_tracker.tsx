@@ -1480,8 +1480,10 @@ const MatchTracker: React.FC = () => {
       currentSet: 0,
       sets: [{ player1: 0, player2: 0 }]
     }));
-    // Ensure the selected server starts at the bottom position
-    setServingPosition('down');
+    // Player 1 starts at bottom, Player 2 starts at top
+    setServingPosition(playerNumber === 1 ? 'down' : 'up');
+    // Set courtRotation so player 2 is at top when serving
+    setCourtRotation(playerNumber === 1 ? 0 : 1);
     setShowServingModal(false);
     
     // For Level 3, automatically start the match to eliminate double-click
