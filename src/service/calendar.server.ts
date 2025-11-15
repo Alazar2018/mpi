@@ -46,6 +46,7 @@ export interface CalendarQueryParams {
   view?: 'day' | 'week' | 'month' | 'year';
   limit?: number;
   childId?: string;
+  forceRefresh?: boolean; // Bypass cache if true
 }
 
 export class CalendarService {
@@ -55,7 +56,7 @@ export class CalendarService {
   
   // Cache for calendar data to prevent duplicate API calls
   private static cache = new Map<string, { data: any; timestamp: number }>();
-  private static readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private static readonly CACHE_DURATION = 30 * 1000; // 30 seconds (reduced from 5 minutes)
 
   /**
    * Check if enough time has passed since the last request
@@ -87,10 +88,12 @@ export class CalendarService {
     // Create cache key from parameters
     const cacheKey = `events_${params.startDate}_${params.endDate}_${params.view || 'default'}_${params.childId || 'all'}`;
     
-    // Check cache first
-    const cachedData = this.getCachedData(cacheKey);
-    if (cachedData) {
-      return cachedData;
+    // Check cache first (unless forceRefresh is true)
+    if (!params.forceRefresh) {
+      const cachedData = this.getCachedData(cacheKey);
+      if (cachedData) {
+        return cachedData;
+      }
     }
 
     // Rate limiting is handled in canMakeRequest, but we always proceed
@@ -196,22 +199,40 @@ export class CalendarService {
    * Convert API event to local event format
    */
   static convertToLocalEvent(apiEvent: CalendarEvent) {
+    // Extract date from startTime
+    const startDate = new Date(apiEvent.startTime);
+    const dateStr = apiEvent.startTime.split('T')[0];
+    
+    // Handle time - if isAllDay is true, don't set a time
+    let time: string | undefined;
+    let endTime: string | undefined;
+    
+    if (!apiEvent.isAllDay) {
+      time = startDate.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      
+      // Only set endTime if it exists
+      if (apiEvent.endTime) {
+        const endDate = new Date(apiEvent.endTime);
+        endTime = endDate.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      }
+    }
+    
     return {
       id: apiEvent.id,
       title: apiEvent.title,
-      date: apiEvent.startTime.split('T')[0],
+      date: dateStr,
       type: apiEvent.type,
       status: apiEvent.status === 'scheduled' ? 'confirmed' : apiEvent.status,
-      time: new Date(apiEvent.startTime).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      }),
-      endTime: new Date(apiEvent.endTime).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      }),
+      time: time, // Will be undefined for all-day events
+      endTime: endTime, // Will be undefined if endTime is null or event is all-day
       location: apiEvent.location,
       description: apiEvent.description,
       participants: apiEvent.participants,

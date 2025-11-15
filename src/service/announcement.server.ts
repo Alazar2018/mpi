@@ -27,12 +27,14 @@ export interface CreateAnnouncementRequest {
   title: string;
   description: string;
   category: 'match' | 'training' | 'message' | 'course';
+  announcedTo?: 'All' | 'Players' | 'Coaches' | 'Parents' | 'None';
 }
 
 export interface UpdateAnnouncementRequest {
   title?: string;
   description?: string;
   category?: 'match' | 'training' | 'message' | 'course';
+  announcedTo?: 'All' | 'Players' | 'Coaches' | 'Parents' | 'None';
 }
 
 export interface AnnouncementsResponse {
@@ -138,21 +140,18 @@ class AnnouncementService {
   }
 
   /**
-   * Get my announcements (Coach only)
-   * GET /api/v1/announcements/my
+   * Get my announcements
+   * GET /api/v1/announcements/me
    */
-  async getMyAnnouncements(params: Omit<PaginationParams, 'category'> = {}): Promise<AnnouncementsResponse> {
-    if (!this.isCoach()) {
-      throw new Error('Only coaches can view their own announcements');
-    }
-
+  async getMyAnnouncements(params: PaginationParams = {}): Promise<AnnouncementsResponse> {
     const queryParams = new URLSearchParams();
     
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.sort) queryParams.append('sort', params.sort);
+    if (params.category) queryParams.append('category', params.category);
 
-    const url = `/api/v1/announcements/my${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/api/v1/announcements/me${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await axiosInstance.get<AnnouncementsResponse>(url);
     return response.data;
   }
@@ -166,7 +165,7 @@ class AnnouncementService {
       throw new Error('Only coaches can view their own announcements');
     }
 
-    const response = await axiosInstance.get<SingleAnnouncementResponse>(`/api/v1/announcements/my/${announcementId}`);
+    const response = await axiosInstance.get<SingleAnnouncementResponse>(`/api/v1/announcements/me/${announcementId}`);
     return response.data;
   }
 
@@ -179,7 +178,7 @@ class AnnouncementService {
       throw new Error('Only coaches can update announcements');
     }
 
-    const response = await axiosInstance.patch<SingleAnnouncementOperationResponse>(`/api/v1/announcements/my/${announcementId}`, data);
+    const response = await axiosInstance.patch<SingleAnnouncementOperationResponse>(`/api/v1/announcements/me/${announcementId}`, data);
     return response.data;
   }
 
@@ -192,7 +191,7 @@ class AnnouncementService {
       throw new Error('Only coaches can delete announcements');
     }
 
-    const response = await axiosInstance.delete<AnnouncementsResponse>(`/api/v1/announcements/my/${announcementId}`);
+    const response = await axiosInstance.delete<AnnouncementsResponse>(`/api/v1/announcements/me/${announcementId}`);
     return response.data;
   }
 

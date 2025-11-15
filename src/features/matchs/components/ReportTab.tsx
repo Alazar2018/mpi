@@ -279,6 +279,19 @@ const formatStatus = (status?: string) => {
   return status.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 };
 
+const formatSectionTitle = (key: string) => {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (c) => c.toUpperCase());
+};
+
+const formatPlacementValue = (count?: number, percentage?: number) => {
+  if (count === undefined && percentage === undefined) return '—';
+  const countDisplay = formatNumber(count, '0');
+  const percentageDisplay = percentage !== undefined ? formatPercentage(percentage) : '';
+  return percentageDisplay ? `${countDisplay} (${percentageDisplay})` : countDisplay;
+};
+
   const getPlayerName = (player: Player | string) => {
   if (typeof player === 'object' && player?.firstName) {
     return `${player.firstName} ${player.lastName ?? ''}`.trim();
@@ -422,13 +435,6 @@ const PlacementCard: React.FC<{
     { key: 'net', label: 'Net' },
   ];
 
-  const formatPlacement = (count?: number, percentage?: number) => {
-    if (count === undefined && percentage === undefined) return '—';
-    const countDisplay = formatNumber(count, '0');
-    const percentageDisplay = percentage !== undefined ? formatPercentage(percentage) : '';
-    return percentageDisplay ? `${countDisplay} (${percentageDisplay})` : countDisplay;
-  };
-
   return (
     <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] px-6 py-5 shadow-[var(--shadow-secondary)] transition-colors duration-300">
       <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">{title}</h3>
@@ -442,15 +448,98 @@ const PlacementCard: React.FC<{
           <div key={key} className="grid grid-cols-3 border-t border-[var(--border-primary)] px-4 py-2 text-sm">
             <span className="text-[var(--text-secondary)]">{label}</span>
             <span className="text-right font-semibold text-emerald-500">
-              {formatPlacement(data?.p1?.[key], data?.p1?.[`${key}Percentage` as keyof typeof data.p1] as number | undefined)}
+              {formatPlacementValue(data?.p1?.[key], data?.p1?.[`${key}Percentage` as keyof typeof data.p1] as number | undefined)}
             </span>
             <span className="text-right font-semibold text-sky-500">
-              {formatPlacement(data?.p2?.[key], data?.p2?.[`${key}Percentage` as keyof typeof data.p2] as number | undefined)}
+              {formatPlacementValue(data?.p2?.[key], data?.p2?.[`${key}Percentage` as keyof typeof data.p2] as number | undefined)}
             </span>
           </div>
         ))}
           </div>
         </div>
+  );
+};
+
+const ReturnPlacementCard: React.FC<{
+  title: string;
+  p1Name: string;
+  p2Name: string;
+  data?: {
+    p1?: Record<string, Record<string, number | undefined>>;
+    p2?: Record<string, Record<string, number | undefined>>;
+  };
+}> = ({ title, p1Name, p2Name, data }) => {
+  const allSections = Array.from(
+    new Set([
+      ...(data?.p1 ? Object.keys(data.p1) : []),
+      ...(data?.p2 ? Object.keys(data.p2) : []),
+    ]),
+  );
+
+  if (allSections.length === 0) return null;
+
+  const preferredOrder = [
+    'firstServe',
+    'firstServeForehand',
+    'firstServeBackhand',
+    'secondServe',
+    'secondServeForehand',
+    'secondServeBackhand',
+  ];
+
+  const orderedSections = [
+    ...preferredOrder.filter((key) => allSections.includes(key)),
+    ...allSections.filter((key) => !preferredOrder.includes(key)),
+  ];
+
+  const rows = [
+    { key: 'wide', label: 'Wide' },
+    { key: 'body', label: 'Body' },
+    { key: 't', label: 'T' },
+    { key: 'net', label: 'Net' },
+  ];
+
+  return (
+    <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] px-6 py-5 shadow-[var(--shadow-secondary)] transition-colors duration-300">
+      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">{title}</h3>
+      <div className="space-y-4">
+        {orderedSections.map((sectionKey) => {
+          const p1Section = data?.p1?.[sectionKey];
+          const p2Section = data?.p2?.[sectionKey];
+          if (!p1Section && !p2Section) return null;
+
+          return (
+            <div key={sectionKey} className="overflow-hidden rounded-xl border border-[var(--border-primary)]">
+              <div className="bg-[var(--bg-secondary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+                {formatSectionTitle(sectionKey)}
+              </div>
+              <div className="grid grid-cols-3 bg-[var(--bg-secondary)] px-4 py-2 text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
+                <span>Location</span>
+                <span className="text-right">{p1Name}</span>
+                <span className="text-right">{p2Name}</span>
+              </div>
+              {rows.map(({ key, label }) => (
+                <div key={key} className="grid grid-cols-3 border-t border-[var(--border-primary)] px-4 py-2 text-sm">
+                  <span className="text-[var(--text-secondary)]">{label}</span>
+                  <span className="text-right font-semibold text-emerald-500">
+                    {formatPlacementValue(
+                      p1Section?.[key],
+                      p1Section?.[`${key}Percentage` as keyof typeof p1Section] as number | undefined,
+                    )}
+                  </span>
+                  <span className="text-right font-semibold text-sky-500">
+                    {formatPlacementValue(
+                      p2Section?.[key],
+                      p2Section?.[`${key}Percentage` as keyof typeof p2Section] as number | undefined,
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
@@ -513,6 +602,8 @@ const PlayerReportCard: React.FC<{
             title="Serving"
             items={[
               { label: 'Total Serves', value: formatNumber(report.service?.totalServices, '0') },
+              { label: '1st Serves Attempted', value: formatNumber(report.service?.firstServices, '0') },
+              { label: '2nd Serves Attempted', value: formatNumber(report.service?.secondServices, '0') },
               { label: '1st Serve %', value: formatPercentage(report.service?.firstServicePercentage) },
               { label: '2nd Serve %', value: formatPercentage(report.service?.secondServicePercentage) },
               { label: 'Aces', value: formatNumber(report.service?.aces, '0'), tone: 'success' },
@@ -524,10 +615,14 @@ const PlayerReportCard: React.FC<{
             title="Point Conversion"
             items={[
               { label: 'Points Won', value: formatNumber(report.points?.totalPointsWon, '0'), tone: 'success' },
+              { label: 'Winners', value: formatNumber(report.points?.winners, '0'), tone: 'success' },
+              { label: 'Forced Errors', value: formatNumber(report.points?.forcedErrors, '0'), tone: 'warning' },
+              { label: 'Unforced Errors', value: formatNumber(report.points?.unforcedErrors, '0'), tone: 'danger' },
               { label: '1st Serve Pts Won', value: formatNumber(report.conversion?.firstServicePointsWon, '0') },
               { label: '2nd Serve Pts Won', value: formatNumber(report.conversion?.secondServicePointsWon, '0') },
               { label: 'Receiving Pts Won', value: formatNumber(report.conversion?.receivingPointsWon, '0') },
               { label: 'Game Points', value: formatNumber(report.conversion?.gamePoints, '0') },
+              { label: 'Break Points', value: formatNumber(report.conversion?.breakPoints, '0') },
             ]}
           />
 
@@ -538,16 +633,45 @@ const PlayerReportCard: React.FC<{
               { label: 'Negative Responses', value: formatNumber(report.response?.negativeResponses, '0'), tone: 'danger' },
               { label: 'Positive Self Talk', value: formatNumber(report.response?.positiveSelfTalks, '0'), tone: 'success' },
               { label: 'Negative Self Talk', value: formatNumber(report.response?.negativeSelfTalks, '0'), tone: 'danger' },
+              { label: 'No Responses', value: formatNumber(report.response?.noResponses, '0') },
+            ]}
+          />
+
+          <StatGroup
+            title="Rally Length"
+            items={[
+              { label: '1-4 shots', value: formatNumber(report.rallies?.oneToFour, '0') },
+              { label: '5-8 shots', value: formatNumber(report.rallies?.fiveToEight, '0') },
+              { label: '9-12 shots', value: formatNumber(report.rallies?.nineToTwelve, '0') },
+              { label: '13-20 shots', value: formatNumber(report.rallies?.thirteenToTwenty, '0') },
+              { label: '21+ shots', value: formatNumber(report.rallies?.twentyOnePlus, '0') },
             ]}
           />
 
           <StatGroup
             title="Court Usage"
             items={[
-              { label: 'Left Court', value: formatNumber(report.courtPositions?.leftCourt, '0') },
-              { label: 'Right Court', value: formatNumber(report.courtPositions?.rightCourt, '0') },
-              { label: 'Net Visits', value: formatNumber(report.courtPositions?.net, '0') },
-              { label: 'Shots Out', value: formatNumber(report.courtPositions?.out, '0'), tone: 'warning' },
+              {
+                label: 'Left Court',
+                value: formatCountWithPercent(report.courtPositions?.leftCourt, report.courtPositions?.leftCourtPercentage),
+              },
+              {
+                label: 'Middle Court',
+                value: formatCountWithPercent(report.courtPositions?.middleCourt, report.courtPositions?.middleCourtPercentage),
+              },
+              {
+                label: 'Right Court',
+                value: formatCountWithPercent(report.courtPositions?.rightCourt, report.courtPositions?.rightCourtPercentage),
+              },
+              {
+                label: 'Net Visits',
+                value: formatCountWithPercent(report.courtPositions?.net, report.courtPositions?.netPercentage),
+              },
+              {
+                label: 'Out',
+                value: formatCountWithPercent(report.courtPositions?.out, report.courtPositions?.outPercentage),
+                tone: 'warning',
+              },
             ]}
           />
         </div>
@@ -610,7 +734,7 @@ const ReportTab: React.FC<ReportTabProps> = ({ matchData }) => {
       },
       {
         title: 'Match Duration',
-        value: formatDuration(matchData.totalGameTime),
+        value: formatDuration(matchData.totalGameTime ? matchData.totalGameTime / 60 : undefined),
         hint: matchData.totalGameTime ? 'Tracked time' : undefined,
         accent: 'amber' as const,
       },
@@ -827,12 +951,27 @@ const ReportTab: React.FC<ReportTabProps> = ({ matchData }) => {
               data={jointReport.firstServePlacement as any}
             />
             <PlacementCard
+              title="Second Serve Placement"
+              p1Name={p1Name}
+              p2Name={p2Name}
+              data={jointReport.secondServePlacement as any}
+            />
+            <PlacementCard
               title="Aces Placement"
               p1Name={p1Name}
               p2Name={p2Name}
               data={jointReport.acesPlacement as any}
             />
           </div>
+        )}
+
+        {jointReport?.returnPlacement && (
+          <ReturnPlacementCard
+            title="Return Placement Breakdown"
+            p1Name={p1Name}
+            p2Name={p2Name}
+            data={jointReport.returnPlacement as any}
+          />
         )}
 
         {jointReport?.rallyLengthFrequency && (

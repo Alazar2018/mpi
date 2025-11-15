@@ -1,17 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Users, TrendingUp, Calendar, Trophy, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarService } from '@/service/calendar.server';
-
-interface PlayerStats {
-  totalPoints: number;
-  totalWinners: number;
-  totalErrors: number;
-  totalServes: number;
-  totalRallies: number;
-  avgPointsPerMatch: number;
-  winRate: number;
-}
+import { aggregateMatchesForPlayer, AggregatedPlayerStats } from '@/utils/playerAnalytics';
 
 interface PlayerMatch {
   _id: string;
@@ -50,10 +41,60 @@ interface PlayerMatch {
     rallies?: { [key: string]: number };
   };
   report?: {
-    points?: { total: number };
+    points?: {
+      total?: number;
+      p1?: { won?: number; wonPercentage?: number };
+      p2?: { won?: number; wonPercentage?: number };
+    };
     winners?: { 
-      p1: { forehand: number; backhand: number; returnForehand: number; returnBackhand: number }; 
-      p2: { forehand: number; backhand: number; returnForehand: number; returnBackhand: number } 
+      p1?: { forehand?: number; backhand?: number; returnForehand?: number; returnBackhand?: number }; 
+      p2?: { forehand?: number; backhand?: number; returnForehand?: number; returnBackhand?: number } 
+    };
+    errorStats?: {
+      p1?: {
+        forced?: { forehand?: { total?: number }; backhand?: { total?: number } };
+        unforced?: { forehand?: { total?: number }; backhand?: { total?: number } };
+      };
+      p2?: {
+        forced?: { forehand?: { total?: number }; backhand?: { total?: number } };
+        unforced?: { forehand?: { total?: number }; backhand?: { total?: number } };
+      };
+    };
+    serves?: {
+      p1?: {
+        firstServesWon?: number;
+        firstServesLost?: number;
+        secondServesWon?: number;
+        secondServesLost?: number;
+      };
+      p2?: {
+        firstServesWon?: number;
+        firstServesLost?: number;
+        secondServesWon?: number;
+        secondServesLost?: number;
+      };
+    };
+    returnStats?: {
+      p1?: {
+        firstServeWon?: number;
+        firstServeLost?: number;
+        secondServeWon?: number;
+        secondServeLost?: number;
+      };
+      p2?: {
+        firstServeWon?: number;
+        firstServeLost?: number;
+        secondServeWon?: number;
+        secondServeLost?: number;
+      };
+    };
+    breakPoints?: {
+      p1?: { total?: number; converted?: number; saved?: number };
+      p2?: { total?: number; converted?: number; saved?: number };
+    };
+    gamePoints?: {
+      p1?: { total?: number; converted?: number; saved?: number };
+      p2?: { total?: number; converted?: number; saved?: number };
     };
     rallyLengthFrequency?: { [key: string]: number };
   };
@@ -61,6 +102,7 @@ interface PlayerMatch {
 
 interface PlayerAnalyticsProps {
   userName: string;
+  playerId: string;
   playerData?: {
     totalMatches: number;
     completedMatches: number;
@@ -68,11 +110,12 @@ interface PlayerAnalyticsProps {
     winRate: number;
     recentMatches: PlayerMatch[];
     matches?: PlayerMatch[]; // Add matches array for filtering
-    stats: PlayerStats;
+    stats: AggregatedPlayerStats;
+    playerId?: string;
   };
 }
 
-const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData }) => {
+const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerId, playerData }) => {
   const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState<'Overview' | 'Serves' | 'Points' | 'Returns' | 'Rally'>('Overview');
   const [selectedTimeframe, setSelectedTimeframe] = useState('All');
@@ -86,174 +129,289 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
   // Use real data if available, otherwise fall back to defaults
   const totalMatches = playerData?.totalMatches || 0;
   const winRate = playerData?.winRate || 0;
-  const stats = playerData?.stats;
   const recentMatches = playerData?.recentMatches || [];
   const allMatches = playerData?.matches || []; // Get all matches for filtering
 
-  // Get all matches for the dropdown (only completed matches)
-  const getAllMatchesForDropdown = () => {
-    let allMatchesForDropdown = playerData?.matches || [];
-    
-    // Only show completed matches
-    allMatchesForDropdown = allMatchesForDropdown.filter(match => match.status === 'completed');
-    
-    // Filter by match type
-    if (selectedMatchType !== 'All') {
-      allMatchesForDropdown = allMatchesForDropdown.filter(match => match.matchCategory === selectedMatchType.toLowerCase());
+  const effectivePlayerId = playerId || playerData?.playerId || '';
+  const matchesForDropdown = useMemo(() => {
+    if (!playerData?.matches) return [];
+
+    const completedMatches = playerData.matches.filter(
+      (match) => match.status === 'completed',
+    );
+
+    const byType =
+      selectedMatchType === 'All'
+        ? completedMatches
+        : completedMatches.filter(
+            (match) =>
+              (match.matchCategory || '').toLowerCase() ===
+              selectedMatchType.toLowerCase(),
+          );
+
+    if (selectedTimeframe === 'All') {
+      return byType;
     }
 
-    // Filter by time
-    if (selectedTimeframe !== 'All') {
-      const now = new Date();
-      let startDate = new Date();
-      
-      switch (selectedTimeframe) {
-        case '1W':
-          startDate.setDate(now.getDate() - 7);
-          break;
-        case '2W':
-          startDate.setDate(now.getDate() - 14);
-          break;
-        case '1M':
-          startDate.setMonth(now.getMonth() - 1);
-          break;
-        case '3M':
-          startDate.setMonth(now.getMonth() - 3);
-          break;
-        case '6M':
-          startDate.setMonth(now.getMonth() - 6);
-          break;
-        case '1Y':
-          startDate.setFullYear(now.getFullYear() - 1);
-          break;
-        default:
-          startDate = new Date(0); // Beginning of time
-      }
-      
-      allMatchesForDropdown = allMatchesForDropdown.filter(match => new Date(match.date) >= startDate);
+    const now = new Date();
+    const startDate = new Date(now);
+
+    switch (selectedTimeframe) {
+      case '1W':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '2W':
+        startDate.setDate(now.getDate() - 14);
+        break;
+      case '1M':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case '3M':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case '6M':
+        startDate.setMonth(now.getMonth() - 6);
+        break;
+      case '1Y':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        return byType;
     }
 
-    return allMatchesForDropdown;
+    return byType.filter((match) => new Date(match.date) >= startDate);
+  }, [playerData?.matches, selectedMatchType, selectedTimeframe]);
+
+  const filteredMatches = useMemo(() => {
+    if (selectedMatch === 'all') {
+      return matchesForDropdown;
+    }
+
+    return matchesForDropdown.filter((match) => match._id === selectedMatch);
+  }, [matchesForDropdown, selectedMatch]);
+
+  const selectedMatchDetails =
+    selectedMatch !== 'all' ? filteredMatches[0] : undefined;
+
+  const filteredStats: AggregatedPlayerStats = useMemo(
+    () => aggregateMatchesForPlayer(filteredMatches, effectivePlayerId),
+    [filteredMatches, effectivePlayerId],
+  );
+
+  useEffect(() => {
+    if (
+      selectedMatch !== 'all' &&
+      !matchesForDropdown.some((match) => match._id === selectedMatch)
+    ) {
+      setSelectedMatch('all');
+    }
+  }, [matchesForDropdown, selectedMatch]);
+
+  const totalPointsWon = filteredStats.totalPoints || 0;
+  const totalPointsLost = filteredStats.pointsLost || 0;
+  const totalPointsPlayed = totalPointsWon + totalPointsLost;
+
+  const getProgressCircle = (value: number, total: number, radius: number) => {
+    const circumference = 2 * Math.PI * radius;
+    const ratio = total > 0 ? value / total : 0;
+    return {
+      circumference,
+      ratio,
+      dashArray: `${circumference} ${circumference}`,
+      dashOffset: circumference * (1 - ratio),
+    };
   };
 
-  // Filter matches based on selected criteria for analytics
-  const getFilteredMatches = () => {
-    let filtered = getAllMatchesForDropdown();
+  const pointsProgress = getProgressCircle(totalPointsWon, totalPointsPlayed, 44);
+  const pointsProgressLarge = getProgressCircle(totalPointsWon, totalPointsPlayed, 56);
 
-    // Filter by specific match
-    if (selectedMatch !== 'all') {
-      filtered = filtered.filter(match => match._id === selectedMatch);
-    }
+  const winnersBreakdown = filteredStats.winnersBreakdown || {
+    forehand: 0,
+    backhand: 0,
+    returnForehand: 0,
+    returnBackhand: 0,
+  };
+  const winnersTotal = filteredStats.totalWinners || 0;
 
-    return filtered;
+  const winnerSegments = [
+    { key: 'forehand', label: 'Forehand', color: 'text-blue-500', bg: 'bg-blue-500' },
+    { key: 'backhand', label: 'Backhand', color: 'text-cyan-500', bg: 'bg-cyan-500' },
+    { key: 'returnForehand', label: 'Return Forehand', color: 'text-yellow-500', bg: 'bg-yellow-500' },
+    { key: 'returnBackhand', label: 'Return Backhand', color: 'text-green-500', bg: 'bg-green-500' },
+  ] as const;
+
+  const totalServePoints =
+    filteredStats.firstServesWon +
+    filteredStats.firstServesLost +
+    filteredStats.secondServesWon +
+    filteredStats.secondServesLost;
+  const servePointsWon = filteredStats.firstServesWon + filteredStats.secondServesWon;
+  const serveAccuracyProgress = getProgressCircle(servePointsWon, totalServePoints, 56);
+
+  const returnStats = filteredStats.returnStats || {
+    totalReturns: 0,
+    firstServeWon: 0,
+    firstServeLost: 0,
+    secondServeWon: 0,
+    secondServeLost: 0,
   };
 
-  // Get filtered stats based on filtered matches
-  const getFilteredStats = () => {
-    const filteredMatches = getFilteredMatches();
-    
-    if (filteredMatches.length === 0) {
+  const totalFirstServePoints =
+    filteredStats.firstServesWon + filteredStats.firstServesLost;
+  const firstServeWinPercentage =
+    totalFirstServePoints > 0
+      ? Math.round((filteredStats.firstServesWon / totalFirstServePoints) * 100)
+      : 0;
+  const totalSecondServePoints =
+    filteredStats.secondServesWon + filteredStats.secondServesLost;
+  const secondServeWinPercentage =
+    totalSecondServePoints > 0
+      ? Math.round(
+          (filteredStats.secondServesWon / totalSecondServePoints) * 100,
+        )
+      : 0;
+
+  const totalReturnPoints =
+    returnStats.firstServeWon +
+    returnStats.firstServeLost +
+    returnStats.secondServeWon +
+    returnStats.secondServeLost;
+
+  const totalReturnWinners =
+    (winnersBreakdown.returnForehand || 0) +
+    (winnersBreakdown.returnBackhand || 0);
+  const totalReturnErrors =
+    returnStats.firstServeLost + returnStats.secondServeLost;
+
+  const serveDistributionData = [
+    { key: 'firstWon', label: '1st Won', value: filteredStats.firstServesWon, color: 'bg-blue-600' },
+    { key: 'firstLost', label: '1st Lost', value: filteredStats.firstServesLost, color: 'bg-blue-300' },
+    { key: 'secondWon', label: '2nd Won', value: filteredStats.secondServesWon, color: 'bg-green-600' },
+    { key: 'secondLost', label: '2nd Lost', value: filteredStats.secondServesLost, color: 'bg-green-300' },
+    { key: 'aces', label: 'Aces', value: filteredStats.aces, color: 'bg-purple-500' },
+    { key: 'doubleFaults', label: 'Double Faults', value: filteredStats.doubleFaults, color: 'bg-red-500' },
+  ];
+
+  const returnDistributionData = [
+    { key: 'returnFirstWon', label: '1st Won', value: returnStats.firstServeWon, color: 'bg-blue-600' },
+    { key: 'returnFirstLost', label: '1st Lost', value: returnStats.firstServeLost, color: 'bg-blue-300' },
+    { key: 'returnSecondWon', label: '2nd Won', value: returnStats.secondServeWon, color: 'bg-green-600' },
+    { key: 'returnSecondLost', label: '2nd Lost', value: returnStats.secondServeLost, color: 'bg-green-300' },
+  ];
+
+  const rallyBuckets = [
+    { key: 'oneToFour', label: '1-4', color: 'bg-blue-500' },
+    { key: 'fiveToEight', label: '5-8', color: 'bg-green-500' },
+    { key: 'nineToTwelve', label: '9-12', color: 'bg-purple-500' },
+    { key: 'thirteenToTwenty', label: '13-20', color: 'bg-orange-500' },
+    { key: 'twentyOnePlus', label: '21+', color: 'bg-red-500' },
+  ] as const;
+
+  const rallyBucketAverages: Record<string, number> = {
+    oneToFour: 3,
+    fiveToEight: 6,
+    nineToTwelve: 10,
+    thirteenToTwenty: 16,
+    twentyOnePlus: 24,
+  };
+
+  const rallyBucketColors: Record<string, string> = {
+    oneToFour: '#3b82f6',
+    fiveToEight: '#22c55e',
+    nineToTwelve: '#a855f7',
+    thirteenToTwenty: '#f97316',
+    twentyOnePlus: '#ef4444',
+  };
+
+  const rallyBreakdown = filteredStats.ralliesBreakdown || {};
+
+  const maxServeValue = useMemo(() => {
+    const values = serveDistributionData.map((item) => item.value || 0);
+    const maxValue = Math.max(...values, 1);
+    return maxValue > 0 ? maxValue : 1;
+  }, [serveDistributionData]);
+
+  const maxReturnValue = useMemo(() => {
+    const values = returnDistributionData.map((item) => item.value || 0);
+    const maxValue = Math.max(...values, 1);
+    return maxValue > 0 ? maxValue : 1;
+  }, [returnDistributionData]);
+
+  const maxRallyValue = useMemo(() => {
+    const values = rallyBuckets.map((bucket) => rallyBreakdown[bucket.key] || 0);
+    const maxValue = Math.max(...values, 1);
+    return maxValue > 0 ? maxValue : 1;
+  }, [rallyBuckets, rallyBreakdown]);
+
+  const longestRallyBucket = useMemo(() => {
+    const bucketsDescending = [...rallyBuckets].reverse();
+    return (
+      bucketsDescending.find((bucket) => (rallyBreakdown[bucket.key] || 0) > 0) ||
+      null
+    );
+  }, [rallyBuckets, rallyBreakdown]);
+
+  const longestRallyApprox = longestRallyBucket
+    ? Math.round(rallyBucketAverages[longestRallyBucket.key] || 0)
+    : 0;
+
+  const recentMatchSummaries = useMemo(() => {
+    return (recentMatches || []).slice(0, 10).map((match) => {
+      const matchStats = aggregateMatchesForPlayer([match], effectivePlayerId);
+      const totalPoints = matchStats.totalPoints + matchStats.pointsLost;
+      const isWin = matchStats.matchesWon > 0;
       return {
-        totalPoints: 0,
-        totalWinners: 0,
-        totalErrors: 0,
-        totalServes: 0,
-        totalRallies: 0,
-        avgPointsPerMatch: 0,
-        winRate: 0
+        match,
+        stats: matchStats,
+        totalPoints,
+        isWin,
       };
-    }
+    });
+  }, [recentMatches, effectivePlayerId]);
 
-    // If filtering by specific match, calculate stats for that match only
-    if (selectedMatch !== 'all') {
-      const match = filteredMatches[0];
-      
-      // Use actual match data from the reports
-      let matchStats = {
-        totalPoints: 0,
-        totalWinners: 0,
-        totalErrors: 0,
-        totalServes: 0,
-        totalRallies: 0,
-        avgPointsPerMatch: 0,
-        winRate: 0
+  const maxTotalPoints = useMemo(() => {
+    if (recentMatchSummaries.length === 0) return 1;
+    const totals = recentMatchSummaries.map((item) => item.totalPoints);
+    const maxValue = Math.max(...totals);
+    return maxValue > 0 ? maxValue : 1;
+  }, [recentMatchSummaries]);
+
+  const recentMatchesDetailed = useMemo(() => {
+    return (recentMatches || []).map((match) => {
+      const stats = aggregateMatchesForPlayer([match], effectivePlayerId);
+      const isCompleted = match.status === 'completed';
+      const isWin = stats.matchesWon > 0;
+      let resultLabel = 'Pending';
+      let resultColor = 'text-gray-500';
+      let resultBg = 'bg-gray-100';
+      let resultIcon = '⏳';
+
+      if (isCompleted) {
+        if (isWin) {
+          resultLabel = 'Win';
+          resultColor = 'text-green-600';
+          resultBg = 'bg-green-100';
+          resultIcon = '✅';
+        } else {
+          resultLabel = 'Loss';
+          resultColor = 'text-red-600';
+          resultBg = 'bg-red-100';
+          resultIcon = '❌';
+        }
+      }
+
+      return {
+        match,
+        stats,
+        isCompleted,
+        isWin,
+        resultLabel,
+        resultColor,
+        resultBg,
+        resultIcon,
       };
-
-      // Extract stats from the match reports
-      if (match.p1MatchReport) {
-        // Add service stats
-        matchStats.totalServes += match.p1MatchReport.service?.totalServices || 0;
-        
-        // Add points stats
-        matchStats.totalPoints += match.p1MatchReport.points?.totalPointsWon || 0;
-        matchStats.totalWinners += match.p1MatchReport.points?.winners || 0;
-        matchStats.totalErrors += (match.p1MatchReport.points?.unforcedErrors || 0) + 
-                                (match.p1MatchReport.points?.forcedErrors || 0);
-        
-        // Add rally stats
-        if (match.p1MatchReport.rallies) {
-          const rallyValues = Object.values(match.p1MatchReport.rallies);
-          matchStats.totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      }
-
-      if (match.p2MatchReport) {
-        // Add service stats
-        matchStats.totalServes += match.p2MatchReport.service?.totalServices || 0;
-        
-        // Add points stats
-        matchStats.totalPoints += match.p2MatchReport.points?.totalPointsWon || 0;
-        matchStats.totalWinners += match.p2MatchReport.points?.winners || 0;
-        matchStats.totalErrors += (match.p2MatchReport.points?.unforcedErrors || 0) + 
-                                (match.p2MatchReport.points?.forcedErrors || 0);
-        
-        // Add rally stats
-        if (match.p2MatchReport.rallies) {
-          const rallyValues = Object.values(match.p2MatchReport.rallies);
-          matchStats.totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      }
-
-      // Also try to get data from the overall report if available
-      if (match.report) {
-        // Add total points from overall report
-        matchStats.totalPoints = match.report.points?.total || matchStats.totalPoints;
-        
-        // Add winners from overall report
-        if (match.report.winners) {
-          matchStats.totalWinners = (match.report.winners.p1?.forehand || 0) + 
-                                   (match.report.winners.p1?.backhand || 0) + 
-                                   (match.report.winners.p1?.returnForehand || 0) + 
-                                   (match.report.winners.p1?.returnBackhand || 0) +
-                                   (match.report.winners.p2?.forehand || 0) + 
-                                   (match.report.winners.p2?.backhand || 0) + 
-                                   (match.report.winners.p2?.returnForehand || 0) + 
-                                   (match.report.winners.p2?.returnBackhand || 0);
-        }
-        
-        // Add rally data from overall report
-        if (match.report.rallyLengthFrequency) {
-          const rallyValues = Object.values(match.report.rallyLengthFrequency);
-          matchStats.totalRallies = rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      }
-
-      // Calculate win rate for this match
-      if (match.winner) {
-        matchStats.winRate = 100; // If there's a winner, it's a completed match
-      }
-
-      matchStats.avgPointsPerMatch = matchStats.totalPoints;
-      
-      return matchStats;
-    }
-
-    // For other filters, return the original stats (or recalculate if needed)
-    return stats;
-  };
-
-  const filteredStats = getFilteredStats();
-  const filteredMatches = getFilteredMatches();
+    });
+  }, [recentMatches, effectivePlayerId]);
 
   // Get unique match types for the dropdown
   const getUniqueMatchTypes = () => {
@@ -263,17 +421,51 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
 
   // Function to get opponent name from a match
   const getOpponentName = (match: PlayerMatch) => {
-    // Check if p2 is an object or just a name
-    if (match.p2IsObject && match.p2?.firstName && match.p2?.lastName) {
-      // p2 is an object with firstName and lastName
-      return `${match.p2.firstName} ${match.p2.lastName}`;
-    } else if (match.p2Name) {
-      // p2 is just a name string
-      return match.p2Name;
-    } else {
-      // Fallback
-      return 'Unknown Player';
+    if (!match) return 'Unknown Player';
+
+    const isPlayerOne =
+      effectivePlayerId &&
+      match.p1 &&
+      typeof match.p1 === 'object' &&
+      match.p1._id === effectivePlayerId;
+    const isPlayerTwo =
+      effectivePlayerId &&
+      match.p2 &&
+      typeof match.p2 === 'object' &&
+      match.p2._id === effectivePlayerId;
+
+    if (isPlayerOne) {
+      if (match.p2 && typeof match.p2 === 'object' && match.p2.firstName && match.p2.lastName) {
+        return `${match.p2.firstName} ${match.p2.lastName}`;
+      }
+      if (typeof match.p2 === 'string') {
+        return match.p2;
+      }
+      if (match.p2Name) {
+        return match.p2Name;
+      }
+    } else if (isPlayerTwo) {
+      if (match.p1 && typeof match.p1 === 'object' && match.p1.firstName && match.p1.lastName) {
+        return `${match.p1.firstName} ${match.p1.lastName}`;
+      }
+      if (typeof match.p1 === 'string') {
+        return match.p1;
+      }
     }
+
+    if (match.p2 && typeof match.p2 === 'object' && match.p2.firstName && match.p2.lastName) {
+      return `${match.p2.firstName} ${match.p2.lastName}`;
+    }
+
+    if (match.p2Name) {
+      return match.p2Name;
+    }
+
+    if (match.p1 && typeof match.p1 === 'object' && match.p1.firstName && match.p1.lastName) {
+      return `${match.p1.firstName} ${match.p1.lastName}`;
+    }
+
+    return 'Unknown Player';
   };
 
     // Fetch weekly activities
@@ -409,8 +601,8 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 onChange={(e) => setSelectedMatch(e.target.value)}
                 className="w-full bg-[var(--bg-card)] text-[var(--text-primary)] px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium border border-[var(--border-primary)] focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 shadow-sm"
               >
-                                 <option value="all">All Matches ({getAllMatchesForDropdown().length})</option>
-                 {getAllMatchesForDropdown().map((match) => {
+                                 <option value="all">All Matches ({matchesForDropdown.length})</option>
+                 {matchesForDropdown.map((match) => {
                    const opponent = getOpponentName(match);
                    return (
                      <option key={match._id} value={match._id}>
@@ -432,7 +624,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 <div>
                                      <p className="text-xs sm:text-sm font-medium text-gray-800">
                      Showing <span className="text-blue-600 font-bold">{filteredMatches.length}</span> completed matches
-                     <span className="text-gray-500 ml-2">({getAllMatchesForDropdown().length} total matches)</span>
+                     <span className="text-gray-500 ml-2">({matchesForDropdown.length} total matches)</span>
                    </p>
                   <p className="text-xs text-gray-500">
                     {selectedMatchType !== 'All' && `${selectedMatchType} • `}
@@ -465,7 +657,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
                 {selectedMatch === 'all' 
                   ? `${userName}'s Analytics Overview`
-                  : `Match Analysis: vs ${getOpponentName(filteredMatches[0])}`
+                  : `Match Analysis: vs ${selectedMatchDetails ? getOpponentName(selectedMatchDetails) : 'N/A'}`
                 }
               </h2>
               <p className="text-sm sm:text-base text-gray-600">
@@ -492,7 +684,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                     {selectedMatch === 'all' ? 'Filtered Matches' : 'Selected Match'}
                   </p>
                   {selectedMatch !== 'all' && (
-                    <p className="text-xs sm:text-sm text-blue-600 mt-1">vs {getOpponentName(filteredMatches[0])}</p>
+                    <p className="text-xs sm:text-sm text-blue-600 mt-1">vs {selectedMatchDetails ? getOpponentName(selectedMatchDetails) : 'N/A'}</p>
                   )}
                 </div>
               </div>
@@ -503,7 +695,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                 </div>
                 <div>
-                   <p className="text-2xl sm:text-3xl font-bold text-gray-900">{filteredStats?.totalRallies || 0}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{filteredStats.totalRallies || 0}</p>
                    <p className="text-sm sm:text-base text-gray-600">Total Rallies</p>
                    {selectedMatch !== 'all' && (
                      <p className="text-xs sm:text-sm text-green-600 mt-1">From selected match</p>
@@ -523,10 +715,10 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             </div>
             <div className="text-center">
               <div className="relative inline-block">
-                <svg className="w-24 h-24 sm:w-32 sm:h-32 transform -rotate-90">
+                <svg className="w-24 h-24 sm:w-32 sm:h-32 transform -rotate-90" viewBox="0 0 100 100">
                   <circle
-                    cx="48"
-                    cy="48"
+                    cx="50"
+                    cy="50"
                     r="44"
                     stroke="currentColor"
                     strokeWidth="6"
@@ -534,21 +726,25 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                     className="text-gray-200"
                   />
                   <circle
-                    cx="48"
-                    cy="48"
+                    cx="50"
+                    cy="50"
                     r="44"
                     stroke="currentColor"
                     strokeWidth="6"
                     fill="transparent"
-                    strokeDasharray={`${filteredStats?.totalPoints || 0} ${filteredStats?.totalErrors || 0}`}
+                    strokeDasharray={pointsProgress.dashArray}
+                    strokeDashoffset={pointsProgress.dashOffset}
+                    strokeLinecap="round"
                     className="text-green-500"
                   />
                 </svg>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
-                    {filteredStats?.totalPoints || 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">Points</p>
+                <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
+                      {totalPointsWon}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">Points</p>
+                  </div>
                 </div>
               </div>
               <div className="mt-4 space-y-2">
@@ -556,13 +752,13 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-xs sm:text-sm text-green-600 font-medium">
-                      Won {filteredStats?.totalPoints || 0} Points
+                      Won {totalPointsWon} Points
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                     <span className="text-xs sm:text-sm text-orange-600 font-medium">
-                      Lost {filteredStats?.totalErrors || 0} Points
+                      Lost {totalPointsLost} Points
                     </span>
                   </div>
                 </div>
@@ -577,21 +773,26 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
               <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
             </div>
             <div className="h-48 sm:h-64 flex items-end justify-center gap-1 sm:gap-2">
-              {recentMatches.slice(0, 8).map((match, index) => {
-                const isWin = match.status === 'completed' && 
-                  ((match.winner === 'playerOne' && match.p1?._id === match.p1?._id) || 
-                   (match.winner === 'playerTwo' && match.p2?._id === match.p2?._id));
-                const height = isWin ? 80 : 40;
+              {recentMatchSummaries.slice(0, 8).map(({ match, stats, totalPoints, isWin }, index) => {
+                const wonHeight = Math.max((stats.totalPoints / maxTotalPoints) * 120, 4);
+                const lostHeight = Math.max((stats.pointsLost / maxTotalPoints) * 120, stats.pointsLost > 0 ? 2 : 0);
                 return (
-                  <div key={index} className="flex flex-col items-center">
-                    <div 
-                      className={`w-6 sm:w-8 rounded-t-sm transition-all duration-300 ${
-                        isWin ? 'bg-green-500' : 'bg-red-500'
-                      }`}
-                      style={{ height: `${height}px` }}
-                    ></div>
-                    <span className="text-xs text-gray-500 mt-1">
-                      {index + 1}
+                  <div key={match._id || index} className="flex flex-col items-center">
+                    <div className="flex flex-col-reverse items-center gap-1 transition-all duration-300">
+                      {lostHeight > 0 && (
+                        <div
+                          className="w-6 sm:w-8 bg-orange-400 rounded-t-sm"
+                          style={{ height: `${lostHeight}px` }}
+                        ></div>
+                      )}
+                      <div
+                        className={`w-6 sm:w-8 rounded-t-sm ${isWin ? 'bg-green-500' : 'bg-red-500'}`}
+                        style={{ height: `${wonHeight}px` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-gray-500 mt-1">{index + 1}</span>
+                    <span className="text-[10px] text-gray-400">
+                      {stats.totalPoints}-{stats.pointsLost}
                     </span>
                   </div>
                 );
@@ -606,6 +807,10 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 Losses
               </span>
+              <span className="inline-flex items-center gap-2 ml-4">
+                <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
+                Opponent Points
+              </span>
             </div>
           </div>
 
@@ -616,101 +821,74 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
              </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-               <div className="text-center">
+                 <div className="text-center">
                  <div className="relative inline-block mb-4">
-                   <svg className="w-20 h-20 sm:w-24 sm:h-24 transform -rotate-90">
+                   <svg className="w-20 h-20 sm:w-24 sm:h-24 transform -rotate-90" viewBox="0 0 100 100">
                      <circle
-                       cx="40"
-                       cy="40"
-                       r="32"
+                       cx="50"
+                       cy="50"
+                       r="40"
                        stroke="currentColor"
                        strokeWidth="5"
                        fill="transparent"
                        className="text-gray-200"
                      />
-                     <circle
-                       cx="40"
-                       cy="40"
-                       r="32"
-                       stroke="currentColor"
-                       strokeWidth="5"
-                       fill="transparent"
-                       strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.25)} 100`}
-                       className="text-blue-500"
-                     />
-                     <circle
-                       cx="40"
-                       cy="40"
-                       r="32"
-                       stroke="currentColor"
-                       strokeWidth="5"
-                       fill="transparent"
-                       strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.35)} 100`}
-                       className="text-cyan-500"
-                       strokeDashoffset={`-${Math.floor((filteredStats?.totalWinners || 0) * 0.25)}`}
-                     />
-                     <circle
-                       cx="40"
-                       cy="40"
-                       r="32"
-                       stroke="currentColor"
-                       strokeWidth="5"
-                       fill="transparent"
-                       strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.24)} 100`}
-                       className="text-yellow-500"
-                       strokeDashoffset={`-${Math.floor((filteredStats?.totalWinners || 0) * 0.6)}`}
-                     />
-                     <circle
-                       cx="40"
-                       cy="40"
-                       r="32"
-                       stroke="currentColor"
-                       strokeWidth="5"
-                       fill="transparent"
-                       strokeDasharray={`${Math.floor((filteredStats?.totalWinners || 0) * 0.24)} 100`}
-                       className="text-green-500"
-                       strokeDashoffset={`-${Math.floor((filteredStats?.totalWinners || 0) * 0.84)}`}
-                     />
+                     {(() => {
+                       const radius = 40;
+                       const circumference = 2 * Math.PI * radius;
+                       let offsetTracker = 0;
+
+                       return winnerSegments.map((segment) => {
+                         const value = winnersBreakdown[segment.key] || 0;
+                         const ratio = winnersTotal > 0 ? value / winnersTotal : 0;
+                         const dashLength = circumference * ratio;
+                         const dashOffset = circumference * (1 - offsetTracker - ratio);
+                         offsetTracker += ratio;
+
+                         if (ratio <= 0) {
+                           return null;
+                         }
+
+                         return (
+                           <circle
+                             key={segment.key}
+                             cx="50"
+                             cy="50"
+                             r={radius}
+                             stroke="currentColor"
+                             strokeWidth="5"
+                             fill="transparent"
+                             strokeDasharray={`${dashLength} ${circumference}`}
+                             strokeDashoffset={dashOffset}
+                             strokeLinecap="round"
+                             className={segment.color}
+                           />
+                         );
+                       });
+                     })()}
                    </svg>
-                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                     <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">
-                       {filteredStats?.totalWinners || 0}
-                     </p>
-                     <p className="text-xs text-gray-600 mt-1">Total</p>
+                   <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none">
+                     <div>
+                       <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">
+                         {winnersTotal}
+                       </p>
+                       <p className="text-xs text-gray-600 mt-1">Total</p>
+                     </div>
                    </div>
                  </div>
                </div>
                <div className="text-center">
                  <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Shot Type</h4>
                  <div className="space-y-2 sm:space-y-3">
-                   <div className="flex items-center gap-2">
-                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                     <span className="text-xs sm:text-sm text-gray-700">Forehand</span>
-                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
-                       {Math.floor((filteredStats?.totalWinners || 0) * 0.25)}
-                     </span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
-                     <span className="text-xs sm:text-sm text-gray-700">Backhand</span>
-                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
-                       {Math.floor((filteredStats?.totalWinners || 0) * 0.35)}
-                     </span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                     <span className="text-xs sm:text-sm text-gray-700">Return Forehand</span>
-                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
-                       {Math.floor((stats?.totalWinners || 0) * 0.24)}
-                     </span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                     <span className="text-xs sm:text-sm text-gray-700">Return Backhand</span>
-                     <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
-                       {Math.floor((stats?.totalWinners || 0) * 0.24)}
-                     </span>
-                   </div>
+                  {winnerSegments.map((segment) => (
+                    <div key={segment.key} className="flex items-center gap-2">
+                      <div className={`w-3 h-3 ${segment.bg} rounded-full`}></div>
+                      <span className="text-xs sm:text-sm text-gray-700">{segment.label}</span>
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 ml-auto">
+                        {winnersBreakdown[segment.key] || 0}
+                      </span>
+                    </div>
+                  ))}
                  </div>
                </div>
              </div>
@@ -815,24 +993,8 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                  <span className="text-xs sm:text-sm text-gray-500">{recentMatches.length} matches</span>
                </div>
               <div className="space-y-3">
-                {recentMatches.map((match, index) => {
-                  // Get opponent name using the helper function
+                {recentMatchesDetailed.map(({ match, stats, resultLabel, resultColor, resultBg, resultIcon }, index) => {
                   const opponentName = getOpponentName(match);
-                  
-                  // Determine match result
-                  let result = 'pending';
-                   let resultColor = 'text-gray-500';
-                   let resultBg = 'bg-gray-100';
-                   let resultIcon = '⚪';
-                   
-                  if (match.status === 'completed' && match.winner) {
-                    // For now, just show completed status since we don't know which player is current user
-                    result = 'completed';
-                    resultColor = 'text-blue-600';
-                    resultBg = 'bg-blue-100';
-                    resultIcon = '✅';
-                  }
-                  
                   return (
                      <div 
                        key={index} 
@@ -860,9 +1022,12 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                            </div>
                          </div>
                       <div className="flex items-center gap-2 sm:gap-3">
-                           <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${resultColor} ${resultBg}`}>
-                             {result.charAt(0).toUpperCase() + result.slice(1)}
+                          <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${resultColor} ${resultBg}`}>
+                            {resultLabel}
                            </div>
+                          <span className="text-xs sm:text-sm text-gray-500">
+                            {stats.totalPoints}-{stats.pointsLost}
+                          </span>
                            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-200" />
               </div>
                     </div>
@@ -888,7 +1053,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Serving</h3>
               <div className="text-center">
-                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredStats?.totalServes || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredStats.totalServes || 0}</p>
                 <p className="text-sm sm:text-base text-gray-600">Total Serves</p>
                 {selectedMatch !== 'all' && (
                   <p className="text-xs sm:text-sm text-blue-600 mt-1">From selected match</p>
@@ -898,7 +1063,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Winners</h3>
               <div className="text-center">
-                <p className="text-2xl sm:text-3xl font-bold text-green-600">{filteredStats?.totalWinners || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-600">{filteredStats.totalWinners || 0}</p>
                 <p className="text-sm sm:text-base text-gray-600">Total Winners</p>
                 {selectedMatch !== 'all' && (
                   <p className="text-xs sm:text-sm text-green-600 mt-1">From selected match</p>
@@ -908,7 +1073,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Rallies</h3>
               <div className="text-center">
-                <p className="text-2xl sm:text-3xl font-bold text-purple-600">{filteredStats?.totalRallies || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-600">{filteredStats.totalRallies || 0}</p>
                 <p className="text-sm sm:text-base text-gray-600">Total Rallies</p>
                 {selectedMatch !== 'all' && (
                   <p className="text-xs sm:text-sm text-purple-600 mt-1">From selected match</p>
@@ -926,7 +1091,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Total Serves</h3>
-               <p className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredStats?.totalServes || 0}</p>
+               <p className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredStats.totalServes || 0}</p>
                <p className="text-sm sm:text-base text-gray-600">Serves</p>
                {selectedMatch !== 'all' && (
                  <p className="text-xs sm:text-sm text-blue-600 mt-1">From selected match</p>
@@ -935,16 +1100,16 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">First Serve %</h3>
                <p className="text-2xl sm:text-3xl font-bold text-green-600">
-                 {filteredStats?.totalServes ? Math.round((filteredStats.totalServes / (filteredStats.totalServes + (filteredStats.totalErrors || 0))) * 100) : 0}%
+                 {firstServeWinPercentage}%
                </p>
-               <p className="text-sm sm:text-base text-gray-600">Success Rate</p>
+               <p className="text-sm sm:text-base text-gray-600">Win Rate ({totalFirstServePoints || 0} points)</p>
                {selectedMatch !== 'all' && (
                  <p className="text-xs sm:text-sm text-green-600 mt-1">From selected match</p>
                )}
              </div>
              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-base sm:text-lg font-semibold text-purple-600 mb-4">Aces</h3>
-               <p className="text-2xl sm:text-3xl font-bold text-purple-600">{Math.floor((filteredStats?.totalServes || 0) * 0.15)}</p>
+               <p className="text-2xl sm:text-3xl font-bold text-purple-600">{filteredStats.aces || 0}</p>
                <p className="text-sm sm:text-base text-gray-600">Aces</p>
                {selectedMatch !== 'all' && (
                  <p className="text-xs sm:text-sm text-purple-600 mt-1">From selected match</p>
@@ -961,24 +1126,18 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   <button className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium">Fullscreen</button>
                 </div>
                 <div className="h-48 sm:h-64 flex items-end justify-center gap-2 sm:gap-4">
-                  {['1st Serve', '2nd Serve', 'Ace', 'Double Fault'].map((type, index) => {
-                    const values = [
-                      Math.floor((filteredStats?.totalServes || 0) * 0.6),
-                      Math.floor((filteredStats?.totalServes || 0) * 0.3),
-                      Math.floor((filteredStats?.totalServes || 0) * 0.15),
-                      Math.floor((filteredStats?.totalServes || 0) * 0.05)
-                    ];
-                    // Cap height to prevent overflow and ensure minimum height
-                    const height = Math.min(Math.max(values[index] * 2, 20), 200);
-                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500'];
+                  {serveDistributionData.map(({ key, label, value, color }) => {
+                    const height = Math.max((value / maxServeValue) * 200, value > 0 ? 8 : 2);
                     return (
-                      <div key={type} className="flex flex-col items-center">
-                        <div 
-                          className={`w-8 sm:w-12 ${colors[index]} rounded-t-sm transition-all duration-300`}
+                      <div key={key} className="flex flex-col items-center">
+                        <div
+                          className={`w-10 sm:w-12 ${color} rounded-t-sm transition-all duration-300`}
                           style={{ height: `${height}px` }}
                         ></div>
-                        <span className="text-xs text-gray-500 mt-2 text-center max-w-[60px] break-words">{type}</span>
-                        <span className="text-xs text-gray-400">{values[index]}</span>
+                        <span className="text-xs text-gray-500 mt-2 text-center max-w-[70px] break-words">
+                          {label}
+                        </span>
+                        <span className="text-xs text-gray-400">{value}</span>
                       </div>
                     );
                   })}
@@ -993,32 +1152,38 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 </div>
                 <div className="text-center">
                   <div className="relative inline-block">
-                    <svg className="w-32 h-32 transform -rotate-90">
+                    <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 140 140">
                       <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
+                        cx="70"
+                        cy="70"
+                        r="60"
                         stroke="currentColor"
                         strokeWidth="8"
                         fill="transparent"
                         className="text-gray-200"
                       />
                       <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
+                        cx="70"
+                        cy="70"
+                        r="60"
                         stroke="currentColor"
                         strokeWidth="8"
                         fill="transparent"
-                        strokeDasharray={`${filteredStats?.totalServes || 0} 100`}
+                        strokeDasharray={serveAccuracyProgress.dashArray}
+                        strokeDashoffset={serveAccuracyProgress.dashOffset}
+                        strokeLinecap="round"
                         className="text-blue-500"
                       />
                     </svg>
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                      <p className="text-3xl font-bold text-gray-900 leading-none">
-                        {filteredStats?.totalServes ? Math.round((filteredStats.totalServes / (filteredStats.totalServes + (filteredStats.totalErrors || 0))) * 100) : 0}%
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">Accuracy</p>
+                    <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none">
+                      <div>
+                        <p className="text-3xl font-bold text-gray-900 leading-none">
+                          {totalServePoints > 0
+                            ? Math.round((servePointsWon / totalServePoints) * 100)
+                            : 0}%
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">Accuracy</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1034,7 +1199,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Points Won</h3>
-                 <p className="text-3xl font-bold text-green-600">{filteredStats?.totalPoints || 0}</p>
+                <p className="text-3xl font-bold text-green-600">{totalPointsWon}</p>
                <p className="text-gray-600">Won</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-green-600 mt-1">From selected match</p>
@@ -1042,7 +1207,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
              </div>
                <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Points Lost</h3>
-                 <p className="text-3xl font-bold text-red-600">{filteredStats?.totalErrors || 0}</p>
+                <p className="text-3xl font-bold text-red-600">{totalPointsLost}</p>
                <p className="text-gray-600">Lost</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-red-600 mt-1">From selected match</p>
@@ -1051,8 +1216,9 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Win Rate</h3>
                <p className="text-3xl font-bold text-blue-600">
-                   {filteredStats?.totalPoints && filteredStats?.totalErrors ? 
-                     Math.round((filteredStats.totalPoints / (filteredStats.totalPoints + filteredStats.totalErrors)) * 100) : 0}%
+                  {totalPointsPlayed > 0
+                    ? Math.round((totalPointsWon / totalPointsPlayed) * 100)
+                    : 0}%
                </p>
                <p className="text-gray-600">Success Rate</p>
                  {selectedMatch !== 'all' && (
@@ -1070,20 +1236,21 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
                 </div>
                 <div className="h-64 flex items-end justify-center gap-2">
-                  {recentMatches.slice(0, 10).map((match, index) => {
-                    const pointsWon = Math.floor(Math.random() * 20) + 10; // Mock data
-                    const pointsLost = Math.floor(Math.random() * 15) + 5;
-                    const height = pointsWon + pointsLost;
+                  {recentMatchSummaries.map(({ match, stats }, index) => {
+                    const wonHeight = Math.max((stats.totalPoints / maxTotalPoints) * 200, stats.totalPoints > 0 ? 6 : 2);
+                    const lostHeight = Math.max((stats.pointsLost / maxTotalPoints) * 200, stats.pointsLost > 0 ? 4 : 0);
                     return (
-                      <div key={index} className="flex flex-col items-center">
-                        <div className="flex flex-col gap-1">
-                          <div 
+                      <div key={match._id || index} className="flex flex-col items-center">
+                        <div className="flex flex-col-reverse gap-1">
+                          {lostHeight > 0 && (
+                            <div
+                              className="w-6 bg-red-500 rounded-t-sm"
+                              style={{ height: `${lostHeight}px` }}
+                            ></div>
+                          )}
+                          <div
                             className="w-6 bg-green-500 rounded-t-sm"
-                            style={{ height: `${pointsWon * 2}px` }}
-                          ></div>
-                          <div 
-                            className="w-6 bg-red-500 rounded-t-sm"
-                            style={{ height: `${pointsLost * 2}px` }}
+                            style={{ height: `${wonHeight}px` }}
                           ></div>
                         </div>
                         <span className="text-xs text-gray-500 mt-1">{index + 1}</span>
@@ -1111,38 +1278,42 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                 </div>
                 <div className="text-center">
                   <div className="relative inline-block">
-                    <svg className="w-32 h-32 transform -rotate-90">
+                    <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 140 140">
                       <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
+                        cx="70"
+                        cy="70"
+                        r="60"
                         stroke="currentColor"
                         strokeWidth="8"
                         fill="transparent"
                         className="text-gray-200"
                       />
                       <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
+                        cx="70"
+                        cy="70"
+                        r="60"
                         stroke="currentColor"
                         strokeWidth="8"
                         fill="transparent"
-                        strokeDasharray={`${filteredStats?.totalPoints || 0} ${filteredStats?.totalErrors || 0}`}
+                        strokeDasharray={pointsProgressLarge.dashArray}
+                        strokeDashoffset={pointsProgressLarge.dashOffset}
+                        strokeLinecap="round"
                         className="text-green-500"
                       />
                     </svg>
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                      <p className="text-3xl font-bold text-gray-900 leading-none">
-                        {filteredStats?.totalPoints || 0}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">Total</p>
+                    <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none">
+                      <div>
+                        <p className="text-3xl font-bold text-gray-900 leading-none">
+                          {totalPointsWon}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">Total</p>
+                      </div>
                     </div>
-            </div>
                   </div>
                 </div>
               </div>
             </div>
+        </div>
       )}
 
       {/* Returns Tab Content */}
@@ -1152,7 +1323,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Returns</h3>
-                 <p className="text-3xl font-bold text-blue-600">{filteredStats?.totalRallies || 0}</p>
+                <p className="text-3xl font-bold text-blue-600">{returnStats.totalReturns || 0}</p>
                <p className="text-gray-600">Returns</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-blue-600 mt-1">From selected match</p>
@@ -1160,7 +1331,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
              </div>
                <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Return Winners</h3>
-                 <p className="text-3xl font-bold text-green-600">{Math.floor((filteredStats?.totalRallies || 0) * 0.3)}</p>
+                <p className="text-3xl font-bold text-green-600">{totalReturnWinners}</p>
                <p className="text-gray-600">Winners</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-green-600 mt-1">From selected match</p>
@@ -1168,7 +1339,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
              </div>
                <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Return Errors</h3>
-                 <p className="text-3xl font-bold text-red-600">{Math.floor((filteredStats?.totalRallies || 0) * 0.2)}</p>
+                <p className="text-3xl font-bold text-red-600">{totalReturnErrors}</p>
                <p className="text-gray-600">Errors</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-red-600 mt-1">From selected match</p>
@@ -1183,29 +1354,22 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
              </div>
              <div className="h-64 flex items-end justify-center gap-4">
-               {['Forehand', 'Backhand', 'Volley', 'Overhead'].map((type, index) => {
-                 const values = [
-                   Math.floor((filteredStats?.totalRallies || 0) * 0.4),
-                   Math.floor((filteredStats?.totalRallies || 0) * 0.35),
-                   Math.floor((filteredStats?.totalRallies || 0) * 0.15),
-                   Math.floor((filteredStats?.totalRallies || 0) * 0.1)
-                 ];
-                 const height = values[index] * 2;
-                 const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500'];
-                 return (
-                   <div key={type} className="flex flex-col items-center">
-                     <div 
-                       className={`w-12 ${colors[index]} rounded-t-sm transition-all duration-300`}
-                       style={{ height: `${Math.max(height, 20)}px` }}
-                     ></div>
-                     <span className="text-xs text-gray-500 mt-2">{type}</span>
-                     <span className="text-xs text-gray-400">{values[index]}</span>
-                   </div>
-                 );
-               })}
+              {returnDistributionData.map(({ key, label, value, color }) => {
+                const height = Math.max((value / maxReturnValue) * 200, value > 0 ? 8 : 2);
+                return (
+                  <div key={key} className="flex flex-col items-center">
+                    <div
+                      className={`w-12 ${color} rounded-t-sm transition-all duration-300`}
+                      style={{ height: `${height}px` }}
+                    ></div>
+                    <span className="text-xs text-gray-500 mt-2">{label}</span>
+                    <span className="text-xs text-gray-400">{value}</span>
                   </div>
-                </div>
-              </div>
+                );
+              })}
+             </div>
+          </div>
+        </div>
       )}
 
       {/* Rally Tab Content */}
@@ -1215,7 +1379,7 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Rallies</h3>
-                 <p className="text-3xl font-bold text-blue-600">{filteredStats?.totalRallies || 0}</p>
+                <p className="text-3xl font-bold text-blue-600">{filteredStats.totalRallies || 0}</p>
                <p className="text-gray-600">Rallies</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-blue-600 mt-1">From selected match</p>
@@ -1223,16 +1387,16 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
              </div>
                <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Avg Rally Length</h3>
-                 <p className="text-3xl font-bold text-green-600">{filteredStats?.totalRallies || 0}</p>
-               <p className="text-gray-600">Shots</p>
+                <p className="text-3xl font-bold text-green-600">{filteredStats.averageRallyLength || 0}</p>
+              <p className="text-gray-600">Shots (avg)</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-green-600 mt-1">From selected match</p>
                  )}
              </div>
                <div className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition-shadow duration-200">
                <h3 className="text-lg font-semibold text-gray-900 mb-4">Longest Rally</h3>
-                 <p className="text-3xl font-bold text-purple-600">{Math.floor((filteredStats?.totalRallies || 0) * 0.8)}</p>
-               <p className="text-gray-600">Shots</p>
+                <p className="text-3xl font-bold text-purple-600">{longestRallyApprox}</p>
+              <p className="text-gray-600">Estimated Shots</p>
                  {selectedMatch !== 'all' && (
                    <p className="text-xs text-purple-600 mt-1">From selected match</p>
                  )}
@@ -1248,23 +1412,17 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
                 </div>
                 <div className="h-64 flex items-end justify-center gap-2">
-                  {['1-3', '4-6', '7-9', '10+'].map((range, index) => {
-                    const values = [
-                      Math.floor((filteredStats?.totalRallies || 0) * 0.4),
-                      Math.floor((filteredStats?.totalRallies || 0) * 0.3),
-                      Math.floor((filteredStats?.totalRallies || 0) * 0.2),
-                      Math.floor((filteredStats?.totalRallies || 0) * 0.1)
-                    ];
-                    const height = values[index] * 2;
-                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500'];
+                  {rallyBuckets.map(({ key, label, color }) => {
+                    const value = rallyBreakdown[key] || 0;
+                    const height = Math.max((value / maxRallyValue) * 200, value > 0 ? 8 : 2);
                     return (
-                      <div key={range} className="flex flex-col items-center">
-                        <div 
-                          className={`w-8 ${colors[index]} rounded-t-sm transition-all duration-300`}
-                          style={{ height: `${Math.max(height, 20)}px` }}
+                      <div key={key} className="flex flex-col items-center">
+                        <div
+                          className={`w-10 ${color} rounded-t-sm transition-all duration-300`}
+                          style={{ height: `${height}px` }}
                         ></div>
-                        <span className="text-xs text-gray-500 mt-1">{range}</span>
-                        <span className="text-xs text-gray-400">{values[index]}</span>
+                        <span className="text-xs text-gray-500 mt-1">{label}</span>
+                        <span className="text-xs text-gray-400">{value}</span>
                       </div>
                     );
                   })}
@@ -1277,22 +1435,32 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
                   <h3 className="text-lg font-semibold text-gray-900">Rally Heatmap</h3>
                   <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">Fullscreen</button>
                 </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {Array.from({ length: 49 }, (_, i) => {
-                    const intensity = Math.floor(Math.random() * 100);
-                    const color = intensity > 80 ? 'bg-red-500' : 
-                                 intensity > 60 ? 'bg-orange-500' : 
-                                 intensity > 40 ? 'bg-yellow-500' : 
-                                 intensity > 20 ? 'bg-blue-500' : 'bg-gray-200';
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+                  {rallyBuckets.map((bucket) => {
+                    const value = rallyBreakdown[bucket.key] || 0;
+                    const ratio =
+                      filteredStats.totalRallies > 0
+                        ? value / filteredStats.totalRallies
+                        : 0;
+                    const backgroundColor = rallyBucketColors[bucket.key] || '#6366f1';
+                    const opacity = ratio > 0 ? Math.min(0.25 + ratio * 0.75, 1) : 0.15;
                     return (
-                      <div 
-                        key={i} 
-                        className={`w-8 h-8 ${color} rounded-sm transition-all duration-300`}
-                        style={{ opacity: intensity / 100 }}
-                      ></div>
+                      <div
+                        key={bucket.key}
+                        className="rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center text-white text-center transition-all duration-300"
+                        style={{ backgroundColor, opacity }}
+                      >
+                        <span className="text-sm sm:text-base font-semibold">{bucket.label}</span>
+                        <span className="text-xs sm:text-sm mt-1">
+                          {value} rallies
+                        </span>
+                        <span className="text-[10px] sm:text-xs mt-1 text-white/80">
+                          {(ratio * 100).toFixed(1)}%
+                        </span>
+                      </div>
                     );
                   })}
-                  </div>
+                </div>
                 <div className="mt-4 text-center text-sm text-gray-600">
                   Court position rally frequency
                 </div>
@@ -1305,3 +1473,4 @@ const PlayerAnalytics: React.FC<PlayerAnalyticsProps> = ({ userName, playerData 
 };
 
 export default PlayerAnalytics;
+

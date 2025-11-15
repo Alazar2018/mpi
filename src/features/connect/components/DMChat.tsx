@@ -16,6 +16,7 @@ export default function DMChat({
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const authStore = useAuthStore();
   const chatStore = useChatStore();
   const socket = useChatSocket();
@@ -37,7 +38,7 @@ export default function DMChat({
     autoRefresh: true,
     refreshInterval: 10000, // 10 seconds
     onMessageSent: (message) => {
-      // Clear the input field when message is sent successfully
+      // Ensure input is cleared (already cleared in send function, but double-check)
       setMessage("");
       setSelectedImage(null);
       setImagePreview(null);
@@ -49,6 +50,16 @@ export default function DMChat({
         textarea.current.style.minHeight = "44px";
         textarea.current.focus();
       }
+      
+      // Auto-scroll to bottom to show the new message
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTo({ 
+            top: messagesContainerRef.current.scrollHeight, 
+            behavior: 'smooth' 
+          });
+        }
+      }, 100);
     }
   });
 
@@ -185,18 +196,30 @@ export default function DMChat({
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll container to bottom to show latest messages
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({ 
+        top: messagesContainerRef.current.scrollHeight, 
+        behavior: 'smooth' 
+      });
+    }
   };
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (especially after sending)
   useEffect(() => {
     if (messages.length > 0) {
-      // With reverse order, scroll to top to show latest messages
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
+      // Scroll container to bottom to show latest messages
+      // Use a small timeout to ensure DOM is updated
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTo({ 
+            top: messagesContainerRef.current.scrollHeight, 
+            behavior: 'smooth' 
+          });
+        }
+      }, 50);
     }
-  }, [messages.length]);
+  }, [messages.length, messages]);
 
   // Sync textarea value when editing state changes
   useEffect(() => {
@@ -216,17 +239,41 @@ export default function DMChat({
   const send = useCallback(async () => {
     if (!message.trim() && !selectedImage) return;
     
+    // Store message content before clearing
+    const messageContent = message;
+    const imageToSend = selectedImage;
+    
+    // Clear input immediately for better UX
+    setMessage("");
+    setSelectedImage(null);
+    setImagePreview(null);
+    
+    // Clear textarea
+    if (textarea.current) {
+      textarea.current.value = "";
+      textarea.current.style.height = "44px";
+      textarea.current.style.minHeight = "44px";
+    }
+    
     try {
-      const sentMessage = await sendMessage(message, selectedImage || undefined);
+      const sentMessage = await sendMessage(messageContent, imageToSend || undefined);
       
       if (sentMessage) {
-        // Input clearing is now handled by the onMessageSent callback
+        // Auto-scroll to bottom to show latest message after sending
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTo({ 
+              top: messagesContainerRef.current.scrollHeight, 
+              behavior: 'smooth' 
+            });
+          }
+        }, 100);
         
         // Emit socket event for real-time delivery
         if (socket && chat?._id) {
           socket.emit('send-message', {
             chatId: chat._id,
-            content: message,
+            content: messageContent,
             messageId: sentMessage._id,
             senderId: authStore.user?._id,
             timestamp: new Date().toISOString()
@@ -235,8 +282,18 @@ export default function DMChat({
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+      // Restore message on error
+      setMessage(messageContent);
+      if (imageToSend) {
+        setSelectedImage(imageToSend);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(imageToSend);
+      }
     }
-  }, [message, selectedImage, sendMessage, chat?._id, authStore.user?._id]);
+  }, [message, selectedImage, sendMessage, chat?._id, authStore.user?._id, socket]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -361,19 +418,26 @@ export default function DMChat({
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto bg-[var(--bg-primary)] dark:bg-gray-900 relative" onScroll={handleScroll}>
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto bg-[var(--bg-primary)] dark:bg-gray-900 relative" 
+        onScroll={handleScroll}
+      >
         {/* Scroll to Bottom Button */}
         {showScrollToBottom && (
           <button
             onClick={() => {
-              if (messagesEndRef.current) {
-                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+              if (messagesContainerRef.current) {
+                messagesContainerRef.current.scrollTo({ 
+                  top: messagesContainerRef.current.scrollHeight, 
+                  behavior: 'smooth' 
+                });
               }
             }}
             className="absolute bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 z-10"
             title="Scroll to latest messages"
           >
-            <span className="text-lg">⬆️</span>
+            <span className="text-lg">⬇️</span>
           </button>
         )}
 

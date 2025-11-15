@@ -188,13 +188,24 @@ class PlayersService {
   }
 
   /**
-   * Search players by name or email
-   * GET /players/search?q=searchTerm
+   * Search players by name
+   * GET /api/v1/users/players?name=searchTerm
+   * Uses the same endpoint as getPlayers but with name query parameter
    */
   async searchPlayers(query: string, page: number = 1, limit: number = 10): Promise<PlayerListResponse> {
-    const response = await axiosInstance.get<PlayerListResponse>(API_CONFIG.ENDPOINTS.PLAYERS.SEARCH, {
-      params: { q: query, page, limit }
+    const params: any = { 
+      name: query,
+      page,
+      limit
+    };
+    
+    // Use the same endpoint as getPlayers with name parameter
+    const correctUrl = 'https://mpiglobal.org/api/v1/users/players';
+    
+    const response = await axiosInstance.get<PlayerListResponse>(correctUrl, {
+      params
     });
+    
     return response.data;
   }
 

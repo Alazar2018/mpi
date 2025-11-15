@@ -48,9 +48,18 @@ export const usePlayers = (options: UsePlayersOptions = {}): UsePlayersReturn =>
       
       let response: PlayerListResponse;
       
-      if (search || searchQuery) {
-        const query = search || searchQuery;
-        response = await playersService.searchPlayers(query, page, limit);
+      // Determine if we should search:
+      // - If search parameter is explicitly provided (string), use it (even if empty)
+      // - If search is undefined, use the hook's searchQuery state
+      // - If search is explicitly empty string '', don't search (clear search)
+      const shouldSearch = search === undefined 
+        ? (searchQuery && searchQuery.trim() !== '')  // Use hook's state if search param not provided
+        : (search && search.trim() !== '');          // Use provided search param (empty string = no search)
+      const queryToUse = search === undefined ? searchQuery : search;
+      
+      if (shouldSearch && queryToUse) {
+        // Use the same players endpoint with name parameter
+        response = await playersService.searchPlayers(queryToUse, page, limit);
       } else if (status) {
         response = await playersService.getPlayersByStatus(status, page, limit);
       } else if (sortBy === 'rating') {
@@ -137,7 +146,9 @@ export const usePlayers = (options: UsePlayersOptions = {}): UsePlayersReturn =>
   const clearSearch = useCallback(() => {
     setSearchQuery('');
     setCurrentPage(1);
-    fetchPlayers(1);
+    // Explicitly pass empty string to fetchPlayers to indicate we want to clear search
+    // This ensures it calls /players endpoint instead of /search
+    fetchPlayers(1, '');
   }, [fetchPlayers]);
 
   const refreshPlayers = useCallback(async () => {

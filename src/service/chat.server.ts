@@ -205,10 +205,15 @@ class ChatService {
    */
   async createDirectChat(userId: string): Promise<Chat> {
     try {
-      const response = await axiosInstance.post<Chat>(CHAT_BASE_URL, {
+      const response = await axiosInstance.post<{status: string, data: Chat}>(CHAT_BASE_URL, {
         userId
       });
-      return response.data;
+      // Handle nested response structure: {status: 'success', data: {...}}
+      if (response.data && response.data.data) {
+        return response.data.data;
+      }
+      // Fallback for direct chat object
+      return response.data as Chat;
     } catch (error) {
       console.error('Error in createDirectChat:', error);
       throw error;
@@ -235,11 +240,16 @@ class ChatService {
    */
   async createGroupChat(userIds: string[], chatName: string): Promise<Chat> {
     try {
-      const response = await axiosInstance.post<Chat>(`${CHAT_BASE_URL}/group`, {
+      const response = await axiosInstance.post<{status: string, data: Chat}>(`${CHAT_BASE_URL}/group`, {
         userIds,
         chatName
       });
-      return response.data;
+      // Handle nested response structure: {status: 'success', data: {...}}
+      if (response.data && response.data.data) {
+        return response.data.data;
+      }
+      // Fallback for direct chat object
+      return response.data as Chat;
     } catch (error) {
       console.error('Error in createGroupChat:', error);
       throw error;

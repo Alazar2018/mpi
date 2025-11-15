@@ -17,6 +17,7 @@ interface CalendarEvent {
     player?: string;
     participants?: string[];
     description?: string;
+    isAllDay?: boolean;
 }
 
 interface CalendarProps {
@@ -201,8 +202,13 @@ export default function Calendar({
     // Get events for a specific date (improved to show all events for the day)
     const getEventsForDate = (date: Date) => {
         const dayEvents = events.filter(event => {
-            const eventDate = parseISO(event.date);
-            return isSameDay(eventDate, date);
+            try {
+                const eventDate = parseISO(event.date);
+                return isSameDay(eventDate, date);
+            } catch (error) {
+                console.error('Error parsing event date:', event.date, error);
+                return false;
+            }
         });
         
         return dayEvents;
@@ -211,14 +217,43 @@ export default function Calendar({
     // Get events for a specific date and time (for time-slot view)
     const getEventsForDateTime = (date: Date, hour: number) => {
         return events.filter(event => {
-            const eventDate = parseISO(event.date);
-            if (!isSameDay(eventDate, date)) return false;
-            
-            // If event has no time, show it in the first time slot
-            if (!event.time) return hour === 9; // Show at 9 AM
-            
-            const eventHour = parseInt(event.time.split(':')[0]);
-            return eventHour === hour;
+            try {
+                const eventDate = parseISO(event.date);
+                if (!isSameDay(eventDate, date)) return false;
+                
+                // If event is all-day or has no time, don't show it in time slots (it's shown in All Day section)
+                if (event.isAllDay || !event.time || event.time.trim() === '') {
+                    return false; // All-day events are shown in the All Day section, not in time slots
+                }
+                
+                // Parse the time - handle formats like "14:30", "2:30 PM", "14:30:00"
+                const timeStr = event.time.trim();
+                let eventHour: number;
+                
+                // Check if it's in 12-hour format with AM/PM
+                if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+                    const [timePart, period] = timeStr.split(/\s*(am|pm)/i);
+                    const [hours] = timePart.split(':').map(Number);
+                    if (period.toLowerCase() === 'pm' && hours !== 12) {
+                        eventHour = hours + 12;
+                    } else if (period.toLowerCase() === 'am' && hours === 12) {
+                        eventHour = 0;
+                    } else {
+                        eventHour = hours;
+                    }
+                } else {
+                    // 24-hour format
+                    const [hours] = timeStr.split(':').map(Number);
+                    eventHour = hours;
+                }
+                
+                // Match events to the hour slot
+                return eventHour === hour;
+            } catch (error) {
+                console.error('Error parsing event time:', event.time, error);
+                // If there's an error parsing, show it at the first time slot
+                return hour === 6;
+            }
         });
     };
 
@@ -539,6 +574,33 @@ export default function Calendar({
                                         </div>
                                     )}
                                 </div>
+                                
+                                {/* All Day Events Section */}
+                                {(() => {
+                                    const allDayEvents = getEventsForDate(selectedDate).filter(event => event.isAllDay || !event.time || event.time.trim() === '');
+                                    if (allDayEvents.length > 0) {
+                                        return (
+                                            <div className="mt-4 pt-4 border-t border-[var(--border-primary)] dark:border-gray-600">
+                                                <h4 className="text-sm font-semibold text-[var(--text-primary)] dark:text-white mb-2">All Day Events</h4>
+                                                <div className="space-y-2">
+                                                    {allDayEvents.map(event => (
+                                                        <div
+                                                            key={event.id}
+                                                            onClick={() => onEventClick?.(event)}
+                                                            className={`${getEventStyle(event.type)} p-2 rounded cursor-pointer shadow-sm hover:shadow-md transition-all`}
+                                                        >
+                                                            <div className="font-semibold text-white text-sm">{event.title}</div>
+                                                            {event.description && (
+                                                                <div className="text-white text-xs opacity-90 mt-1">{event.description}</div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                                 <div className="flex justify-center mt-3 space-x-2">
                                     <button
                                         onClick={() => {
@@ -670,17 +732,41 @@ export default function Calendar({
                         <div className="min-w-[800px]">
                             {/* Day Headers */}
                             <div className="grid grid-cols-8 border-b border-[var(--border-primary)] dark:border-gray-600">
-                                <div className="p-3 border-r border-[var(--border-primary)] dark:border-gray-600"></div>
-                                {viewDays.map(day => (
-                                    <div key={day.toString()} className="p-3 text-center border-r border-[var(--border-primary)] dark:border-gray-600">
-                                        <div className="text-sm font-medium text-[var(--text-secondary)] dark:text-gray-400">
-                                            {format(day, 'EEEE')}
+                                <div className="p-3 border-r border-[var(--border-primary)] dark:border-gray-600">
+                                    <div className="text-xs font-medium text-[var(--text-secondary)] dark:text-gray-400 mb-1">All Day</div>
+                                </div>
+                                {viewDays.map(day => {
+                                    const allDayEvents = getEventsForDate(day).filter(event => event.isAllDay || !event.time || event.time.trim() === '');
+                                    return (
+                                        <div key={day.toString()} className="p-3 text-center border-r border-[var(--border-primary)] dark:border-gray-600">
+                                            <div className="text-sm font-medium text-[var(--text-secondary)] dark:text-gray-400">
+                                                {format(day, 'EEEE')}
+                                            </div>
+                                            <div className="text-lg font-semibold text-[var(--text-primary)] dark:text-white">
+                                                {format(day, 'd')}
+                                            </div>
+                                            {allDayEvents.length > 0 && (
+                                                <div className="mt-2 space-y-1">
+                                                    {allDayEvents.slice(0, 2).map(event => (
+                                                        <div
+                                                            key={event.id}
+                                                            onClick={() => onEventClick?.(event)}
+                                                            className={`${getEventStyle(event.type)} p-1 rounded text-xs cursor-pointer truncate`}
+                                                            title={event.title}
+                                                        >
+                                                            {event.title}
+                                                        </div>
+                                                    ))}
+                                                    {allDayEvents.length > 2 && (
+                                                        <div className="text-xs text-[var(--text-tertiary)] dark:text-gray-500">
+                                                            +{allDayEvents.length - 2}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="text-lg font-semibold text-[var(--text-primary)] dark:text-white">
-                                            {format(day, 'd')}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
 
@@ -690,7 +776,7 @@ export default function Calendar({
                                 {timeSlots.map(hour => (
                                     <div key={hour} className="contents">
                                         {/* Time Label */}
-                                        <div className="p-2 border-r border-[var(--border-primary)] dark:border-gray-600 border-b border-[var(--border-secondary)] dark:border-gray-700 text-xs text-[var(--text-tertiary)] dark:text-gray-500 flex items-center justify-between">
+                                        <div className="p-2 border-r border-[var(--border-primary)] dark:border-gray-600 border-b border-[var(--border-secondary)] dark:border-gray-700 text-xs text-[var(--text-tertiary)] dark:text-gray-500 flex items-center justify-between bg-[var(--bg-secondary)] dark:bg-gray-700">
                                             <span>{hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}</span>
                                             <button 
                                                 className="text-[var(--text-tertiary)] dark:text-gray-500 hover:text-[var(--text-secondary)] dark:hover:text-gray-400"
@@ -700,9 +786,10 @@ export default function Calendar({
                                             </button>
                                         </div>
 
-                                        {/* Day Cells */}
+                                        {/* Day Cells - Only show events with times */}
                                         {viewDays.map(day => {
-                                            const dayEvents = getEventsForDateTime(day, hour);
+                                            // Filter out all-day events and events without times (they're shown in the All Day section)
+                                            const dayEvents = getEventsForDateTime(day, hour).filter(event => !event.isAllDay && event.time && event.time.trim() !== '');
                                             return (
                                                 <div
                                                     key={`${day.toString()}-${hour}`}
@@ -712,18 +799,18 @@ export default function Calendar({
                                                         <div
                                                             key={event.id}
                                                             onClick={() => onEventClick?.(event)}
-                                                            className={`${getEventStyle(event.type)} p-2 rounded text-xs cursor-pointer mb-1 shadow-sm`}
+                                                            className={`${getEventStyle(event.type)} p-2 rounded text-xs cursor-pointer mb-1 shadow-sm hover:shadow-md transition-all`}
                                                         >
                                                             <div className="font-medium truncate">
                                                                 {event.time && event.endTime 
-                                                                    ? `${event.time} ${event.endTime}`
+                                                                    ? `${event.time} - ${event.endTime}`
                                                                     : event.time || ''
                                                                 }
                                                             </div>
                                                             <div className="font-semibold truncate">
                                                                 {event.title}
                                                             </div>
-                                                            {event.participants && (
+                                                            {event.participants && event.participants.length > 0 && (
                                                                 <div className="text-xs opacity-90 truncate">
                                                                     {event.participants.join(', ')}
                                                                 </div>

@@ -613,6 +613,8 @@ export default function Profile() {
         activeTab: "Photos",
         searchQuery: "",
         isFilterOpen: false,
+        isSortOpen: false,
+        sortOrder: "newest" as "newest" | "oldest" | "title-asc" | "title-desc",
         selectedMedia: null as (Upload & { category: string }) | null,
         isViewerOpen: false,
         isShareModalOpen: false,
@@ -752,11 +754,19 @@ export default function Profile() {
     };
 
     const toggleFilterDropdown = () => {
-        setUploadsData(prev => ({ ...prev, isFilterOpen: !prev.isFilterOpen }));
+        setUploadsData(prev => ({ ...prev, isFilterOpen: !prev.isFilterOpen, isSortOpen: false }));
     };
 
     const closeFilterDropdown = () => {
         setUploadsData(prev => ({ ...prev, isFilterOpen: false }));
+    };
+
+    const toggleSortDropdown = () => {
+        setUploadsData(prev => ({ ...prev, isSortOpen: !prev.isSortOpen, isFilterOpen: false }));
+    };
+
+    const handleSortChange = (sortOrder: "newest" | "oldest" | "title-asc" | "title-desc") => {
+        setUploadsData(prev => ({ ...prev, sortOrder, isSortOpen: false }));
     };
 
     // Media viewer and modal handlers
@@ -788,6 +798,17 @@ export default function Profile() {
         setEditFormData({
             title: media?.title || "",
             category: media?.category || "All",
+            file: null
+        });
+        setUploadsData(prev => ({ ...prev, isEditModalOpen: true }));
+    };
+
+    const openUploadModal = () => {
+        // Clear selected media for new upload
+        setUploadsData(prev => ({ ...prev, selectedMedia: null }));
+        setEditFormData({
+            title: "",
+            category: "All",
             file: null
         });
         setUploadsData(prev => ({ ...prev, isEditModalOpen: true }));
@@ -1095,27 +1116,32 @@ export default function Profile() {
         }
     };
 
-    const handleEditSubmit = () => {
-        // Update the media item
-        const updatedItems = uploadsData.mediaItems.map(item => 
-            item._id === uploadsData.selectedMedia?._id 
-                ? { ...item, title: editFormData.title, category: editFormData.category as 'forehand' | 'backhand' | 'volley' | 'serve' }
-                : item
-        ) as Upload[];
-        
-        const updatedSelectedMedia = uploadsData.selectedMedia ? { 
-            ...uploadsData.selectedMedia, 
-            title: editFormData.title, 
-            category: editFormData.category as 'forehand' | 'backhand' | 'volley' | 'serve'
-        } as Upload & { category: string } : null;
-        
-        setUploadsData(prev => ({ 
-            ...prev, 
-            mediaItems: updatedItems,
-            selectedMedia: updatedSelectedMedia
-        } as any));
-        closeEditModal();
-        toast.success("Media updated successfully!");
+    const handleEditSubmit = async () => {
+        // If there's a file selected, it's a new upload
+        if (editFormData.file) {
+            if (!editFormData.title.trim()) {
+                toast.error("Please enter a title");
+                return;
+            }
+            await handleFileUpload(editFormData.file, editFormData.title, editFormData.category);
+            return;
+        }
+
+        // If there's selected media, it's an edit
+        if (uploadsData.selectedMedia) {
+            try {
+                await handleUploadUpdate(uploadsData.selectedMedia._id, {
+                    title: editFormData.title,
+                    category: editFormData.category.toLowerCase() as 'forehand' | 'backhand' | 'volley' | 'serve'
+                });
+            } catch (error) {
+                console.error('Error updating upload:', error);
+            }
+            return;
+        }
+
+        // If no file and no selected media, show error
+        toast.error("Please select a file to upload");
     };
 
     const handleDeleteMedia = () => {
@@ -1181,19 +1207,22 @@ export default function Profile() {
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Element;
-            if (!target.closest('.filter-dropdown')) {
+            if (!target.closest('.filter-dropdown') && !target.closest('.sort-dropdown')) {
                 closeFilterDropdown();
+                if (uploadsData.isSortOpen) {
+                    setUploadsData(prev => ({ ...prev, isSortOpen: false }));
+                }
             }
         };
 
-        if (uploadsData.isFilterOpen) {
+        if (uploadsData.isFilterOpen || uploadsData.isSortOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [uploadsData.isFilterOpen]);
+    }, [uploadsData.isFilterOpen, uploadsData.isSortOpen]);
 
     // Cleanup search timeout on unmount
     useEffect(() => {
@@ -1204,26 +1233,54 @@ export default function Profile() {
         };
     }, []);
 
-    const getFilteredMedia = () => {
+    // Filter and sort media items
+    const filteredAndSortedMedia = useMemo(() => {
         let filtered = uploadsData.mediaItems;
+        
+        // Filter by active tab (Videos/Photos)
+        if (uploadsData.activeTab === "Videos") {
+            filtered = filtered.filter(item => item.type === 'video');
+        } else if (uploadsData.activeTab === "Photos") {
+            filtered = filtered.filter(item => item.type === 'photo');
+        }
         
         // Filter by category
         if (uploadsData.activeFilter !== "All") {
             filtered = filtered.filter(item => 
-                item.category.toLowerCase() === uploadsData.activeFilter.toLowerCase()
+                item.category?.toLowerCase() === uploadsData.activeFilter.toLowerCase()
             );
         }
         
         // Filter by search query
         if (uploadsData.searchQuery) {
             filtered = filtered.filter(item => 
-                item.title.toLowerCase().includes(uploadsData.searchQuery.toLowerCase()) ||
-                item.category.toLowerCase().includes(uploadsData.searchQuery.toLowerCase())
+                item.title?.toLowerCase().includes(uploadsData.searchQuery.toLowerCase()) ||
+                item.category?.toLowerCase().includes(uploadsData.searchQuery.toLowerCase())
             );
         }
         
+        // Sort based on selected sort order
+        filtered = filtered.sort((a, b) => {
+            switch (uploadsData.sortOrder) {
+                case "newest":
+                    const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+                    const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+                    return dateB - dateA; // Newest first
+                case "oldest":
+                    const dateAOld = new Date(a.createdAt || a.updatedAt || 0).getTime();
+                    const dateBOld = new Date(b.createdAt || b.updatedAt || 0).getTime();
+                    return dateAOld - dateBOld; // Oldest first
+                case "title-asc":
+                    return (a.title || "").localeCompare(b.title || "");
+                case "title-desc":
+                    return (b.title || "").localeCompare(a.title || "");
+                default:
+                    return 0;
+            }
+        });
+        
         return filtered;
-    };
+    }, [uploadsData.mediaItems, uploadsData.activeTab, uploadsData.activeFilter, uploadsData.searchQuery, uploadsData.sortOrder]);
 
     // Filter and search logic for achievements
     const filteredAchievements = useMemo(() => {
@@ -3157,7 +3214,10 @@ export default function Profile() {
                         {/* Header */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                             <h3 className="text-lg font-semibold text-[var(--text-primary)]">Uploads</h3>
-                            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm w-full sm:w-auto flex items-center gap-2">
+                            <button 
+                                onClick={openUploadModal}
+                                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm w-full sm:w-auto flex items-center gap-2 cursor-pointer transition-colors"
+                            >
                                 <i className="*:size-4" dangerouslySetInnerHTML={{ __html: icons.plus }} />
                                 Upload
                             </button>
@@ -3207,13 +3267,54 @@ export default function Profile() {
                                     )}
                                 </div>
 
-                                {/* Sort Button */}
-                                <button className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-2">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                                    </svg>
-                                    Sort
-                                </button>
+                                {/* Sort Dropdown */}
+                                <div className="relative sort-dropdown">
+                                    <button 
+                                        onClick={toggleSortDropdown}
+                                        className="px-3 py-2 border border-[var(--border-primary)] rounded-lg hover:bg-[var(--bg-secondary)] text-sm flex items-center gap-2 transition-colors duration-300"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                                        </svg>
+                                        Sort
+                                    </button>
+                                    {uploadsData.isSortOpen && (
+                                        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-[var(--shadow-secondary)] z-10 min-w-40 transition-colors duration-300">
+                                            <button
+                                                onClick={() => handleSortChange("newest")}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] first:rounded-t-lg transition-colors duration-300 ${
+                                                    uploadsData.sortOrder === "newest" ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-[var(--text-primary)]"
+                                                }`}
+                                            >
+                                                Newest First
+                                            </button>
+                                            <button
+                                                onClick={() => handleSortChange("oldest")}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] transition-colors duration-300 ${
+                                                    uploadsData.sortOrder === "oldest" ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-[var(--text-primary)]"
+                                                }`}
+                                            >
+                                                Oldest First
+                                            </button>
+                                            <button
+                                                onClick={() => handleSortChange("title-asc")}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] transition-colors duration-300 ${
+                                                    uploadsData.sortOrder === "title-asc" ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-[var(--text-primary)]"
+                                                }`}
+                                            >
+                                                Title (A-Z)
+                                            </button>
+                                            <button
+                                                onClick={() => handleSortChange("title-desc")}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] last:rounded-b-lg transition-colors duration-300 ${
+                                                    uploadsData.sortOrder === "title-desc" ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-[var(--text-primary)]"
+                                                }`}
+                                            >
+                                                Title (Z-A)
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -3249,9 +3350,19 @@ export default function Profile() {
                                     Upload First Media
                                 </button>
                             </div>
+                        ) : filteredAndSortedMedia.length === 0 ? (
+                            <div className="text-center py-12">
+                                <div className="text-gray-400 mb-4">
+                                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-600 mb-2">No results found</h3>
+                                <p className="text-gray-500 mb-4">Try adjusting your filters or search query</p>
+                            </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {uploadsData.mediaItems.map((item) => (
+                                {filteredAndSortedMedia.map((item) => (
                                     <div key={item._id} className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                                     <div className="aspect-square overflow-hidden cursor-pointer" onClick={() => openMediaViewer(item)}>
                                         <img
@@ -3335,70 +3446,107 @@ export default function Profile() {
 
                                     {/* Media Content */}
                                     <div className="relative h-full flex items-center justify-center">
-                                        <img
-                                            src={uploadsData.selectedMedia.url}
-                                            alt={uploadsData.selectedMedia.title}
-                                            className="max-w-full max-h-full object-contain"
-                                        />
+                                        {uploadsData.selectedMedia.type === 'video' ? (
+                                            <video
+                                                src={uploadsData.selectedMedia.url}
+                                                controls
+                                                className="max-w-full max-h-full object-contain"
+                                                autoPlay
+                                            >
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        ) : (
+                                            <img
+                                                src={uploadsData.selectedMedia.url}
+                                                alt={uploadsData.selectedMedia.title}
+                                                className="max-w-full max-h-full object-contain"
+                                            />
+                                        )}
                                         
-                                        {/* Control Bar Overlay */}
-                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-6">
-                                            {/* Playback Controls */}
-                                            <div className="flex items-center justify-between text-white mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <button className="p-2 rounded-full hover:bg-white/20 transition-colors">
-                                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                                            <path d="M8 5v14l11-7z" />
+                                        {/* Control Bar Overlay - Only show for videos */}
+                                        {uploadsData.selectedMedia.type === 'video' && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-6">
+                                                {/* Video Title */}
+                                                <div className="text-center mb-4">
+                                                    <div className="text-sm font-medium text-white">
+                                                        {uploadsData.selectedMedia.title}
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Action Buttons */}
+                                                <div className="flex gap-3 justify-center">
+                                                    <button
+                                                        onClick={openShareModal}
+                                                        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 font-medium"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
                                                         </svg>
+                                                        Share
                                                     </button>
-                                                    <span className="text-sm">0:10 / 0:41</span>
+                                                    <button
+                                                        onClick={openEditModal}
+                                                        className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 font-medium"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={openDeleteModal}
+                                                        className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 font-medium"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
                                                 </div>
-                                                <div className="text-sm font-medium">
-                                                    {uploadsData.selectedMedia.title}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Action Buttons Overlay for Photos */}
+                                        {uploadsData.selectedMedia.type === 'photo' && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-6">
+                                                <div className="text-center mb-4">
+                                                    <div className="text-sm font-medium text-white">
+                                                        {uploadsData.selectedMedia.title}
+                                                    </div>
                                                 </div>
-                                                <button className="p-2 rounded-full hover:bg-white/20 transition-colors">
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                                    </svg>
-                                                </button>
+                                                
+                                                {/* Action Buttons */}
+                                                <div className="flex gap-3 justify-center">
+                                                    <button
+                                                        onClick={openShareModal}
+                                                        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 font-medium"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                                                        </svg>
+                                                        Share
+                                                    </button>
+                                                    <button
+                                                        onClick={openEditModal}
+                                                        className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 font-medium"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={openDeleteModal}
+                                                        className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 font-medium"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </div>
-                                            
-                                            {/* Progress Bar */}
-                                            <div className="w-full bg-white/30 rounded-full h-1 mb-4">
-                                                <div className="bg-white h-1 rounded-full w-1/4"></div>
-                                            </div>
-                                            
-                                            {/* Action Buttons */}
-                                            <div className="flex gap-3">
-                                                <button
-                                                    onClick={openShareModal}
-                                                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 font-medium"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                                                    </svg>
-                                                    Share
-                                                </button>
-                                                <button
-                                                    onClick={openEditModal}
-                                                    className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 font-medium"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={openDeleteModal}
-                                                    className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 font-medium"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -3835,13 +3983,15 @@ export default function Profile() {
                 </div>
             )}
 
-            {/* Edit Modal */}
+            {/* Edit/Upload Modal */}
             {uploadsData.isEditModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
                     <div className="bg-[var(--bg-card)] rounded-lg shadow-[var(--shadow-secondary)] w-full max-w-md mx-4 border border-[var(--border-primary)] transition-colors duration-300">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between p-4 border-b">
-                            <h3 className="text-lg font-semibold text-gray-800">Edit Media</h3>
+                            <h3 className="text-lg font-semibold text-gray-800">
+                                {uploadsData.selectedMedia ? 'Edit Media' : 'Upload Media'}
+                            </h3>
                             <button
                                 onClick={closeEditModal}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -3857,13 +4007,14 @@ export default function Profile() {
                             {/* File Upload */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Upload New File (Optional)
+                                    {uploadsData.selectedMedia ? 'Upload New File (Optional)' : 'Upload File *'}
                                 </label>
                                 <input
                                     type="file"
                                     accept="image/*,video/*"
                                     onChange={(e) => setEditFormData(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
                                     className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    required={!uploadsData.selectedMedia}
                                 />
                             </div>
 
@@ -3910,10 +4061,10 @@ export default function Profile() {
                             </button>
                             <button
                                 onClick={handleEditSubmit}
-                                disabled={!editFormData.title.trim()}
+                                disabled={!editFormData.title.trim() || (!editFormData.file && !uploadsData.selectedMedia)}
                                 className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Save Changes
+                                {uploadsData.selectedMedia ? 'Save Changes' : 'Upload'}
                             </button>
                         </div>
                     </div>

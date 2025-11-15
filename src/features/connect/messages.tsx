@@ -7,7 +7,7 @@ import { useUserSearch } from "@/hooks/useUserSearch";
 import { useFriends } from "@/hooks/useFriends";
 import DMChat from "./components/DMChat";
 import EnhancedChatList from "./components/EnhancedChatList";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 
 export default function Messages() {
@@ -28,6 +28,8 @@ export default function Messages() {
   const [editingGroupName, setEditingGroupName] = useState("");
   const [selectedGroupForManagement, setSelectedGroupForManagement] = useState<Chat | null>(null);
   const [transferAdminUserId, setTransferAdminUserId] = useState("");
+  const [pendingChatSelection, setPendingChatSelection] = useState<Chat | null>(null);
+  const pendingChatRef = useRef<Chat | null>(null);
 
   // Use the new useChat hook for real data
   const {
@@ -35,6 +37,7 @@ export default function Messages() {
     selectedChat,
     loading,
     error,
+    loadChats,
     createDirectChat,
     createGroupChat,
     selectChat,
@@ -97,14 +100,11 @@ export default function Messages() {
     if (selectedUsers.length === 0) return;
     
     try {
+      let newChat: Chat | null = null;
+      
       if (selectedUsers.length === 1) {
         // Create direct chat
-        const chat = await createDirectChat(selectedUsers[0]._id);
-        selectChat(chat);
-        setShowCreateModal(false);
-        setSelectedUsers([]);
-        setGroupName("");
-        setMessageText("");
+        newChat = await createDirectChat(selectedUsers[0]._id);
         toast.success('Direct chat created successfully!');
       } else {
         // Create group chat - require group name
@@ -118,16 +118,35 @@ export default function Messages() {
           return;
         }
         
-        const chat = await createGroupChat(
+        newChat = await createGroupChat(
           selectedUsers.map(u => u._id),
           groupName.trim()
         );
-        selectChat(chat);
+        toast.success(`Group "${groupName.trim()}" created successfully with ${selectedUsers.length} member${selectedUsers.length !== 1 ? 's' : ''}!`);
+      }
+      
+      if (newChat) {
+        console.log('New chat created:', newChat);
+        
+        // Select the chat immediately
+        selectChat(newChat);
+        console.log('Chat selected:', newChat._id);
+        
+        // Store as pending in case we need to reselect after refresh
+        setPendingChatSelection(newChat);
+        pendingChatRef.current = newChat;
+        
+        // Close modal and reset state
         setShowCreateModal(false);
         setSelectedUsers([]);
         setGroupName("");
         setMessageText("");
-        toast.success(`Group "${groupName.trim()}" created successfully with ${selectedUsers.length} member${selectedUsers.length !== 1 ? 's' : ''}!`);
+        setSearchQuery("");
+        
+        // Refresh chat list in background (non-blocking)
+        loadChats().catch(err => {
+          console.error('Failed to refresh chat list:', err);
+        });
       }
     } catch (error) {
       console.error('Failed to create chat:', error);
@@ -285,6 +304,23 @@ export default function Messages() {
   const handleChatSelect = (chat: Chat) => {
     selectChat(chat);
   };
+
+  // Ensure pending chat selection is applied after chats load
+  useEffect(() => {
+    if (pendingChatSelection && chats.length > 0 && !loading) {
+      // Find the chat in the refreshed list (preferred) or use the pending one
+      const chatToSelect = chats.find(c => c._id === pendingChatSelection._id) || pendingChatSelection;
+      console.log('Selecting chat from refreshed list:', chatToSelect._id);
+      selectChat(chatToSelect);
+      setPendingChatSelection(null);
+      pendingChatRef.current = null;
+    }
+  }, [chats, pendingChatSelection, loading, selectChat]);
+  
+  // Debug: Log when selected chat changes
+  useEffect(() => {
+    console.log('Selected chat changed:', selectedChat?._id, selectedChat);
+  }, [selectedChat]);
 
   return (
     <div className="flex flex-1 bg-[var(--bg-primary)] overflow-hidden">

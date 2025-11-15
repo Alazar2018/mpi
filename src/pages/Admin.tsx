@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useDashboard } from '@/hooks/useDashboard';
-import PlayerAnalytics from '../components/PlayerAnalytics';
-import GeneralDashboard from '../components/GeneralDashboard';
-import LoadingSpinner from '../components/LoadingSpinner';
+import PlayerAnalytics from '@/components/PlayerAnalytics';
+import GeneralDashboard from '@/components/GeneralDashboard';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { aggregateMatchesForPlayer } from '@/utils/playerAnalytics';
 import { 
   Users, 
   Trophy, 
@@ -49,14 +50,17 @@ const PlayerDashboard: React.FC = () => {
         
 
         // Transform the data for the dashboard
+        const aggregatedStats = aggregateMatchesForPlayer(playerMatches, userId);
+
         const playerDashboardData = {
           matches: playerMatches,
           totalMatches: playerMatches.length,
           completedMatches: playerMatches.filter(m => m.status === 'completed').length,
           pendingMatches: playerMatches.filter(m => m.status === 'pending').length,
-          winRate: calculatePlayerWinRate(playerMatches, userId),
+          winRate: aggregatedStats.winRate,
           recentMatches: playerMatches.slice(0, 5), // Last 5 matches
-          stats: aggregatePlayerStatsForSelf(playerMatches, userId)
+          stats: aggregatedStats,
+          playerId: userId
         };
 
         
@@ -70,115 +74,6 @@ const PlayerDashboard: React.FC = () => {
   };
 
   // Helper function to calculate player's own win rate
-  const calculatePlayerWinRate = (matches: any[], playerId: string) => {
-    const completedMatches = matches.filter(m => m.status === 'completed');
-    if (completedMatches.length === 0) return 0;
-    
-    const wins = completedMatches.filter(m => m.winner === 'playerOne' && m.p1?._id === playerId || 
-                                            m.winner === 'playerTwo' && m.p2?._id === playerId).length;
-    
-    return Math.round((wins / completedMatches.length) * 100);
-  };
-
-  // Helper function to aggregate player's own statistics
-  const aggregatePlayerStatsForSelf = (matches: any[], playerId: string) => {
-    const completedMatches = matches.filter(m => m.status === 'completed');
-    let totalPoints = 0;
-    let totalWinners = 0;
-    let totalErrors = 0;
-    let totalServes = 0;
-    let totalRallies = 0;
-
-    completedMatches.forEach(match => {
-      const isPlayerOne = match.p1?._id === playerId;
-      const matchReport = isPlayerOne ? match.p1MatchReport : match.p2MatchReport;
-      const overallReport = match.report;
-      
-      if (matchReport) {
-        // Extract data from individual player match report
-        totalPoints += matchReport.points?.totalPointsWon || 0;
-        totalWinners += matchReport.points?.winners || 0;
-        totalErrors += (matchReport.points?.unforcedErrors || 0) + (matchReport.points?.forcedErrors || 0);
-        totalServes += matchReport.service?.totalServices || 0;
-        
-        // Sum up rally lengths from the rallies object
-        if (matchReport.rallies) {
-          const rallyValues = Object.values(matchReport.rallies);
-          totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      }
-      
-      // Also try to get data from the overall report if available
-      if (overallReport && isPlayerOne) {
-        // For player one, use p1 data from overall report
-        totalPoints += overallReport.points?.p1?.won || 0;
-        totalWinners += overallReport.winners?.p1?.forehand || 0;
-        totalWinners += overallReport.winners?.p1?.backhand || 0;
-        totalWinners += overallReport.winners?.p1?.returnForehand || 0;
-        totalWinners += overallReport.winners?.p1?.returnBackhand || 0;
-        
-        // Sum up errors
-        const p1Errors = overallReport.errorStats?.p1;
-        if (p1Errors) {
-          totalErrors += (p1Errors.forced?.forehand?.total || 0) + 
-                        (p1Errors.forced?.backhand?.total || 0) +
-                        (p1Errors.unforced?.forehand?.total || 0) + 
-                        (p1Errors.unforced?.backhand?.total || 0);
-        }
-        
-        // Sum up serves
-        totalServes += overallReport.serves?.p1?.firstServesWon || 0;
-        totalServes += overallReport.serves?.p1?.firstServesLost || 0;
-        totalServes += overallReport.serves?.p1?.secondServesWon || 0;
-        totalServes += overallReport.serves?.p1?.secondServesLost || 0;
-        
-        // Sum up rallies
-        if (overallReport.rallyLengthFrequency) {
-          const rallyValues = Object.values(overallReport.rallyLengthFrequency);
-          totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      } else if (overallReport && !isPlayerOne) {
-        // For player two, use p2 data from overall report
-        totalPoints += overallReport.points?.p2?.won || 0;
-        totalWinners += overallReport.winners?.p2?.forehand || 0;
-        totalWinners += overallReport.winners?.p2?.backhand || 0;
-        totalWinners += overallReport.winners?.p2?.returnForehand || 0;
-        totalWinners += overallReport.winners?.p2?.returnBackhand || 0;
-        
-        // Sum up errors
-        const p2Errors = overallReport.errorStats?.p2;
-        if (p2Errors) {
-          totalErrors += (p2Errors.forced?.forehand?.total || 0) + 
-                        (p2Errors.forced?.backhand?.total || 0) +
-                        (p2Errors.unforced?.forehand?.total || 0) + 
-                        (p2Errors.unforced?.backhand?.total || 0);
-        }
-        
-        // Sum up serves
-        totalServes += overallReport.serves?.p2?.firstServesWon || 0;
-        totalServes += overallReport.serves?.p2?.firstServesLost || 0;
-        totalServes += overallReport.serves?.p2?.secondServesWon || 0;
-        totalServes += overallReport.serves?.p2?.secondServesLost || 0;
-        
-        // Sum up rallies
-        if (overallReport.rallyLengthFrequency) {
-          const rallyValues = Object.values(overallReport.rallyLengthFrequency);
-          totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      }
-    });
-
-    return {
-      totalPoints,
-      totalWinners,
-      totalErrors,
-      totalServes,
-      totalRallies,
-      avgPointsPerMatch: completedMatches.length > 0 ? Math.round(totalPoints / completedMatches.length) : 0,
-      winRate: calculatePlayerWinRate(matches, playerId)
-    };
-  };
-
   // Fetch player data when switching to personal analytics
   React.useEffect(() => {
     if (dashboardType === 'personal' && userId) {
@@ -234,7 +129,11 @@ const PlayerDashboard: React.FC = () => {
                     <LoadingSpinner size="md" text="Loading your analytics..." />
                   </div>
                 ) : (
-                  <PlayerAnalytics userName={userName} playerData={playerData} />
+                  <PlayerAnalytics 
+                    userName={userName} 
+                    playerId={userId || ''} 
+                    playerData={playerData} 
+                  />
                 )}
               </>
             )}
@@ -376,16 +275,16 @@ const CoachDashboard: React.FC = () => {
               avatar: player.avatar,
               goals: totalGoals,
               completedGoals: completedGoals,
-              progress: Math.floor(Math.random() * 40) + 60 // Mock progress for now
+              progress: totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0
             };
           });
           
           setPlayers(playersWithStats);
           setStats({
             totalPlayers: playersWithStats.length,
-            classesToday: Math.floor(Math.random() * 20) + 5, // Mock for now
-            avgWinRate: Math.floor(Math.random() * 30) + 60, // Mock for now
-            matchesThisMonth: Math.floor(Math.random() * 100) + 50 // Mock for now
+            classesToday: 0,
+            avgWinRate: 0,
+            matchesThisMonth: 0
           });
         }
       } catch (error) {
@@ -459,110 +358,19 @@ const CoachDashboard: React.FC = () => {
       return Math.round((wins / completedMatches.length) * 100);
     };
 
-    // Helper function to aggregate player statistics
+    // Helper function to aggregate player statistics - Use aggregateMatchesForPlayer for consistency
     const aggregatePlayerStats = (matches: any[], playerId: string) => {
-      const completedMatches = matches.filter(m => m.status === 'completed');
-     
+      const aggregatedStats = aggregateMatchesForPlayer(matches, playerId);
       
-      let totalPoints = 0;
-      let totalWinners = 0;
-      let totalErrors = 0;
-      let totalServes = 0;
-      let totalRallies = 0;
-
-      completedMatches.forEach(match => {
-        const isPlayerOne = match.p1?._id === playerId;
-        const matchReport = isPlayerOne ? match.p1MatchReport : match.p2MatchReport;
-        const overallReport = match.report;
-        
-       
-        
-        if (matchReport) {
-          // Extract data from individual player match report
-          totalPoints += matchReport.points?.totalPointsWon || 0;
-          totalWinners += matchReport.points?.winners || 0;
-          totalErrors += (matchReport.points?.unforcedErrors || 0) + (matchReport.points?.forcedErrors || 0);
-          totalServes += matchReport.service?.totalServices || 0;
-          
-          // Sum up rally lengths from the rallies object
-          if (matchReport.rallies) {
-            const rallyValues = Object.values(matchReport.rallies);
-            totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-          }
-        }
-        
-        // Also try to get data from the overall report if available
-        if (overallReport && isPlayerOne) {
-          // For player one, use p1 data from overall report
-          totalPoints += overallReport.points?.p1?.won || 0;
-          totalWinners += overallReport.winners?.p1?.forehand || 0;
-          totalWinners += overallReport.winners?.p1?.backhand || 0;
-          totalWinners += overallReport.winners?.p1?.returnForehand || 0;
-          totalWinners += overallReport.winners?.p1?.returnBackhand || 0;
-          
-          // Sum up errors
-          const p1Errors = overallReport.errorStats?.p1;
-          if (p1Errors) {
-            totalErrors += (p1Errors.forced?.forehand?.total || 0) + 
-                          (p1Errors.forced?.backhand?.total || 0) +
-                          (p1Errors.unforced?.forehand?.total || 0) + 
-                          (p1Errors.unforced?.backhand?.total || 0);
-          }
-          
-          // Sum up serves
-          totalServes += overallReport.serves?.p1?.firstServesWon || 0;
-          totalServes += overallReport.serves?.p1?.firstServesLost || 0;
-          totalServes += overallReport.serves?.p1?.secondServesWon || 0;
-          totalServes += overallReport.serves?.p1?.secondServesLost || 0;
-          
-          // Sum up rallies
-          if (overallReport.rallyLengthFrequency) {
-            const rallyValues = Object.values(overallReport.rallyLengthFrequency);
-            totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-          }
-        } else if (overallReport && !isPlayerOne) {
-          // For player two, use p2 data from overall report
-          totalPoints += overallReport.points?.p2?.won || 0;
-          totalWinners += overallReport.winners?.p2?.forehand || 0;
-          totalWinners += overallReport.winners?.p2?.backhand || 0;
-          totalWinners += overallReport.winners?.p2?.returnForehand || 0;
-          totalWinners += overallReport.winners?.p2?.returnBackhand || 0;
-          
-          // Sum up errors
-          const p2Errors = overallReport.errorStats?.p2;
-          if (p2Errors) {
-            totalErrors += (p2Errors.forced?.forehand?.total || 0) + 
-                          (p2Errors.forced?.backhand?.total || 0) +
-                          (p2Errors.unforced?.forehand?.total || 0) + 
-                          (p2Errors.unforced?.backhand?.total || 0);
-          }
-          
-          // Sum up serves
-          totalServes += overallReport.serves?.p2?.firstServesWon || 0;
-          totalServes += overallReport.serves?.p2?.firstServesLost || 0;
-          totalServes += overallReport.serves?.p2?.secondServesWon || 0;
-          totalServes += overallReport.serves?.p2?.secondServesLost || 0;
-          
-          // Sum up rallies
-          if (overallReport.rallyLengthFrequency) {
-            const rallyValues = Object.values(overallReport.rallyLengthFrequency);
-            totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-          }
-        }
-      });
-
-      const stats = {
-        totalPoints,
-        totalWinners,
-        totalErrors,
-        totalServes,
-        totalRallies,
-        avgPointsPerMatch: completedMatches.length > 0 ? Math.round(totalPoints / completedMatches.length) : 0,
-        winRate: calculateWinRate(matches, playerId)
+      return {
+        totalPoints: aggregatedStats.totalPoints,
+        totalWinners: aggregatedStats.totalWinners,
+        totalErrors: aggregatedStats.totalErrors,
+        totalServes: aggregatedStats.totalServes,
+        totalRallies: aggregatedStats.totalRallies,
+        avgPointsPerMatch: aggregatedStats.avgPointsPerMatch,
+        winRate: aggregatedStats.winRate
       };
-      
-      
-      return stats;
     };
 
   const upcomingClasses = [
@@ -704,7 +512,7 @@ const CoachDashboard: React.FC = () => {
                   </div>
 
                   {/* Use PlayerAnalytics Component */}
-                  <PlayerAnalytics userName={player.name} playerData={selectedPlayerData} />
+                  <PlayerAnalytics userName={player.name} playerId={selectedPlayer} playerData={selectedPlayerData} />
 
                 </div>
               );
@@ -792,8 +600,8 @@ const ParentDashboard: React.FC = () => {
                 return {
                   id: child._id,
                   name: `${child.firstName} ${child.lastName}`,
-                  age: Math.floor(Math.random() * 10) + 8, // Default age since not available in API
-                  level: ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)], // Default level
+                  age: (child as any).dateOfBirth ? Math.floor((new Date().getTime() - new Date((child as any).dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0,
+                  level: 'Intermediate',
                   progress: totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0,
                   email: child.emailAddress?.email || 'No email',
                   lastOnline: child.lastOnline,
@@ -805,16 +613,12 @@ const ParentDashboard: React.FC = () => {
               
               setChildren(childrenData);
               setStats({
-                sessionsThisMonth: Math.floor(Math.random() * 20) + 5,
-                matchesWon: Math.floor(Math.random() * 30) + 10,
-                avgPerformance: Math.floor(Math.random() * 30) + 70
+                sessionsThisMonth: 0,
+                matchesWon: 0,
+                avgPerformance: 0
               });
               
-              setUpcomingEvents([
-                { id: '1', name: 'Tennis Tournament', date: 'Dec 15', time: '9:00 AM', location: 'City Courts' },
-                { id: '2', name: 'Parent-Child Match', date: 'Dec 20', time: '2:00 PM', location: 'Academy' },
-                { id: '3', name: 'Progress Review', date: 'Dec 25', time: '10:00 AM', location: 'Academy' },
-              ]);
+              setUpcomingEvents([]);
             } else {
               // No children found
               setChildren([]);
@@ -850,8 +654,8 @@ const ParentDashboard: React.FC = () => {
               return {
                   id: child._id,
                   name: `${child.firstName} ${child.lastName}`,
-                  age: Math.floor(Math.random() * 10) + 8, // Default age since not available in API
-                  level: ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)], // Default level
+                  age: (child as any).dateOfBirth ? Math.floor((new Date().getTime() - new Date((child as any).dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0,
+                  level: 'Intermediate',
                 progress: totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0,
                   email: child.emailAddress?.email || 'No email',
                   lastOnline: child.lastOnline,
@@ -863,16 +667,12 @@ const ParentDashboard: React.FC = () => {
             
             setChildren(childrenData);
             setStats({
-              sessionsThisMonth: Math.floor(Math.random() * 20) + 5,
-              matchesWon: Math.floor(Math.random() * 30) + 10,
-              avgPerformance: Math.floor(Math.random() * 30) + 70
+              sessionsThisMonth: 0,
+              matchesWon: 0,
+              avgPerformance: 0
             });
             
-            setUpcomingEvents([
-              { id: '1', name: 'Tennis Tournament', date: 'Dec 15', time: '9:00 AM', location: 'City Courts' },
-              { id: '2', name: 'Parent-Child Match', date: 'Dec 20', time: '2:00 PM', location: 'Academy' },
-              { id: '3', name: 'Progress Review', date: 'Dec 25', time: '10:00 AM', location: 'Academy' },
-            ]);
+            setUpcomingEvents([]);
             } else {
               // No children found
               setChildren([]);
@@ -966,103 +766,18 @@ const ParentDashboard: React.FC = () => {
     return Math.round((wins / completedMatches.length) * 100);
   };
 
-  // Helper function to aggregate child statistics
+  // Helper function to aggregate child statistics - Use aggregateMatchesForPlayer for consistency
   const aggregateChildStats = (matches: any[], childId: string) => {
-    const completedMatches = matches.filter(m => m.status === 'completed');
+    const aggregatedStats = aggregateMatchesForPlayer(matches, childId);
     
-    let totalPoints = 0;
-    let totalWinners = 0;
-    let totalErrors = 0;
-    let totalServes = 0;
-    let totalRallies = 0;
-
-    completedMatches.forEach(match => {
-      const isPlayerOne = match.p1?._id === childId;
-      const matchReport = isPlayerOne ? match.p1MatchReport : match.p2MatchReport;
-      const overallReport = match.report;
-      
-      if (matchReport) {
-        // Extract data from individual player match report
-        totalPoints += matchReport.points?.totalPointsWon || 0;
-        totalWinners += matchReport.points?.winners || 0;
-        totalErrors += (matchReport.points?.unforcedErrors || 0) + (matchReport.points?.forcedErrors || 0);
-        totalServes += matchReport.service?.totalServices || 0;
-        
-        // Sum up rally lengths from the rallies object
-        if (matchReport.rallies) {
-          const rallyValues = Object.values(matchReport.rallies);
-          totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      }
-      
-      // Also try to get data from the overall report if available
-      if (overallReport && isPlayerOne) {
-        // For player one, use p1 data from overall report
-        totalPoints += overallReport.points?.p1?.won || 0;
-        totalWinners += overallReport.winners?.p1?.forehand || 0;
-        totalWinners += overallReport.winners?.p1?.backhand || 0;
-        totalWinners += overallReport.winners?.p1?.returnForehand || 0;
-        totalWinners += overallReport.winners?.p1?.returnBackhand || 0;
-        
-        // Sum up errors
-        const p1Errors = overallReport.errorStats?.p1;
-        if (p1Errors) {
-          totalErrors += (p1Errors.forced?.forehand?.total || 0) + 
-                        (p1Errors.forced?.backhand?.total || 0) +
-                        (p1Errors.unforced?.forehand?.total || 0) + 
-                        (p1Errors.unforced?.backhand?.total || 0);
-        }
-        
-        // Sum up serves
-        totalServes += overallReport.serves?.p1?.firstServesWon || 0;
-        totalServes += overallReport.serves?.p1?.firstServesLost || 0;
-        totalServes += overallReport.serves?.p1?.secondServesWon || 0;
-        totalServes += overallReport.serves?.p1?.secondServesLost || 0;
-        
-        // Sum up rallies
-        if (overallReport.rallyLengthFrequency) {
-          const rallyValues = Object.values(overallReport.rallyLengthFrequency);
-          totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      } else if (overallReport && !isPlayerOne) {
-        // For player two, use p2 data from overall report
-        totalPoints += overallReport.points?.p2?.won || 0;
-        totalWinners += overallReport.winners?.p2?.forehand || 0;
-        totalWinners += overallReport.winners?.p2?.backhand || 0;
-        totalWinners += overallReport.winners?.p2?.returnForehand || 0;
-        totalWinners += overallReport.winners?.p2?.returnBackhand || 0;
-        
-        // Sum up errors
-        const p2Errors = overallReport.errorStats?.p2;
-        if (p2Errors) {
-          totalErrors += (p2Errors.forced?.forehand?.total || 0) + 
-                        (p2Errors.forced?.backhand?.total || 0) +
-                        (p2Errors.unforced?.forehand?.total || 0) + 
-                        (p2Errors.unforced?.backhand?.total || 0);
-        }
-        
-        // Sum up serves
-        totalServes += overallReport.serves?.p2?.firstServesWon || 0;
-        totalServes += overallReport.serves?.p2?.firstServesLost || 0;
-        totalServes += overallReport.serves?.p2?.secondServesWon || 0;
-        totalServes += overallReport.serves?.p2?.secondServesLost || 0;
-        
-        // Sum up rallies
-        if (overallReport.rallyLengthFrequency) {
-          const rallyValues = Object.values(overallReport.rallyLengthFrequency);
-          totalRallies += rallyValues.reduce((sum: number, val: any) => sum + (val || 0), 0);
-        }
-      }
-    });
-
     return {
-      totalPoints,
-      totalWinners,
-      totalErrors,
-      totalServes,
-      totalRallies,
-      avgPointsPerMatch: completedMatches.length > 0 ? Math.round(totalPoints / completedMatches.length) : 0,
-      winRate: calculateChildWinRate(matches, childId)
+      totalPoints: aggregatedStats.totalPoints,
+      totalWinners: aggregatedStats.totalWinners,
+      totalErrors: aggregatedStats.totalErrors,
+      totalServes: aggregatedStats.totalServes,
+      totalRallies: aggregatedStats.totalRallies,
+      avgPointsPerMatch: aggregatedStats.avgPointsPerMatch,
+      winRate: aggregatedStats.winRate
     };
   };
 
@@ -1281,7 +996,7 @@ const ParentDashboard: React.FC = () => {
                   )}
 
                   {/* Use PlayerAnalytics Component for Child */}
-                  <PlayerAnalytics userName={child.name} playerData={selectedChildData} />
+                  <PlayerAnalytics userName={child.name} playerId={selectedChild} playerData={selectedChildData} />
                   </div>
                 );
               })()}

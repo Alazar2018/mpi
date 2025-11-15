@@ -73,6 +73,8 @@ export default function MatchDetail() {
 			status: match.status,
 			winner: match.winner,
 			report: match.report,
+			p1MatchReport: match.p1MatchReport,
+			p2MatchReport: match.p2MatchReport,
 			totalGameTime: match.totalGameTime,
 			courtSurface: match.courtSurface,
 			matchType: match.matchType,

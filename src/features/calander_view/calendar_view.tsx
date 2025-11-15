@@ -13,6 +13,7 @@ import { useAuthStore } from "@/store/auth.store";
 import NotificationTest from "@/components/NotificationTest";
 import { debounce } from "@/utils/utils";
 import { toast } from "react-toastify";
+import { startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 
 interface LocalCalendarEvent {
     id: string;
@@ -151,7 +152,8 @@ export default function Calendar_view() {
                 endDate: endDate.toISOString(),
                 view: currentView,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                ...(userRole === 'parent' && selectedChildId && { childId: selectedChildId })
+                ...(userRole === 'parent' && selectedChildId && { childId: selectedChildId }),
+                forceRefresh: false // Use cache for initial load
             });
 
             if (response.success) {
@@ -519,12 +521,19 @@ export default function Calendar_view() {
         setCurrentView(view);
         setCurrentDate(new Date());
         
+        // Clear cache when view changes to ensure fresh data
+        CalendarService.clearCache();
+        
         // Fetch events for the new view
         fetchEventsForView(view);
     };
 
     const handleDateChange = (date: Date) => {
+        console.log('Date changed:', { date, currentView });
         setCurrentDate(date);
+        
+        // Clear cache when navigating to ensure fresh data
+        CalendarService.clearCache();
         
         // Fetch events for the new date range
         fetchEventsForView(currentView, date);
@@ -553,10 +562,9 @@ export default function Calendar_view() {
                 endDate = new Date(targetDate);
                 break;
             case 'week':
-                startDate = new Date(targetDate);
-                startDate.setDate(startDate.getDate() - 3);
-                endDate = new Date(targetDate);
-                endDate.setDate(endDate.getDate() + 3);
+                // Use proper week boundaries (Monday to Sunday)
+                startDate = startOfWeek(targetDate, { weekStartsOn: 1 });
+                endDate = endOfWeek(targetDate, { weekStartsOn: 1 });
                 break;
             case 'month':
                 startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
@@ -598,7 +606,8 @@ export default function Calendar_view() {
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),
                 view: view as 'day' | 'week' | 'month' | 'year',
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                forceRefresh: true // Always fetch fresh data when view changes
             });
 
             if (response.success) {

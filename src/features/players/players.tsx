@@ -8,9 +8,15 @@ import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useAuthStore } from "@/store/auth.store";
 import { usePlayerMessaging } from "@/hooks/usePlayerMessaging";
 import { playersService } from "@/service/players.server";
+import { inviteService } from "@/service/invite.server";
 
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [selectedRelationship, setSelectedRelationship] = useState("");
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
   
   // Get current user's role to determine what to display
   const authStore = useAuthStore();
@@ -60,9 +66,13 @@ export default function Players() {
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    if (e.target.value === "") {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (value === "") {
+      setSearchQuery('');
       clearSearch();
+      // Explicitly pass empty string to fetchPlayers to ensure we call /players endpoint
+      fetchPlayers(1, '');
     }
   };
 
@@ -78,6 +88,53 @@ export default function Players() {
     if (page >= 1 && page <= totalPages) {
       fetchPlayers(page, searchQuery);
     }
+  };
+
+  // Handle send invite
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteError("");
+    setInviteSuccess("");
+    
+    if (!inviteEmail.trim() || !selectedRelationship) {
+      setInviteError("Please fill in all fields");
+      return;
+    }
+
+    setIsSendingInvite(true);
+
+    try {
+      // Validate relationship type
+      if (!inviteService.isValidRelationship(currentUserRole || '', selectedRelationship)) {
+        setInviteError("Invalid relationship type for your role");
+        return;
+      }
+
+      // Send invitation
+      await inviteService.sendInvite({
+        email: inviteEmail.trim(),
+        relationship: selectedRelationship as 'parent' | 'coach' | 'child' | 'player' | 'join'
+      });
+      
+      setInviteSuccess("Connection invite sent successfully!");
+      setInviteEmail("");
+      setSelectedRelationship("");
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setInviteSuccess("");
+      }, 5000);
+      
+    } catch (error: any) {
+      setInviteError(error.message || "Failed to send connection invite");
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  // Get available relationships based on current user's role
+  const getAvailableRelationships = () => {
+    return inviteService.getAvailableRelationships(currentUserRole || '');
   };
 
   // Get the appropriate title and description based on user role
@@ -106,18 +163,28 @@ export default function Players() {
   return (
     <div className="space-y-6">
       {/* Hero Section */}
-      <div className="relative isolate rounded-3xl overflow-hidden min-h-[16rem] max-h-[16rem] shadow-[var(--shadow-primary)] transition-colors duration-300">
-        <div className="absolute inset-0 bg-[var(--bg-card)] flex flex-col justify-center items-center text-center px-8">
-          <div className="mb-6">
-            <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center mb-4 mx-auto">
-              <span className="text-3xl text-[var(--text-primary)]">
+      <div className="relative isolate rounded-3xl overflow-hidden min-h-[20rem] shadow-[var(--shadow-primary)] transition-colors duration-300 bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-secondary)] to-[var(--bg-card)]">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 z-0"></div>
+        <img
+          src="/stuff.jpg"
+          className="absolute inset-0 max-w-full object-cover w-full h-full opacity-10 z-0"
+          alt="Hero background"
+        />
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center px-6 py-10 md:py-12">
+          {/* Icon and Title Section */}
+          <div className="text-center mb-8 w-full max-w-3xl">
+            <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg border border-primary/20">
+              <span className="text-4xl">
                 {currentUserRole === 'parent' ? '👶' : '🎾'}
               </span>
             </div>
-            <h1 className="font-bold text-3xl text-[var(--text-primary)] mb-2">
+            <h1 className="font-bold text-3xl md:text-4xl text-[var(--text-primary)] mb-3">
               {currentUserRole === 'parent' ? 'Add your child to the platform' : 'Invite new player via email'}
             </h1>
-            <p className="text-[var(--text-secondary)] text-lg">
+            <p className="text-[var(--text-secondary)] text-base md:text-lg max-w-2xl mx-auto">
               {currentUserRole === 'parent' 
                 ? 'Connect with coaches and track progress together'
                 : 'Expand your team with talented players'
@@ -125,61 +192,172 @@ export default function Players() {
             </p>
           </div>
           
+          {/* Form Section for Coach */}
           {currentUserRole === 'coach' && (
-            <div className="flex items-center gap-4 bg-[var(--bg-secondary)] backdrop-blur-sm rounded-2xl p-4 border border-[var(--border-primary)]">
-              <div className="flex items-center w-80 bg-[var(--bg-card)] rounded-full pr-3 border border-[var(--border-primary)]">
-                <input
-                  placeholder="Enter Email"
-                  className="w-full placeholder:text-[var(--text-tertiary)] text-sm pl-4 h-12 bg-transparent rounded-full outline-none text-[var(--text-primary)]"
-                />
-                <div className="grid place-items-center px-3">
-                  <i dangerouslySetInnerHTML={{ __html: icons.mail }} className="text-[var(--text-tertiary)]" />
+            <div className="w-full max-w-4xl">
+              <form onSubmit={handleSendInvite} className="flex flex-col gap-4 bg-[var(--bg-card)]/80 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-[var(--border-primary)] shadow-xl">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+                  <div className="flex items-center flex-1 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-primary)] transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                    <div className="pl-4 pr-2 flex-shrink-0">
+                      <i dangerouslySetInnerHTML={{ __html: icons.mail }} className="text-[var(--text-tertiary)] text-lg" />
+                    </div>
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="Enter email address"
+                      className="flex-1 placeholder:text-[var(--text-tertiary)] text-sm pl-2 pr-4 h-14 bg-transparent rounded-2xl outline-none border-none text-[var(--text-primary)] focus:outline-none focus:ring-0"
+                      disabled={isSendingInvite}
+                      required
+                    />
+                  </div>
+                  <div className="relative">
+                    <select
+                      value={selectedRelationship}
+                      onChange={(e) => setSelectedRelationship(e.target.value)}
+                      className="bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-2xl h-14 pl-6 pr-10 border border-[var(--border-primary)] outline-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm min-w-[180px] transition-all appearance-none cursor-pointer w-full"
+                      disabled={isSendingInvite}
+                      required
+                    >
+                      <option value="">Select Type</option>
+                      {getAvailableRelationships().map((relationship) => (
+                        <option key={relationship.value} value={relationship.value}>
+                          {relationship.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <i dangerouslySetInnerHTML={{ __html: icons.arrowDown }} className="text-[var(--text-tertiary)]" />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSendingInvite}
+                    className="bg-primary text-white rounded-2xl h-14 px-8 hover:bg-primary/90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  >
+                    {isSendingInvite ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        Sending...
+                      </span>
+                    ) : (
+                      'Invite Player'
+                    )}
+                  </button>
                 </div>
-              </div>
-              <Button className="bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-full !h-12 px-8 hover:bg-[var(--bg-secondary)] transition-colors duration-300">
-                Invite Player
-              </Button>
+                
+                {/* Error Message */}
+                {inviteError && (
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl animate-in slide-in-from-top-2">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                      <span>⚠️</span>
+                      {inviteError}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Success Message */}
+                {inviteSuccess && (
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl animate-in slide-in-from-top-2">
+                    <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                      <span>✅</span>
+                      {inviteSuccess}
+                    </p>
+                  </div>
+                )}
+              </form>
             </div>
           )}
           
+          {/* Parent Section */}
           {currentUserRole === 'parent' && (
-            <div className="bg-[var(--bg-secondary)] backdrop-blur-sm rounded-2xl p-6 max-w-md border border-[var(--border-primary)]">
-              <p className="text-[var(--text-primary)] text-lg font-medium mb-2">Contact your coach</p>
-              <p className="text-[var(--text-secondary)] text-sm">
-                Reach out to your child's coach to get them added to the platform and start tracking their progress
-              </p>
+            <div className="w-full max-w-2xl">
+              <div className="bg-[var(--bg-card)]/80 backdrop-blur-md rounded-3xl p-8 border border-[var(--border-primary)] shadow-xl">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">💬</span>
+                  </div>
+                  <div>
+                    <p className="text-[var(--text-primary)] text-lg font-semibold mb-2">Contact your coach</p>
+                    <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
+                      Reach out to your child's coach to get them added to the platform and start tracking their progress
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
-        <img
-          src="/stuff.jpg"
-          className="max-w-full object-cover w-full h-full opacity-20"
-          alt="Hero background"
-        />
       </div>
 
       {/* Search Section */}
       <div className="bg-[var(--bg-card)] rounded-3xl p-6 shadow-[var(--shadow-secondary)] border border-[var(--border-primary)] transition-colors duration-300">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center flex-1 bg-[var(--bg-secondary)] rounded-2xl pr-4 border border-[var(--border-primary)] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-            <div className="pl-4 pr-2">
-              <span className="text-[var(--text-tertiary)]">🔍</span>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center flex-1 bg-[var(--bg-secondary)] rounded-2xl pr-4 border border-[var(--border-primary)] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <div className="pl-4 pr-2">
+                <span className="text-[var(--text-tertiary)]">🔍</span>
+              </div>
+              <input
+                placeholder={currentUserRole === 'parent' ? 'Search your children by name...' : 'Search players by name or email...'}
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyPress={handleSearchKeyPress}
+                className="w-full placeholder:text-[var(--text-tertiary)] text-sm h-12 bg-transparent outline-none text-[var(--text-primary)] focus:outline-none focus:ring-0"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    clearSearch();
+                    // Explicitly pass empty string to fetchPlayers to ensure we call /players endpoint
+                    fetchPlayers(1, '');
+                  }}
+                  className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors mr-2"
+                  type="button"
+                >
+                  <i dangerouslySetInnerHTML={{ __html: icons.close }} className="text-[var(--text-tertiary)] text-sm" />
+                </button>
+              )}
             </div>
-            <input
-              placeholder={currentUserRole === 'parent' ? 'Search your children by name...' : 'Search players by name or email...'}
-              value={searchQuery}
-              onChange={handleSearchChange}
-              onKeyPress={handleSearchKeyPress}
-              className="w-full placeholder:text-[var(--text-tertiary)] text-sm h-12 bg-transparent outline-none text-[var(--text-primary)]"
-            />
+            <Button 
+              onClick={handleSearch}
+              className="bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-xl !h-12 px-8 hover:bg-[var(--bg-secondary)] transition-colors duration-300"
+              disabled={loading || !searchQuery.trim()}
+            >
+              {loading ? '🔍 Searching...' : currentUserRole === 'parent' ? 'Find Child' : 'Search'}
+            </Button>
           </div>
-          <Button 
-            onClick={handleSearch}
-            className="bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-xl !h-12 px-8 hover:bg-[var(--bg-secondary)] transition-colors duration-300"
-            disabled={loading}
-          >
-            {loading ? '🔍 Searching...' : currentUserRole === 'parent' ? 'Find Child' : 'Search'}
-          </Button>
+          
+          {/* Active Search Indicator */}
+          {searchQuery && !loading && (
+            <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-xl p-3 border border-[var(--border-primary)]">
+              <div className="flex items-center gap-2">
+                <span className="text-[var(--text-secondary)] text-sm">🔍</span>
+                <span className="text-[var(--text-secondary)] text-sm">
+                  Showing results for: <span className="font-semibold text-[var(--text-primary)]">"{searchQuery}"</span>
+                </span>
+                {totalPlayers !== undefined && (
+                  <span className="text-[var(--text-tertiary)] text-xs">
+                    ({totalPlayers} {totalPlayers === 1 ? 'result' : 'results'})
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  clearSearch();
+                  // Explicitly pass empty string to fetchPlayers to ensure we call /players endpoint
+                  fetchPlayers(1, '');
+                }}
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors flex items-center gap-1"
+                type="button"
+              >
+                <span>Clear search</span>
+                <i dangerouslySetInnerHTML={{ __html: icons.close }} className="text-xs" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -197,8 +375,15 @@ export default function Players() {
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">{getPageTitle()}</h2>
-                  <p className="text-[var(--text-secondary)]">{getPageDescription()}</p>
+                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                    {searchQuery ? `Search Results` : getPageTitle()}
+                  </h2>
+                  <p className="text-[var(--text-secondary)]">
+                    {searchQuery 
+                      ? `Found ${totalPlayers || 0} ${currentUserRole === 'parent' ? 'children' : 'players'} matching "${searchQuery}"`
+                      : getPageDescription()
+                    }
+                  </p>
                 </div>
               </div>
               {!loading && totalPlayers !== undefined && (
@@ -233,12 +418,14 @@ export default function Players() {
               <div className="text-center py-12 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-2xl border border-red-200 dark:border-red-700 transition-colors duration-300">
                 <div className="text-red-500 dark:text-red-400 text-6xl mb-4">⚠️</div>
                 <p className="text-red-600 dark:text-red-400 text-lg mb-6">{error}</p>
-                <Button 
-                  onClick={() => fetchPlayers(currentPage, searchQuery)} 
-                  className="bg-[var(--bg-primary)] text-[var(--text-primary)] px-8 py-3 rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-300"
-                >
-                  {currentUserRole === 'parent' ? '🔄 Refresh Children' : '🔄 Try Again'}
-                </Button>
+                <div className="flex justify-center">
+                  <Button 
+                    onClick={() => fetchPlayers(currentPage, searchQuery)} 
+                    className="bg-[var(--bg-primary)] text-[var(--text-primary)] px-8 py-3 rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-300"
+                  >
+                    {currentUserRole === 'parent' ? '🔄 Refresh Children' : '🔄 Try Again'}
+                  </Button>
+                </div>
               </div>
             ) : !players || players.length === 0 ? (
               <div className="text-center py-16 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800/50 dark:to-blue-900/20 rounded-2xl border border-gray-200 dark:border-gray-600 transition-colors duration-300">
@@ -263,7 +450,9 @@ export default function Players() {
                   <Button 
                     onClick={() => {
                       setSearchQuery('');
-                      fetchPlayers();
+                      clearSearch();
+                      // Explicitly pass empty string to fetchPlayers to ensure we call /players endpoint
+                      fetchPlayers(1, '');
                     }} 
                     className="bg-[var(--bg-primary)] text-[var(--text-primary)] px-8 py-3 rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-300"
                   >
