@@ -1451,13 +1451,14 @@ const MatchTracker: React.FC = () => {
     setPlayer1(prev => ({ ...prev, isServing: !prev.isServing }));
     setPlayer2(prev => ({ ...prev, isServing: !prev.isServing }));
     // Update match.server state
-    setMatch(prev => ({ ...prev, server: prev.server === 1 ? 2 : 1 }));
+    const newServer = match.server === 1 ? 2 : 1;
+    setMatch(prev => ({ ...prev, server: newServer }));
     
     if (isTieBreak) {
       const desiredPosition = getTiebreakServePosition(totalPointsForPosition);
       setServingPosition(prev => (prev === desiredPosition ? prev : desiredPosition));
     } else {
-      // Start the new server at the bottom position for regular games
+      // Both players serve from bottom
       setServingPosition('down');
     }
   };
@@ -1480,9 +1481,9 @@ const MatchTracker: React.FC = () => {
       currentSet: 0,
       sets: [{ player1: 0, player2: 0 }]
     }));
-    // Player 1 starts at bottom, Player 2 starts at top
-    setServingPosition(playerNumber === 1 ? 'down' : 'up');
-    // Set courtRotation so player 2 is at top when serving
+    // Both players start serving from bottom
+    setServingPosition('down');
+    // Set courtRotation appropriately
     setCourtRotation(playerNumber === 1 ? 0 : 1);
     setShowServingModal(false);
     
@@ -3739,15 +3740,45 @@ const MatchTracker: React.FC = () => {
         setPlayer1(prev => ({ ...prev, points: 0 }));
         setPlayer2(prev => ({ ...prev, points: 0 }));
     setMatch(prev => ({ ...prev, isDeuce: false, hasAdvantage: null }));
-        switchServer();
+        
+        // Calculate who will be serving AFTER switchServer (before calling it)
+        const newServerAfterSwitch = match.server === 1 ? 2 : 1;
         
         // Rotate court on every odd game (1, 3, 5, 7, etc.)
         const totalGames = newGames[match.currentSet].player1 + newGames[match.currentSet].player2;
-        if (totalGames % 2 === 1) { // Odd game number
+        const shouldRotate = totalGames % 2 === 1; // Odd game number
+        
+        // Call switchServer
+        switchServer();
+        
+        // Handle court rotation after switchServer
+        if (shouldRotate) {
+          // Court rotates on odd games - both players serve from bottom
           setCourtRotation(prev => {
             const newRotation = prev === 0 ? 1 : 0;
+            // After rotation, both players should serve from bottom
+            // Logic: bottomPlayer = servingPosition === 'up' ? (courtRotation === 0 ? 2 : 1) : (courtRotation === 0 ? 1 : 2)
+            if (newServerAfterSwitch === 1) {
+              // P1 serving from bottom: (down && rotation=0) OR (up && rotation=1)
+              setServingPosition(newRotation === 0 ? 'down' : 'up');
+            } else {
+              // P2 serving from bottom: (up && rotation=0) OR (down && rotation=1)
+              setServingPosition(newRotation === 0 ? 'up' : 'down');
+            }
             return newRotation;
           });
+        } else {
+          // Court does NOT rotate on even games - P1 serves from top, P2 serves from bottom
+          // Logic: topPlayer = servingPosition === 'up' ? (courtRotation === 0 ? 1 : 2) : (courtRotation === 0 ? 2 : 1)
+          // For P1 at top with rotation=0: servingPosition='up' → topPlayer=1 ✓
+          // For P2 at bottom with rotation=0: servingPosition='down' → topPlayer=2, bottomPlayer=1 (P1 at top, P2 at bottom) ✓
+          if (newServerAfterSwitch === 1) {
+            // P1 serving from top: (up && rotation=0) OR (down && rotation=1)
+            setServingPosition(courtRotation === 0 ? 'up' : 'down');
+          } else {
+            // P2 serving from bottom: (down && rotation=0) OR (up && rotation=1)
+            setServingPosition(courtRotation === 0 ? 'down' : 'up');
+          }
         }
   };
 
