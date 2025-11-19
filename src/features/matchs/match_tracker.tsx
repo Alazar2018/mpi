@@ -1457,10 +1457,8 @@ const MatchTracker: React.FC = () => {
     if (isTieBreak) {
       const desiredPosition = getTiebreakServePosition(totalPointsForPosition);
       setServingPosition(prev => (prev === desiredPosition ? prev : desiredPosition));
-    } else {
-      // Both players serve from bottom
-      setServingPosition('down');
     }
+    // For regular games, servingPosition will be set by handleGameWin based on even/odd total games
   };
 
   const selectServer = (playerNumber: 1 | 2) => {
@@ -3744,41 +3742,41 @@ const MatchTracker: React.FC = () => {
         // Calculate who will be serving AFTER switchServer (before calling it)
         const newServerAfterSwitch = match.server === 1 ? 2 : 1;
         
-        // Rotate court on every odd game (1, 3, 5, 7, etc.)
+        // Calculate total games played (after the game that just ended)
         const totalGames = newGames[match.currentSet].player1 + newGames[match.currentSet].player2;
-        const shouldRotate = totalGames % 2 === 1; // Odd game number
+        const isEvenTotalGames = totalGames % 2 === 0; // Even: 0-0, 1-1, 2-0, 2-2, 3-1, 4-0, etc.
+        const shouldRotate = totalGames % 2 === 1; // Odd game number - court rotates
         
         // Call switchServer
         switchServer();
         
-        // Handle court rotation after switchServer
+        // Handle serving position and court rotation after switchServer
         if (shouldRotate) {
-          // Court rotates on odd games - both players serve from bottom
+          // Odd total games (1-0, 2-1, 3-0, etc.) - court rotates, both players serve from bottom
           setCourtRotation(prev => {
             const newRotation = prev === 0 ? 1 : 0;
-            // After rotation, both players should serve from bottom
-            // Logic: bottomPlayer = servingPosition === 'up' ? (courtRotation === 0 ? 2 : 1) : (courtRotation === 0 ? 1 : 2)
-            if (newServerAfterSwitch === 1) {
-              // P1 serving from bottom: (down && rotation=0) OR (up && rotation=1)
-              setServingPosition(newRotation === 0 ? 'down' : 'up');
-            } else {
-              // P2 serving from bottom: (up && rotation=0) OR (down && rotation=1)
-              setServingPosition(newRotation === 0 ? 'up' : 'down');
-            }
+            // On odd games, server should be visually at bottom (y=420), so always use 'down'
+            console.log('🎾 [Odd Games] Setting serving position to bottom:', {
+              totalGames,
+              newServerAfterSwitch,
+              newRotation
+            });
+            setServingPosition('down');
             return newRotation;
           });
         } else {
-          // Court does NOT rotate on even games - P1 serves from top, P2 serves from bottom
+          // Even total games (0-0, 1-1, 2-0, 2-2, 3-1, 4-0, etc.) - no rotation, server serves from top
           // Logic: topPlayer = servingPosition === 'up' ? (courtRotation === 0 ? 1 : 2) : (courtRotation === 0 ? 2 : 1)
-          // For P1 at top with rotation=0: servingPosition='up' → topPlayer=1 ✓
-          // For P2 at bottom with rotation=0: servingPosition='down' → topPlayer=2, bottomPlayer=1 (P1 at top, P2 at bottom) ✓
-          if (newServerAfterSwitch === 1) {
-            // P1 serving from top: (up && rotation=0) OR (down && rotation=1)
-            setServingPosition(courtRotation === 0 ? 'up' : 'down');
-          } else {
-            // P2 serving from bottom: (down && rotation=0) OR (up && rotation=1)
-            setServingPosition(courtRotation === 0 ? 'down' : 'up');
-          }
+          // On even games, whoever is serving should be at top
+          // Use setCourtRotation callback to ensure we get the latest rotation value
+          // On even games, server should be visually at top (y=120), so always use 'up'
+          // The topPlayer formula will determine which player is conceptually at top based on rotation
+          console.log('🎾 [Even Games] Setting serving position to top:', {
+            totalGames,
+            newServerAfterSwitch,
+            courtRotation
+          });
+          setServingPosition('up');
         }
   };
 
