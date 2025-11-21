@@ -3781,6 +3781,12 @@ const MatchTracker: React.FC = () => {
   };
 
   // Helper function to handle deuce/advantage logic
+  // Tennis scoring rules: 
+  // - Deuce occurs when both players reach 40 (3 points each)
+  // - After deuce, a player must win 2 consecutive points to win the game
+  // - First point after deuce = Advantage (Ad)
+  // - If they win the next point = Game Win
+  // - If they lose the next point = Back to Deuce
   const handleDeuceAdvantage = (p1Total: number, p2Total: number) => {
         // Check for deuce/advantage in regular game (not tiebreak)
         if (!match.isTieBreak) {
@@ -3796,29 +3802,26 @@ const MatchTracker: React.FC = () => {
             setMatch(prev => ({ ...prev, isDeuce: false, hasAdvantage: null }));
           } else {
             // Standard scoring with deuce/advantage
-            // Both players at 40 (3 points) - set to deuce
+            // Both players at 40 (3 points each) - this is Deuce
             if (p1Total >= 3 && p2Total >= 3 && p1Total === p2Total) {
               setMatch(prev => ({ ...prev, isDeuce: true, hasAdvantage: null }));
             } 
-            // One player has 4+ points - check for advantage or game win
-            else if (p1Total >= 4 || p2Total >= 4) {
-              // If both players are at 40+ and scores are equal, return to deuce
-              if (p1Total === p2Total) {
-                setMatch(prev => ({
-                  ...prev,
-                  isDeuce: true,
-                  hasAdvantage: null
-                }));
-              } 
-              // One player has advantage (1 point lead)
-              else if (Math.abs(p1Total - p2Total) === 1) {
-                const advantagePlayer = p1Total > p2Total ? 1 : 2;
-                setMatch(prev => ({
-                  ...prev,
-                  isDeuce: false,
-                  hasAdvantage: advantagePlayer
-                }));
-              }
+            // After deuce (both at 3+), one player has 1 more point = Advantage
+            else if (p1Total >= 3 && p2Total >= 3 && Math.abs(p1Total - p2Total) === 1) {
+              const advantagePlayer = p1Total > p2Total ? 1 : 2;
+              setMatch(prev => ({
+                ...prev,
+                isDeuce: false,
+                hasAdvantage: advantagePlayer
+              }));
+            }
+            // Before deuce (one player hasn't reached 3 points yet) - no deuce/advantage
+            else if (p1Total < 3 || p2Total < 3) {
+              setMatch(prev => ({ ...prev, isDeuce: false, hasAdvantage: null }));
+            }
+            // If scores are equal after deuce is no longer possible (shouldn't happen in normal flow)
+            else {
+              setMatch(prev => ({ ...prev, isDeuce: false, hasAdvantage: null }));
             }
           }
         }
@@ -4055,14 +4058,32 @@ const MatchTracker: React.FC = () => {
         let isDeuce = false;
         let advantage: 1 | 2 | null = null;
 
+        // Tennis scoring rules:
+        // - Deuce: both players at 40 (3 points each) and scores are equal
+        // - Advantage: both players at 3+ points and one player leads by exactly 1 point
+        // - Before deuce: one or both players haven't reached 3 points yet
         if (p1 >= 3 && p2 >= 3) {
           if (p1 === p2) {
+            // Both at 40 (3 points) = Deuce
             isDeuce = true;
+            advantage = null;
           } else if (p1 === p2 + 1) {
+            // Player 1 has advantage (1 point lead after deuce)
+            isDeuce = false;
             advantage = 1;
           } else if (p2 === p1 + 1) {
+            // Player 2 has advantage (1 point lead after deuce)
+            isDeuce = false;
             advantage = 2;
+          } else {
+            // Game should have been won (2+ point lead after deuce)
+            isDeuce = false;
+            advantage = null;
           }
+        } else {
+          // Before deuce (one or both players haven't reached 3 points)
+          isDeuce = false;
+          advantage = null;
         }
 
         return { p1, p2, isDeuce, advantage };
@@ -5806,10 +5827,20 @@ const MatchTracker: React.FC = () => {
                     if (rules.isTiebreakOnly || match.isTieBreak) {
                       return courtRotation === 0 ? player1.points : player2.points;
                     }
-                    return match.isDeuce ? "Deuce" : 
-                           match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : 
-                           match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "40" : 
-                           pointToScore(courtRotation === 0 ? player1.points : player2.points);
+                    // Tennis scoring display logic for court view:
+                    // - Deuce (40-40): Both players show "40"
+                    // - Advantage: Player with advantage shows "AD", opponent shows "40"
+                    // - Regular: Players show their scores (0, 15, 30, 40)
+                    const currentPlayer = courtRotation === 0 ? 1 : 2;
+                    if (match.isDeuce) {
+                      return "40"; // Both players show "40" during deuce
+                    } else if (match.hasAdvantage === currentPlayer) {
+                      return "AD"; // This player has advantage
+                    } else if (match.hasAdvantage !== null) {
+                      return "40"; // Opponent has advantage, this player shows "40"
+                    } else {
+                      return pointToScore(courtRotation === 0 ? player1.points : player2.points);
+                    }
                   })()}
                 </text>
                 <text x="430" y="340" textAnchor="middle" fontSize="14" fill="white">
@@ -5826,10 +5857,20 @@ const MatchTracker: React.FC = () => {
                     if (rules.isTiebreakOnly || match.isTieBreak) {
                       return courtRotation === 0 ? player2.points : player1.points;
                     }
-                    return match.isDeuce ? "Deuce" : 
-                           match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : 
-                           match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "40" : 
-                           pointToScore(courtRotation === 0 ? player2.points : player1.points);
+                    // Tennis scoring display logic for court view:
+                    // - Deuce (40-40): Both players show "40"
+                    // - Advantage: Player with advantage shows "AD", opponent shows "40"
+                    // - Regular: Players show their scores (0, 15, 30, 40)
+                    const currentPlayer = courtRotation === 0 ? 2 : 1;
+                    if (match.isDeuce) {
+                      return "40"; // Both players show "40" during deuce
+                    } else if (match.hasAdvantage === currentPlayer) {
+                      return "AD"; // This player has advantage
+                    } else if (match.hasAdvantage !== null) {
+                      return "40"; // Opponent has advantage, this player shows "40"
+                    } else {
+                      return pointToScore(courtRotation === 0 ? player2.points : player1.points);
+                    }
                   })()}
                 </text>
                 <text x="750" y="340" textAnchor="middle" fontSize="14" fill="white">
@@ -5955,7 +5996,20 @@ const MatchTracker: React.FC = () => {
                           if (rules.noAdScoring) {
                             return getScoreDisplay(courtRotation === 0 ? player1.points : player2.points, true);
                           } else {
-                            return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 1 : 2) ? "AD" : pointToScore(courtRotation === 0 ? player1.points : player2.points);
+                            // Tennis scoring display logic:
+                            // - Deuce (40-40): Both players show "40"
+                            // - Advantage: Player with advantage shows "AD", opponent shows "40"
+                            // - Regular: Players show their scores (0, 15, 30, 40)
+                            const currentPlayer = courtRotation === 0 ? 1 : 2;
+                            if (match.isDeuce) {
+                              return "40"; // Both players show "40" during deuce
+                            } else if (match.hasAdvantage === currentPlayer) {
+                              return "AD"; // This player has advantage
+                            } else if (match.hasAdvantage !== null) {
+                              return "40"; // Opponent has advantage, this player shows "40"
+                            } else {
+                              return pointToScore(courtRotation === 0 ? player1.points : player2.points);
+                            }
                           }
                         })()}
                     </div>
@@ -5978,7 +6032,20 @@ const MatchTracker: React.FC = () => {
                           if (rules.noAdScoring) {
                             return getScoreDisplay(courtRotation === 0 ? player2.points : player1.points, true);
                           } else {
-                            return match.isDeuce ? "Deuce" : match.hasAdvantage === (courtRotation === 0 ? 2 : 1) ? "AD" : pointToScore(courtRotation === 0 ? player2.points : player1.points);
+                            // Tennis scoring display logic:
+                            // - Deuce (40-40): Both players show "40"
+                            // - Advantage: Player with advantage shows "AD", opponent shows "40"
+                            // - Regular: Players show their scores (0, 15, 30, 40)
+                            const currentPlayer = courtRotation === 0 ? 2 : 1;
+                            if (match.isDeuce) {
+                              return "40"; // Both players show "40" during deuce
+                            } else if (match.hasAdvantage === currentPlayer) {
+                              return "AD"; // This player has advantage
+                            } else if (match.hasAdvantage !== null) {
+                              return "40"; // Opponent has advantage, this player shows "40"
+                            } else {
+                              return pointToScore(courtRotation === 0 ? player2.points : player1.points);
+                            }
                           }
                         })()}
                     </div>
